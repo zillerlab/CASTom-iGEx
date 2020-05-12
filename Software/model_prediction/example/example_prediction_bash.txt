@@ -1,64 +1,17 @@
-disease_name=T1D
+pheno_name=T1D
 id_t=1
+perc_comp=0.7
+comp_base=false
 
 ############################
 ### compute TScores GTEx ###
 ############################
 
-sbatch --job-name=t${id_t}_${disease_name} --array=1-100%10  Tscore_GTEx_splitGenes_phenoSpec.sh ${id_t} ${disease_name}
+sbatch --job-name=t${id_t}_${pheno_name} --array=1-100%10 Tscore_GTEx_splitGenes_phenoSpec.sh ${id_t} ${pheno_name} ${perc_comp}
 
 ##############################
 ### compute PathScore GTEx ###
 ##############################
 
-sbatch --job-name=t${id_t} PathScore_GTEx_phenoSpec.sh ${id_t} ${disease_name}
-
-################################
-### associate with phenotype ###
-################################
-
-# prepare
-sbatch --job-name=prepare --array=${id_t} ElNet_withPrior_phenoAssociation_200kb_trainGTEx_prepare_phenoSpec.sh ${disease_name}
-# compute
-sbatch --job-name=t${id_t} --array=1-100%20 ElNet_withPrior_phenoAssociation_200kb_trainGTEx_tscore_phenoSpec.sh ${disease_name}
-sbatch --job-name=t${id_t} --array=1-100%20 ElNet_withPrior_phenoAssociation_200kb_trainGTEx_pathR_phenoSpec.sh ${disease_name}
-sbatch --job-name=t${id_t} --array=1-100%20 ElNet_withPrior_phenoAssociation_200kb_trainGTEx_pathGO_phenoSpec.sh ${disease_name}
-# combine
-sbatch --job-name=comb --array=t${id_t} ElNet_withPrior_phenoAssociation_200kb_trainGTEx_combine_phenoSpec.sh ${disease_name}
-
-###################
-### ML approach ###
-###################
-
-# prepare
-sbatch --job-name=split split_data_base-target-ext.sh ${disease_name}
-
-##################
-# base association 
-
-sbatch --job-name=t${id_t} --array=1-100%20 ElNet_withPrior_phenoAssociation_200kb_trainGTEx_tscore_phenoSpec_base.sh ${id_t} ${disease_name}
-sbatch --job-name=t${id_t} --array=1-100%20 ElNet_withPrior_phenoAssociation_200kb_trainGTEx_pathR_phenoSpec_base.sh ${id_t} ${disease_name}
-sbatch --job-name=t${id_t} --array=1-100%20 ElNet_withPrior_phenoAssociation_200kb_trainGTEx_pathGO_phenoSpec_base.sh ${id_t} ${disease_name}
-sbatch --job-name=comb --array=${id_t} ElNet_withPrior_phenoAssociation_200kb_trainGTEx_combine_phenoSpec_base.sh ${id_t} ${disease_name}
-
-##############################
-# rescale all the data based on target distribution
-sbatch --job-name=parScalet --array=${id_t} computePar_scale_target_tscore_phenoSpec.sh
-
-####################################
-#### UMAP preproc SVM (2-class) ####
-pt_thr=(0.01 0.05 0.1 0.2 0.5)
-for id in ${pt_thr[@]}
-do
-sbatch --job-name=pt${id}_${disease_name} --array=${id_t} UMAP_preproc_SVM_2class_tscore_phenoSpec.sh ${id} ${disease_name}
-done
-
-for id in ${pt_thr[@]}
-do
-# predict external dataset
-sbatch --job-name=pt${id}_${disease_name} --array=${id_t} predictNew_UMAP_preproc_SVM_2class_tscore_phenoSpec.sh ${id} ${disease_name}
-done
-
-
-
+sbatch --job-name=t${id_t}_${pheno_name} PathScore_GTEx_phenoSpec.sh ${id_t} ${pheno_name}
 
