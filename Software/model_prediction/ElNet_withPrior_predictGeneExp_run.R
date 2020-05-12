@@ -13,14 +13,12 @@ parser$add_argument("--genoDat_file", type = "character", help = "directory with
 parser$add_argument("--covDat_file", type = "character", help = "directory with sample info for new genotype data, keep only this samples")
 parser$add_argument("--InfoFold", type = "character", help = "path to fold with additional info (e.g. snp-gene dist matrix)")
 parser$add_argument("--cis_thres", type = "integer", default = 200000, help = "window (in bp) to compute distance from gene and snps")
-parser$add_argument("--functR", type="character", help = "Rscript with functions to be used")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
 args <- parser$parse_args()
 outTrain_fold <- args$outTrain_fold
 genoDat_file <- args$genoDat_file
 covDat_file <- args$covDat_file
-functR <- args$functR
 cis_thres <- args$cis_thres
 InfoFold <- args$InfoFold
 outFold <- args$outFold
@@ -35,7 +33,6 @@ outFold <- args$outFold
 # InfoFold <- '/ziller/lucia/eQTL_PROJECT_CMC/OUTPUT_CMC_SCRIPTS_v1/'
 #####################################################################
 
-source(functR)
 cis_ann <- paste0(cis_thres/10^5, 'e+05')
 
 covDat <- read.table(covDat_file, header = T, sep = '\t', stringsAsFactors = F, check.names=F)
