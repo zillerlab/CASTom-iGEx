@@ -33,14 +33,14 @@ ncores <- args$ncores
 outFold <- args$outFold
 
 # ####################################################################
-# input_file <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_UKBB/Brain_Cortex/200kb/noGWAS/devgeno0.01_testdevgeno0/predictedTscores_splitGenes'
+# input_file <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_UKBB/Brain_Hippocampus/200kb/noGWAS/devgeno0.01_testdevgeno0/predictedTscores_splitGenes'
 # split_tot <- 100
 # covDat_file <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/INPUT_DATA/Covariates/covariatesMatrix.txt'
 # GOterms_file <- '/psycl/g/mpsziller/lucia/refData/GOterm_geneAnnotation_allOntologies.RData'
 # reactome_file <- '/psycl/g/mpsziller/lucia/refData/ReactomePathways.gmt'
 # skip_reactome <- F
 # ncores <- 10
-# outFold <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_UKBB/Brain_Cortex/200kb/noGWAS/devgeno0.01_testdevgeno0/'
+# outFold <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_UKBB/Brain_Hippocampus/200kb/noGWAS/devgeno0.01_testdevgeno0/'
 # ####################################################################
 
 #########################
@@ -120,7 +120,7 @@ if(split_tot>0){
       tscoreMat_list[[i]] <- big.matrix(ncol=ncol(tmp), nrow = nrow(tmp), type = "double", init = 0, dimnames = NULL, shared = F)
       tscoreMat_list[[i]][,] <- tmp
     }else{
-      print('split',i,'does not exist')
+      print(paste('split',i,'does not exist'))
     }
   }
   split_tot <- length(tscoreMat_list)
