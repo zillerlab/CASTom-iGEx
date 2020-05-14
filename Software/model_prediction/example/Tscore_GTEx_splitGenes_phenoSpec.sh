@@ -22,10 +22,10 @@ echo ${t}
 mkdir -p OUTPUT_GTEx/predict_UKBB/${t}/200kb/noGWAS/devgeno0.01_testdevgeno0/${name_pheno}_pheno/
 
 inputfile=OUTPUT_GTEx/predict_UKBB/${t}/200kb/noGWAS/devgeno0.01_testdevgeno0/
-covfile=INPUT_DATA/Covariates/
+
 
 inputfile_list=()
-covfile_list=()
+
 for i in $(seq 100)
 do
 	inputfile_list+=(${inputfile}split${i}_predictedExpression_filt.txt)
