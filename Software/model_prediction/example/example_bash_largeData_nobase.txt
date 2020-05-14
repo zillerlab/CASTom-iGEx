@@ -20,10 +20,10 @@ sbatch --job-name=t${id_t}_${pheno_name} PathScore_GTEx_phenoSpec.sh ${id_t} ${p
 ################################
 
 # prepare
-sbatch --job-name=prepare_${pheno_name} --array=${id_t} PriLer_phenoAssociation_200kb_GTEx_prepare_phenoSpec.sh ${pheno_name}
+sbatch --job-name=prepare_${pheno_name} --array=${id_t} PriLer_phenoAssociation_GTEx_prepare_phenoSpec.sh ${pheno_name}
 # compute
-sbatch --job-name=t${id_t}_${pheno_name} --array=1-100%30 PriLer_phenoAssociation_200kb_GTEx_tscore_phenoSpec.sh ${pheno_name}
-sbatch --job-name=t${id_t}_${pheno_name} --array=1-100%30 PriLer_phenoAssociation_200kb_GTEx_pathR_phenoSpec.sh ${pheno_name}
-sbatch --job-name=t${id_t}_${pheno_name} --array=1-100%30 PriLer_phenoAssociation_200kb_GTEx_pathGO_phenoSpec.sh ${pheno_name}
+sbatch --job-name=t${id_t}_${pheno_name} --array=1-100%30 PriLer_phenoAssociation_GTEx_tscore_phenoSpec.sh ${pheno_name}
+sbatch --job-name=t${id_t}_${pheno_name} --array=1-100%30 PriLer_phenoAssociation_GTEx_pathR_phenoSpec.sh ${pheno_name}
+sbatch --job-name=t${id_t}_${pheno_name} --array=1-100%30 PriLer_phenoAssociation_GTEx_pathGO_phenoSpec.sh ${pheno_name}
 # combine
-sbatch --job-name=comb_${pheno_name} --array=t${id_t} PriLer_phenoAssociation_200kb_GTEx_combine_phenoSpec.sh ${pheno_name}
+sbatch --job-name=comb_${pheno_name} --array=t${id_t} PriLer_phenoAssociation_GTEx_combine_phenoSpec.sh ${pheno_name}
