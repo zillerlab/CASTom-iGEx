@@ -33,12 +33,12 @@ ncores <- args$ncores
 outFold <- args$outFold
 
 # ####################################################################
-# input_file <- paste0('/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_UKBB/Liver/200kb/noGWAS/devgeno0.01_testdevgeno0/split', 1:100, '_predictedExpression_filt.txt')
+# input_file <- paste0('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Adipose_Subcutaneous/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/split', 1:100, '_predictedExpression_filt.txt')
 # nFolds <- 10
 # perc_comp <- 0.7
 # ncores <- 10
-# covDat_file <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/INPUT_DATA/Covariates/covariateMatrix_FluidIntelligence_score.txt'
-# outFold <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_UKBB/Liver/200kb/noGWAS/devgeno0.01_testdevgeno0/'
+# covDat_file <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/INPUT_DATA/Covariates/covariateMatrix_LipoProteinDisorder.txt'
+# outFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Adipose_Subcutaneous/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/'
 # split_gene_id <- 1
 # split_tot <- 100
 # ###################################################################
@@ -62,15 +62,22 @@ extract_values <- function(inputData, colnames_exp_list, sample_list){
       if(any(colnames_exp_list[[i]] %in% sample_list)){
         id <- which(colnames_exp_list[[i]] %in% sample_list)
         tmp[[i]] <- matrix(inputData[[i]][, id], ncol = length(id), nrow = nrow(inputData[[i]]))
+        colnames(tmp[[i]]) <- colnames_exp_list[[i]][id]
       }
     }
-    new_mat <- big.matrix(ncol=length(sample_list) , nrow = nrow(inputData[[i]]), type = "double", init = 0, dimnames = NULL, shared = F)
-    new_mat[,] <-  do.call(cbind, tmp)
     
-  }
-  
+    tmp <- do.call(cbind, tmp)
+    tmp <- tmp[, match(sample_list, colnames(tmp))]
+    print(identical(colnames(tmp), sample_list))
+    
+    new_mat <- big.matrix(ncol=length(sample_list) , nrow = nrow(inputData[[i]]), type = "double", init = 0, dimnames = NULL, shared = F)
+    new_mat[,] <-  tmp
+    
+  } 
   return(new_mat)
+  
 }
+
 
 # function to compute t statistic
 t_stat <- function(x){
@@ -207,7 +214,6 @@ ovMat=sapply(seq(1,nFolds),function(X){
   
 })
 
-
 rownames(ovMat)=overlap
 
 # res must be a bigmatrix
@@ -247,7 +253,6 @@ for (i in 1:nFolds){
   clusterExport(cl, "ref")
   clusterExport(cl, "t_stat")
   clusterEvalQ(cl, library("matrixStats"))
-
   tmp <- parLapply(cl, 1:length(curCases[[i]]), function(j) t_stat(comp[,j] - ref))
   stopCluster(cl)
   
