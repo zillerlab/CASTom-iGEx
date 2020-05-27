@@ -1,7 +1,6 @@
-pheno_name=T2D
+pheno_name=T1D
 id_t=1
-perc_comp=0.67
-comp_base=true
+perc_comp=0.7
 
 ############################
 ### compute TScores GTEx ###
