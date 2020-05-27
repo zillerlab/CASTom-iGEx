@@ -1,0 +1,9 @@
+name_pheno=T1D
+perc_comp=0.7
+t=Pancreas
+
+#####################
+### split dataset ###
+#####################
+
+sbatch --job-name=${name_pheno} split_data_base-target-ext.sh ${name_pheno} ${perc_comp} ${t}
