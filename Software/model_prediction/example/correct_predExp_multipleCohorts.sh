@@ -12,6 +12,7 @@ cd /psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/
 
 git_fold=/psycl/g/mpsziller/lucia/priler_project/Software/model_prediction/
 
+id_t=${SLURM_ARRAY_TASK_ID}
 readarray -t tissues < OUTPUT_GTEx/Tissue_CADgwas
 t=$(eval echo "\${tissues[${id_t}-1]}")
 
