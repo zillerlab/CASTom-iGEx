@@ -1,0 +1,7 @@
+#########################################
+### correct predicted gene expression ###
+#########################################
+
+sbatch --array=1-14 --job-name=corr correct_predExp_multipleCohorts.sh
+
+
