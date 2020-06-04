@@ -5,7 +5,6 @@ options(max.print=1000)
 suppressPackageStartupMessages(library(argparse))
 suppressPackageStartupMessages(library(PGSEA))
 suppressPackageStartupMessages(library(limma))
-suppressPackageStartupMessages(library(biomaRt))
 suppressPackageStartupMessages(library(qvalue))
 
 parser <- ArgumentParser(description="Compute PathCcore for a specific pathway structure")
