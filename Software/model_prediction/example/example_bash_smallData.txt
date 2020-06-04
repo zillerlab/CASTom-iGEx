@@ -1,3 +1,10 @@
+###############################
+### custom pathway analysis ###
+###############################
+
+sbatch --job-name=wiki2019 --array=1-36 PathScore_customPath_CMC.sh WikiPathways_2019_Human.RData WikiPath2019Human
+sbatch --job-name=wiki2019 --array=1-36 PathScore_customPath_GTEx.sh WikiPathways_2019_Human.RData WikiPath2019Human 1
+
 #########################################
 ### correct predicted gene expression ###
 #########################################
