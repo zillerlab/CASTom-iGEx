@@ -19,4 +19,10 @@ sbatch --job-name=wiki2019_${t} PriLer_metaAnalysis_phenoAssociation_customPath_
 
 sbatch --array=1-14 --job-name=corr correct_predExp_multipleCohorts.sh
 
+############################################################################
+### compute T-score from corrected gene expression, all cohorts together ###
+############################################################################
 
+# split dataset
+
+sbatch --job-name=split --array=1-9 split_base-target-ext_multipleCohorts.sh
