@@ -128,34 +128,49 @@ if(length(controls_not_ref)>thr_n){
   controls_not_ref <- sample(controls_not_ref, size = thr_n, replace = F)
 }
 
-# match cases by gender
-N_male <- length(which(sampleAnn$Gender[sampleAnn$Individual_ID %in% controls_not_ref] == 0))
-N_female <- length(which(sampleAnn$Gender[sampleAnn$Individual_ID %in% controls_not_ref] == 1))
-# # get same amount control of gender
-#gender_min <- as.numeric(names(which.min(table(sampleAnn$Gender[sampleAnn$Individual_ID %in% controls_not_ref]))))
+if(length(controls_not_ref)>=length(which(sampleAnn$Dx==1))){
+ 
+  N_male <- length(which(sampleAnn$Gender[sampleAnn$Dx == 1] == 0))
+  N_female <- length(which(sampleAnn$Gender[sampleAnn$Dx == 1] == 1))
+  set.seed(seed_fixed*10)
+  sel_controls_male <- sample(controls_not_ref[controls_not_ref %in% sampleAnn$Temp_ID[sampleAnn$Gender == 0]], size = N_male, replace = F)  
+  set.seed(seed_fixed*10+20)
+  sel_controls_female <- sample(controls_not_ref[controls_not_ref %in% sampleAnn$Temp_ID[sampleAnn$Gender == 1]], size = N_female, replace = F)
+  sel_controls <- c(sel_controls_male, sel_controls_female)
+  sel_cases <-sampleAnn$Temp_ID[sampleAnn$Dx==1]
 
-if(length(which(sampleAnn$Dx==1 & sampleAnn$Gender == 0))<=N_male*0.9 | length(which(sampleAnn$Dx==1 & sampleAnn$Gender == 1))<=N_female*0.9){
-  set.seed(seed_fixed)
-  sel_cases <- sample(sampleAnn$Temp_ID[sampleAnn$Dx==1], size = length(controls_not_ref), replace = F)
 }else{
-  set.seed(seed_fixed)
-  sel_cases_male <- sample(sampleAnn$Temp_ID[sampleAnn$Dx==1 & sampleAnn$Gender == 0], size = N_male, replace = F)
-  set.seed(seed_fixed+1)
-  sel_cases_female <- sample(sampleAnn$Temp_ID[sampleAnn$Dx==1 & sampleAnn$Gender == 1], size = N_female, replace = F)
-  sel_cases <- c(sel_cases_female, sel_cases_male)
+  
+  # match cases by gender
+  N_male <- length(which(sampleAnn$Gender[sampleAnn$Individual_ID %in% controls_not_ref] == 0))
+  N_female <- length(which(sampleAnn$Gender[sampleAnn$Individual_ID %in% controls_not_ref] == 1))
+
+  if(length(which(sampleAnn$Dx==1 & sampleAnn$Gender == 0))<=N_male*0.9 | length(which(sampleAnn$Dx==1 & sampleAnn$Gender == 1))<=N_female*0.9){
+    set.seed(seed_fixed)
+    sel_cases <- sample(sampleAnn$Temp_ID[sampleAnn$Dx==1], size = length(controls_not_ref), replace = F)
+  }else{
+    set.seed(seed_fixed)
+    sel_cases_male <- sample(sampleAnn$Temp_ID[sampleAnn$Dx==1 & sampleAnn$Gender == 0], size = N_male, replace = F)
+    set.seed(seed_fixed+1)
+    sel_cases_female <- sample(sampleAnn$Temp_ID[sampleAnn$Dx==1 & sampleAnn$Gender == 1], size = N_female, replace = F)
+    sel_cases <- c(sel_cases_female, sel_cases_male)
+  }
+  sel_controls <- controls_not_ref
 }
 
 # write new covariate file (base data and target data)
-cov_target <- sampleAnn[sampleAnn$Temp_ID %in% c(controls_not_ref, sel_cases), ]
-cov_base <- sampleAnn[!sampleAnn$Temp_ID %in% c(controls_not_ref, sel_cases), ]
 
-cov_base <- cov_base[, !colnames(cov_base) %in% c('Temp_ID', 'split_id')]
+if(length(controls_not_ref)<length(which(sampleAnn$Dx==1))){
+  cov_base <- sampleAnn[!sampleAnn$Temp_ID %in% c(sel_controls, sel_cases), ]
+  cov_base <- cov_base[, !colnames(cov_base) %in% c('Temp_ID', 'split_id')]
+  # save
+  write.table(sprintf('%scovariateMatrix_base_seed%i.txt', outFold, seed_fixed), x = cov_base, col.names = T, row.names = F, sep = '\t', quote = F)
+}
+
+cov_target <- sampleAnn[sampleAnn$Temp_ID %in% c(sel_controls, sel_cases), ]
 cov_target <- cov_target[, !colnames(cov_target) %in% c('Temp_ID', 'split_id')]
-
-# save
-write.table(sprintf('%scovariateMatrix_base_seed%i.txt', outFold, seed_fixed), x = cov_base, col.names = T, row.names = F, sep = '\t', quote = F)
+#save
 write.table(sprintf('%scovariateMatrix_target_seed%i.txt', outFold, seed_fixed), x = cov_target, col.names = T, row.names = F, sep = '\t', quote = F)
-
 
 # split into external data
 set.seed(9)
