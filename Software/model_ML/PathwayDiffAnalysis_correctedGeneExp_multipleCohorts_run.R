@@ -130,7 +130,7 @@ t_stat <- function(x){
 
 ### load data ###
 sampleAnn <- read.table(sampleAnn_file, header = T, stringsAsFactors = F)
-expDat <- read.table(gzfile(input_file),sep="\t",header=T,  check.names = F)
+expDat <- read.delim(gzfile(input_file),sep="\t",header=T,  check.names = F, stringsAsFactors=F)
 id_samples <- match(sampleAnn$Individual_ID, colnames(expDat))
 
 eMat <- as.matrix(expDat[,id_samples])
