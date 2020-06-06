@@ -12,7 +12,7 @@ readarray -t cohorts < INPUT_DATA_GTEx/CAD/CAD_cohort_name
 id_c=${SLURM_ARRAY_TASK_ID}
 cohort=$(eval echo "\${cohorts[${id_c}-1]}")
 
-fold_git=/psycl/g/mpsziller/lucia/priler_project/Software/model_prediction/
+fold_git=/psycl/g/mpsziller/lucia/priler_project/Software/model_ML/
 
 Rscript ${fold_git}split_base-target-ext_multipleCohorts_run.R --covDat_file INPUT_DATA_GTEx/CAD/Covariates/${cohort}/covariateMatrix.txt --perc_base 0.7 --perc_ext 0.2 --seed_fixed 1235 --outFold INPUT_DATA_GTEx/CAD/Covariates/${cohort}/
 
