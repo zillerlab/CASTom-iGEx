@@ -88,7 +88,7 @@ if(path_type == 'GO'){
 }
 
 
-pathScoreMat <- as.matrix(t(score_mat[, -1]))
+pathScoreMat <- matrix(t(score_mat[, -1]), nrow = ncol(score_mat)-1, ncol = nrow(score_mat))
 # match
 if(!identical(rownames(pathScoreMat), sampleAnn$Temp_ID)){
   id <- match(rownames(pathScoreMat), sampleAnn$Temp_ID)
@@ -96,7 +96,7 @@ if(!identical(rownames(pathScoreMat), sampleAnn$Temp_ID)){
 }
 
 # remove sample that have NAs
-id_s <- rowSums(is.na(pathScoreMat[,])) == 0
+id_s <- rowSums(matrix(is.na(pathScoreMat), nrow = nrow(pathScoreMat))) == 0
 sampleAnn <- sampleAnn[id_s,]
 samplesID_new <- sampleAnn$Temp_ID
 if(!all(id_s)){pathScoreMat <- pathScoreMat[id_s, ]}
