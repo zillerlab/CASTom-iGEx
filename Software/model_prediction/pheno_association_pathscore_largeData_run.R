@@ -89,6 +89,7 @@ if(path_type == 'GO'){
 
 
 pathScoreMat <- matrix(t(score_mat[, -1]), nrow = ncol(score_mat)-1, ncol = nrow(score_mat))
+rownames(pathScoreMat) <- colnames(score_mat[, -1])
 # match
 if(!identical(rownames(pathScoreMat), sampleAnn$Temp_ID)){
   id <- match(rownames(pathScoreMat), sampleAnn$Temp_ID)
