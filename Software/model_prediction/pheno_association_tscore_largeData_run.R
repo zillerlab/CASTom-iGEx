@@ -117,21 +117,20 @@ print(paste('same gene annotation:', identical(df_info$external_gene_name, score
 
 tscoreMat <- matrix(t(score_mat[, -1]), ncol = nrow(score_mat), nrow = ncol(score_mat)-1)
 rownames(tscoreMat) <- colnames(score_mat)[-1]
-tscoreMat <- tscoreMat[rownames(tscoreMat) %in% sampleAnn$Temp_ID,]
 
 # match
 if(!identical(rownames(tscoreMat), sampleAnn$Temp_ID)){
-  sampleAnn <- sampleAnn[match(rownames(tscoreMat), sampleAnn$Temp_ID),]
+  common_s <- intersect(rownames(tscoreMat), sampleAnn$Temp_ID)
+  sampleAnn <- sampleAnn[match(common_s, sampleAnn$Temp_ID),]
+  tscoreMat <- tscoreMat[match(common_s,rownames(tscoreMat)), ,drop=FALSE]
 }
 
 # remove sample that have NAs
-id_s <- rowSums(matrix(is.na(tscoreMat), nrow = nrow(tscoreMat))) == 0
+id_s <- rowSums(matrix(is.na(tscoreMat), ncol = ncol(tscoreMat), nrow = nrow(tscoreMat))) == 0
 sampleAnn <- sampleAnn[id_s,]
 samplesID_new <- sampleAnn$Temp_ID
 if(!all(id_s)){
-  tmp <- rownames(tscoreMat)
-  tscoreMat <- matrix(tscoreMat[id_s, ], ncol = ncol(tscoreMat), nrow = length(which(id_s)))
-  rownames(tscoreMat) <- tmp[id_s]
+  tscoreMat <- tscoreMat[id_s, ,drop=FALSE]
 }
 
 print(str(tscoreMat))
