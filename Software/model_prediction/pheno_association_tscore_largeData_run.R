@@ -125,7 +125,7 @@ if(!identical(rownames(tscoreMat), sampleAnn$Temp_ID)){
 }
 
 # remove sample that have NAs
-id_s <- rowSums(is.na(tscoreMat)) == 0
+id_s <- rowSums(matrix(is.na(tscoreMat), nrow = nrow(tscoreMat))) == 0
 sampleAnn <- sampleAnn[id_s,]
 samplesID_new <- sampleAnn$Temp_ID
 if(!all(id_s)){
