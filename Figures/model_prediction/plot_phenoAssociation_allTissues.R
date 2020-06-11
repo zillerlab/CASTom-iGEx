@@ -1,21 +1,38 @@
-# plot for CAD results: CAD_UKBB + reproducibility CAD Schunkert cohorts
-
 library(ggplot2)
 library(ggpubr)
 library(qvalue)
 library(corrplot)
 library(RColorBrewer)
 library(ggrepel)
-
+library(argparse)
 
 Sys.setlocale("LC_NUMERIC", "C")
 
-fold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/'
-color_tissues <- read.table('/psycl/g/mpsziller/lucia/color_tissues.txt', h=T, stringsAsFactors = F)
-pval_FDR <- 0.05
-train_fold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/train_GTEx/'
-pheno <- 'CAD_HARD'
-type_dat <- 'CAD_HARD-UKBB'
+parser <- ArgumentParser(description="plot pheno association")
+parser$add_argument("--fold", type = "character", help = "fold output")
+parser$add_argument("--train_fold", type = "character", help = "train model fold")
+parser$add_argument("--color_file", type = "character", help = "file with tissues color code")
+parser$add_argument("--pheno", type = "character", help = "name phenotype")
+parser$add_argument("--type_dat", type = "character", help = "name to append to plot file")
+parser$add_argument("--pval_FDR", type = "double", default = 0.05, help = "pvalue threshold")
+
+
+args <- parser$parse_args()
+fold <- args$fold
+train_fold <- args$train_fold
+color_file <- args$color_file
+pheno <- args$pheno
+type_dat <- args$type_dat
+pval_FDR <- args$pval_FDR
+
+# fold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/'
+# color_tissues <- read.table('/psycl/g/mpsziller/lucia/color_tissues.txt', h=T, stringsAsFactors = F)
+# pval_FDR <- 0.05
+# train_fold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/train_GTEx/'
+# pheno <- 'CAD_HARD'
+# type_dat <- 'CAD_HARD-UKBB'
+
+color_tissues <- read.table(color_file, h=T, stringsAsFactors = F)
 
 # load results
 tscore <- read.delim(sprintf('%stscore_pval_%s_covCorr.txt', fold, pheno), h=T, stringsAsFactors = F, sep = '\t')
@@ -23,7 +40,12 @@ pathR <- read.delim(sprintf('%spath_Reactome_pval_%s_covCorr_filt.txt', fold, ph
 pathGO <- read.delim(sprintf('%spath_GO_pval_%s_covCorr_filt.txt', fold, pheno), h=T, stringsAsFactors = F, sep = '\t')
 
 tissues <- unique(tscore$tissue)
-train_fold <- paste0(train_fold, tissues, '/200kb/CAD_GWAS_bin5e-2/')
+if(grepl('CAD', pheno)){
+  train_fold <- paste0(train_fold, tissues, '/200kb/CAD_GWAS_bin5e-2/')  
+}else{
+  train_fold <- paste0(train_fold, tissues, '/')
+}
+
 
 # gene location
 tscore$start_position <- NA
@@ -425,9 +447,9 @@ tscore_df <- create_df_manhattan_plot(tissues_name = tissues, res = tscore, id_p
 pathR_df <- create_df_manhattan_plot(tissues_name = tissues, res = pathR, id_pval = 13, pval_FDR = pval_FDR, df_color = color_tissues, id_name = 1, n_sign = 2)
 pathGO_df <- create_df_manhattan_plot(tissues_name = tissues, res = pathGO, id_pval = 15, pval_FDR = pval_FDR, df_color = color_tissues, id_name = 2, n_sign = 2)
 
-pl_manhattan_function(data_input = tscore_df, type_mat = 'tscore', outFold = CAD_fold, type_dat = type_dat)
-pl_manhattan_function(data_input = pathR_df, type_mat = 'path_Reactome', outFold = CAD_fold, type_dat = type_dat)
-pl_manhattan_function(data_input = pathGO_df, type_mat = 'path_GO', outFold = CAD_fold, type_dat = type_dat)
+pl_manhattan_function(data_input = tscore_df, type_mat = 'tscore', outFold = fold, type_dat = type_dat)
+pl_manhattan_function(data_input = pathR_df, type_mat = 'path_Reactome', outFold = fold, type_dat = type_dat)
+pl_manhattan_function(data_input = pathGO_df, type_mat = 'path_GO', outFold = fold, type_dat = type_dat)
 
 ### pathway plot ngenes info ###
 pathR_df <- create_df_manhattan_plot_path(tissues_name = tissues,  res = pathR, id_pval = 13, thr_genes = 0.1, pval_thr = 10^-4, pval_FDR = pval_FDR, df_color = color_tissues, id_name = 1)

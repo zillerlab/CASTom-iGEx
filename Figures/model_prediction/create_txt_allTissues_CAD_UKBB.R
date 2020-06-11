@@ -1,4 +1,5 @@
 # combine all tissues results (CAD)
+library(qvalue)
 
 setwd('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/')
 tissues_name <- c('Adipose_Subcutaneous', 'Adipose_Visceral_Omentum', 'Adrenal_Gland', 'Artery_Aorta', 'Artery_Coronary', 'Colon_Sigmoid', 'Colon_Transverse', 'Heart_Atrial_Appendage','Heart_Left_Ventricle', 'Liver')
