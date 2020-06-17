@@ -9,7 +9,7 @@ suppressPackageStartupMessages(library(qvalue))
 suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(ggrepel))
 Sys.setlocale("LC_NUMERIC", "C")
-
+options(bitmapType = 'cairo', device = 'png')
 
 
 parser <- ArgumentParser(description="compare association results discovery and replication dataset")
@@ -215,7 +215,7 @@ pl_dot <- ggplot(data = df, mapping = aes(x = tissue, y = perc, color = tissue, 
 
 
 ggsave(plot = pl_dot, filename = sprintf('%s/signConcordance_discovery%s_replication_signFDR%.2f_dotplot.png', outFold, pheno_name, pval_thr_FDR), width = 8, height = 3.7, dpi = 500)
-ggsave(plot = pl_dot, filename = sprintf('%s/signConcordance_discovery%s_replication_signFDR%.2f_dotplot.pdf', outFold, pheno_name, pval_thr_FDR), width = 8, height = 3.7,  dpi = 500, compress = F)
+ggsave(plot = pl_dot, filename = sprintf('%s/signConcordance_discovery%s_replication_signFDR%.2f_dotplot.pdf', outFold, pheno_name, pval_thr_FDR), width = 20, height = 10,  dpi = 500, compress = F)
 
 
 

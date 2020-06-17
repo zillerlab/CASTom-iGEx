@@ -7,6 +7,7 @@ library(ggrepel)
 library(argparse)
 
 Sys.setlocale("LC_NUMERIC", "C")
+options(bitmapType = 'cairo', device = 'png')
 
 parser <- ArgumentParser(description="plot pheno association")
 parser$add_argument("--fold", type = "character", help = "fold output")
