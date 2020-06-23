@@ -476,5 +476,14 @@ if(grepl('CAD', pheno)){
   
 }
 
+if(grepl('SCZ', pheno)){
 
+  best_pathR <- best_res_fun(pathR, tissues, id_pval = 13)
+  best_pathGO <- best_res_fun(pathGO, tissues, id_pval = 15)
+  plot_best_path(best_res = best_pathR, color_tissues = color_tissues, title_plot = sprintf('Reactome pathways %s', pheno), type_mat = 'path_Reactome',outFold = fold, type_dat = type_dat,
+  tissues = c('DLPC_CMC', 'Brain_Cerebellum', 'Brain_Hypothalamus', 'Cells_EBV-transformed_lymphocytes', 'Colon_Transverse'), height_plot = 6.5)
+  plot_best_path(best_res = best_pathGO, color_tissues = color_tissues, title_plot = sprintf('GO pathways %s', pheno),  type_mat = 'path_GO', outFold = fold, type_dat = type_dat,
+  tissues = c('DLPC_CMC', 'Brain_Cerebellum', 'Brain_Hypothalamus', 'Cells_EBV-transformed_lymphocytes', 'Colon_Transverse'), height_plot = 6.5)
+
+}
 
