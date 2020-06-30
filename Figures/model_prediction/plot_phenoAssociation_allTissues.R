@@ -444,7 +444,7 @@ pl_number_function(df = pathR_nsgin, type_mat = 'path_Reactome', outFold = fold,
 pl_number_function(df = pathGO_nsgin, type_mat = 'path_GO', outFold = fold, type_dat = type_dat)
 
 ### manhattan plot ###
-if(grepl('SCZ', pheno)){n_sign=5}
+if(grepl('SCZ', pheno)){n_sign=10}
 if(grepl('CAD', pheno)){n_sign=3}
 
 tscore_df <- create_df_manhattan_plot(tissues_name = tissues, res = tscore, id_pval = 8, pval_FDR = pval_FDR, df_color = color_tissues, id_name = 2, n_sign = n_sign, gene = T)
