@@ -17,6 +17,7 @@ t=$(eval echo "\${tissues[${id_t}-1]}")
 
 echo ${t}
 
+git_fold=/psycl/g/mpsziller/lucia/priler_project/Software/model_prediction/
 inputfile=OUTPUT_GTEx/predict_CAD/${t}/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/
 mkdir -p OUTPUT_GTEx/predict_CAD/${t}/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_subset/
 
