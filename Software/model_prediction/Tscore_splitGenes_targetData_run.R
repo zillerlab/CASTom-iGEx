@@ -269,7 +269,7 @@ for (i in 1:nFolds){
   
   res_mat[[i]] <- do.call(cbind, tmp)
   
-  colnames(res_mat[[i]]) <- curCases[[i]]
+  colnames(res_mat[[i]]) <- curCases
   rownames(res_mat[[i]]) <- geneNames
   
 }
