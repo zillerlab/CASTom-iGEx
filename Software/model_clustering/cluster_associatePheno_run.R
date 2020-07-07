@@ -40,16 +40,16 @@ clusterFile <- args$clusterFile
 outFold <- args$outFold
 
 # #####################################################################################################################
-# phenoDatFile <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_clustering/phenotypeMatrix_CADsubset.txt'
-# phenoDescFile <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_clustering/phenotypeDescription_CADsubset.txt'
-# sampleAnnFile <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_clustering/covariateMatrix_CADsubset.txt'
-# clusterFile <- 'OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/tscore_original_clusterAll_PGmethod_SNF.RData'
-# type_cluster <- 'All'
+# phenoDatFile <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/phenotypeMatrix_CADHARD_All.txt'
+# phenoDescFile <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/phenotypeDescription.txt'
+# sampleAnnFile <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/covariateMatrix_CADHARD_All.txt'
+# clusterFile <- 'OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/tscore_zscaled_clusterCases_PGmethod_HKmetric.RData'
+# type_cluster <- 'Cases'
 # type_data <- 'tscore'
-# type_sim <- 'SNF'
-# outFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/'
+# type_sim <- 'HK'
+# outFold <- 'OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/'
 # functR <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/RSCRIPTS/SCRIPTS_v2/clustering_functions.R'
-# type_input <- 'original'
+# type_input <- 'zscaled'
 # #####################################################################################################################
 
 source(functR)
@@ -75,7 +75,15 @@ identical(sampleAnn$Individual_ID, cluster_output$samples_id)
 
 phenoDat <- phenoDat[match(sampleAnn$Individual_ID, phenoDat$Individual_ID),]
 phenoDat <- phenoDat[, -1]
-phenoDat <- phenoDat[,colSums(phenoDat != 0)>=20]
+# remove columns with too many NAs
+phenoDat <- phenoDat[,colSums(!is.na(phenoDat))>=200]
+# remove binary with too few T
+id_bin <- rep(F, ncol(phenoDat))
+for(i in 1:ncol(phenoDat)){
+  id_bin[i] <- is.integer(phenoDat[, i])
+}
+rm_col <- colnames(phenoDat[, id_bin & colSums(phenoDat != 0 & !is.na(phenoDat))<50])
+phenoDat <- phenoDat[,!colnames(phenoDat) %in% rm_col]
 
 phenoInfo <- read.delim(phenoDescFile, h=T, stringsAsFactors = F, sep = '\t')
 phenoInfo <- phenoInfo[match(colnames(phenoDat), phenoInfo$pheno_id),]
@@ -105,7 +113,7 @@ for(i in 1:nrow(test_pheno)){
 test_pheno$pval_BHcorr <- p.adjust(test_pheno$pval, method = 'BH')
 
 # save
-write.table(x = test_pheno, sprintf('%s%s_%s_cluster%s_PGmethod_%s_phenoAssociation.txt', outFold, type_data, type_input, type_cluster, type_sim), col.names = T, row.names = F, sep = '\t', quote = F)
+write.table(x = test_pheno, sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation.txt', outFold, type_data, type_input, type_cluster, type_sim), col.names = T, row.names = F, sep = '\t', quote = F)
 
 ###############################################################################
 # plot association to covariates, to endophenotypes and Dx_nmi if available
@@ -124,8 +132,8 @@ pl <-  ggplot(df_cov, aes(x = cov_id, y = logpval, fill = sign))+
   scale_fill_manual(values=c("#999999", "#E69F00"))+
   theme(legend.position = 'none', plot.title = element_text(size=9), axis.text.y = element_text(size = 7))+ggtitle(paste(type_data, type_input, 'cluster', type_cluster))+
   coord_flip()
-ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%s_covAssociation.png', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = 3, plot = pl, device = 'png')
-ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%s_covAssociation.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = 3, plot = pl, device = 'pdf')
+ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_covAssociation.png', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = 3, plot = pl, device = 'png')
+ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_covAssociation.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = 3, plot = pl, device = 'pdf')
 
 
 if(type_cluster == 'All'){
@@ -145,8 +153,8 @@ if(type_cluster == 'All'){
     ylab('n. of samples')+xlab('group')+
     annotate("text", x = sort(unique(perc_info$gr)), y = sapply(sort(unique(perc_info$gr)),function(x) sum(perc_info$count[perc_info$gr == x])) + 50, label = df_sign$symb, size = 3) +
     theme(legend.position = 'right', plot.title = element_text(size=9), axis.text.y = element_text(size = 7))+ggtitle(paste(type_data, type_input))
-  ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%s_DxPerc.png', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = 3, plot = pl, device = 'png')
-  ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%s_DxPerc.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = 3, plot = pl, device = 'pdf')
+  ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_DxPerc.png', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = 3, plot = pl, device = 'png')
+  ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_DxPerc.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = 3, plot = pl, device = 'pdf')
 
 }
 
@@ -167,8 +175,8 @@ pl <-  ggplot(test_pheno, aes(x = new_id, y = logpval, fill = sign))+
   scale_fill_manual(values=c("#999999", "#E69F00"))+
   theme(legend.position = 'none', plot.title = element_text(size=9), axis.text.y = element_text(size = 7))+ggtitle(paste(type_data, type_input, 'cluster', type_cluster))+
   coord_flip()
-ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%s_phenoAssociation.png', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = 5, plot = pl, device = 'png')
-ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%s_phenoAssociation.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = 5, plot = pl, device = 'pdf')
+ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation.png', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = 5, plot = pl, device = 'png')
+ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = 5, plot = pl, device = 'pdf')
 
 
 # spider plot for the 10 best phenotypes
@@ -183,7 +191,7 @@ for(i in 1:ncol(phenoDat_red)){
   if((is.integer(phenoDat_red[,i]) | is.character(phenoDat_red[,i])) & length(unique(phenoDat_red[,i])) == 2){
     perc_gr[i,] <- table(cl, phenoDat_red[,i])[,2]/rowSums(table(cl, phenoDat_red[,i]))
   }else{
-    perc_gr[i,] <- sapply(gr_id, function(x) mean(phenoDat_red[cl == x,i]))
+    perc_gr[i,] <- sapply(gr_id, function(x) mean(phenoDat_red[cl == x,i], na.rm = T))
   }
 }
 
@@ -201,7 +209,7 @@ col_lab <- rep('black', ncol(df_mat))
 # col_lab[test_pheno$sign[1:10] == 'yes'] <- 'orange'
 
 # If you remove the 2 first lines, the function compute the max and min of each variable with the available data:
-png(sprintf('%s%s_%s_cluster%s_PGmethod_%s_phenoAssociation_SP.png', outFold, type_data, type_input, type_cluster, type_sim), width = 10, height = 10, res = 500, units = 'in')
+png(sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation_SP.png', outFold, type_data, type_input, type_cluster, type_sim), width = 10, height = 10, res = 500, units = 'in')
 par(xpd = TRUE, mar=c(2,7,2,7))
 radarchart(df_mat  , axistype=0, maxmin = F,
            #custom polygon

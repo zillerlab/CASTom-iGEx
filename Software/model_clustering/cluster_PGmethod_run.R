@@ -298,10 +298,38 @@ if(type_cluster == 'All'){
 ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_umap.png', outFold, type_data, type_input, type_cluster, type_sim), width = width_pl, height = 4, plot = tot_pl, device = 'png')
 ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_umap.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = width_pl, height = 4, plot = tot_pl, device = 'pdf')
 
+df$Gender <- factor(sampleAnn$Gender)
+df$Batch <- factor(sampleAnn$Batch)
+df$Array <- factor(sampleAnn$Array)
+df$Centre <- factor(sampleAnn$initial_assessment_centre)
+df$Age <- sampleAnn$Age
+
+myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
+sc <- scale_colour_gradientn(colours = myPalette(100), limits=c(min(sampleAnn$Age), max(sampleAnn$Age)))
+
+pl1 <- ggplot(df, aes(x = component_1, y=component_2, color = Gender))+
+  geom_point(size = 0.03)+ggtitle('Gender')+
+  theme_bw()+theme(legend.position = 'none')
+pl2 <- ggplot(df, aes(x = component_1, y=component_2, color = Batch))+
+  geom_point(size = 0.03)+ggtitle('Batch')+
+  theme_bw()+theme(legend.position = 'none')
+pl3 <- ggplot(df, aes(x = component_1, y=component_2, color = Array))+
+  geom_point(size = 0.03)+ggtitle('Array')+
+  theme_bw()+theme(legend.position = 'none')
+pl4 <- ggplot(df, aes(x = component_1, y=component_2, color = Centre))+
+  geom_point(size = 0.03)+ggtitle('Centre')+
+  theme_bw()+theme(legend.position = 'none')
+pl5 <- ggplot(df, aes(x = component_1, y=component_2, color = Age))+
+  geom_point(size = 0.03)+ggtitle('Age')+sc+
+  theme_bw()+theme(legend.position = 'right')
+tot_pl <- ggarrange(plotlist = list(pl1, pl2, pl3, pl4, pl5), ncol = 3, nrow = 2)
+ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_umap_cov.png', outFold, type_data, type_input, type_cluster, type_sim), width = 12, height = 8, plot = tot_pl, device = 'png')
+ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_umap_cov.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = 12, height = 8, plot = tot_pl, device = 'pdf')
+
 
 ### plot: heatmap
 cl <- data.frame(gr = PG_cl[[which(kNN_par == opt_k)]]$cl$membership, id = output$samples_id, stringsAsFactors = F)
-pheat_pl(mat = input_data[,order(test_diff$pval)[1:100]], type_mat = type_data, cl = cl, height_pl = 9, width_pl = 7, outFile = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_heatmap', outFold, type_data, type_input, type_cluster, type_sim))
-pheat_pl(mat = scale(input_data[,order(test_diff$pval)[1:100]]), type_mat = type_data, cl = cl, height_pl = 9, width_pl = 7, outFile = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_heatmap_scaled', outFold, type_data, type_input, type_cluster, type_sim))
+pheat_pl(mat = input_data[,order(test_diff$pval)[1:100]], type_mat = type_data, cl = cl, height_pl = 8, width_pl = 6, outFile = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_heatmap', outFold, type_data, type_input, type_cluster, type_sim))
+pheat_pl(mat = scale(input_data[,order(test_diff$pval)[1:100]]), type_mat = type_data, cl = cl, height_pl = 8, width_pl = 6, outFile = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_heatmap_scaled', outFold, type_data, type_input, type_cluster, type_sim))
 
 
