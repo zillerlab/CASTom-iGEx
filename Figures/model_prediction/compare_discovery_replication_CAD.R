@@ -174,8 +174,10 @@ color_tissues <- read.table(color_file, h=T, stringsAsFactors = F)
 color_tissues <- color_tissues$color[match(tissues_name, color_tissues$tissues)]
 color_tissues <- c(color_tissues, '#666666')
 
-df <- data.frame(tissue = rep(res_tab$perc_disc_rep$tissue, 2),type = c(rep('T-score', nrow(res_tab$perc_disc_rep)),rep('Path-score (Reactome)', nrow(res_tab$perc_disc_rep))), perc = c(res_tab$perc_disc_rep$tscore, res_tab$perc_disc_rep$pathScore_reactome))
-df$pval <- c(res_tab$pval_disc_rep$tscore, res_tab$pval_disc_rep$pathScore_reactome)
+df <- data.frame(tissue = rep(res_tab$perc_disc_rep$tissue, 3),
+                 type = c(rep('T-score', nrow(res_tab$perc_disc_rep)),rep('Path-score (Reactome)', nrow(res_tab$perc_disc_rep)), rep('Path-score (GO)', nrow(res_tab$perc_disc_rep))), 
+                 perc = c(res_tab$perc_disc_rep$tscore, res_tab$perc_disc_rep$pathScore_reactome, res_tab$perc_disc_rep$pathScore_GO))
+df$pval <- c(res_tab$pval_disc_rep$tscore, res_tab$pval_disc_rep$pathScore_reactome, res_tab$pval_disc_rep$pathScore_GO)
 df$sign_symbol <- ''
 df$sign_symbol[df$pval<=0.05 & df$pval>0.01] <- '*'
 df$sign_symbol[df$pval<=0.01 & df$pval>0.001] <- '**'
@@ -183,7 +185,7 @@ df$sign_symbol[df$pval<=0.001 & df$pval>0.0001] <- '***'
 df$sign_symbol[df$pval<=0.0001] <- '****'
 df$pos <- df$perc+0.03
 df$tissue <- factor(df$tissue, levels = res_tab$perc_disc_rep$tissue)
-df$type <- factor(df$type, levels = c('T-score', 'Path-score (Reactome)'))
+df$type <- factor(df$type, levels = c('T-score', 'Path-score (Reactome)', 'Path-score (GO)'))
 
 pl_bar <- ggplot(data = df, mapping = aes(x = tissue, y = perc, fill = tissue))+
   geom_bar(stat = 'identity',color = 'black', alpha = 0.7, width = 0.8)+
@@ -191,31 +193,31 @@ pl_bar <- ggplot(data = df, mapping = aes(x = tissue, y = perc, fill = tissue))+
   geom_text(data = df, aes(x =tissue, y = pos, label = sign_symbol), size = 4, angle = 90)+
   facet_wrap(.~type, nrow = 1)+
   theme_bw()+theme(legend.position = 'none', axis.text.y = element_text(colour = color_tissues), axis.title.y = element_blank())+
-  ylab('percentage concordance z')+
+  ylab('fraction concordance z')+
   scale_fill_manual(values = color_tissues)+
   coord_flip()
 
-ggsave(plot = pl_bar, filename = sprintf('%s/signConcordance_discovery%s_replication_signFDR%.2f.png', outFold, pheno_name, pval_thr_FDR), width = 8, height = 3.7, dpi = 500)
-ggsave(plot = pl_bar, filename = sprintf('%s/signConcordance_discovery%s_replication_signFDR%.2f.pdf', outFold, pheno_name, pval_thr_FDR), width = 8, height = 3.7,  dpi = 500, compress = F)
+ggsave(plot = pl_bar, filename = sprintf('%s/signConcordance_discovery%s_replication_signFDR%.2f.png', outFold, pheno_name, pval_thr_FDR), width = 9, height = 3.7, dpi = 500)
+ggsave(plot = pl_bar, filename = sprintf('%s/signConcordance_discovery%s_replication_signFDR%.2f.pdf', outFold, pheno_name, pval_thr_FDR), width = 9, height = 3.7,  dpi = 500, compress = F)
 
 
 # dot plot
-df$nsign <- c(res_tab$dim_disc_sign$tscore, res_tab$dim_disc_sign$pathScore_reactome)
+df$nsign <- c(res_tab$dim_disc_sign$tscore, res_tab$dim_disc_sign$pathScore_reactome, res_tab$dim_disc_sign$pathScore_GO)
 pl_dot <- ggplot(data = df, mapping = aes(x = tissue, y = perc, color = tissue, size = nsign))+
   geom_point(alpha = 0.7)+
   geom_hline(yintercept = 0.5, linetype = 'dashed', size = 0.5)+
   geom_text(data = df, aes(x =tissue, y = pos, label = sign_symbol), size = 4, angle = 90)+
   facet_wrap(.~type, nrow = 1)+
   theme_bw()+theme(legend.position = 'bottom', axis.text.y = element_text(colour = color_tissues), axis.title.y = element_blank())+
-  ylab('percentage concordance z')+
+  ylab('fraction concordance z')+
   scale_color_manual(values = color_tissues)+
   scale_size_continuous(breaks = round(seq(min(df$nsign), max(df$nsign), length.out = 6)))+
   labs(size = sprintf('n. of genes/pathway significant\n (FDR %.2f)', pval_thr_FDR))+
   guides(color = FALSE, size=guide_legend(nrow=1,byrow=TRUE)) + coord_flip()
 
 
-ggsave(plot = pl_dot, filename = sprintf('%s/signConcordance_discovery%s_replication_signFDR%.2f_dotplot.png', outFold, pheno_name, pval_thr_FDR), width = 8, height = 3.7, dpi = 500)
-ggsave(plot = pl_dot, filename = sprintf('%s/signConcordance_discovery%s_replication_signFDR%.2f_dotplot.pdf', outFold, pheno_name, pval_thr_FDR), width = 20, height = 10,  dpi = 500, compress = F)
+ggsave(plot = pl_dot, filename = sprintf('%s/signConcordance_discovery%s_replication_signFDR%.2f_dotplot.png', outFold, pheno_name, pval_thr_FDR), width = 9, height = 3.7, dpi = 500)
+ggsave(plot = pl_dot, filename = sprintf('%s/signConcordance_discovery%s_replication_signFDR%.2f_dotplot.pdf', outFold, pheno_name, pval_thr_FDR), width = 9, height = 3.7,  dpi = 500, compress = F)
 
 
 

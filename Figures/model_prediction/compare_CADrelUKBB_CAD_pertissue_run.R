@@ -13,7 +13,6 @@ suppressPackageStartupMessages(library(qvalue))
 suppressPackageStartupMessages(library(cowplot))
 suppressPackageStartupMessages(library(ggsignif))
 suppressPackageStartupMessages(library(ggpubr))
-
 options(bitmapType = 'cairo', device = 'png')
 
 parser <- ArgumentParser(description="find enrichment of CAD-UKBB associated element with UKBB gene-pheno or path-pheno phenotypes")
@@ -23,7 +22,7 @@ parser$add_argument("--inputFile_CADUKBB", type = "character", help = "File with
 parser$add_argument("--pval_FDR_CADrel", type = "double", default = 0.05, help = "pval threshold to filter the genes and pathways (after BH correction) in CAD related phenotypes")
 parser$add_argument("--pval_FDR_CAD", type = "double", default = 0.05,  help = "pval threshold to filter the genes and pathways (after BH correction) in CAD phenotypes")
 parser$add_argument("--tissue_name", type = "character", help = "tissue considered")
-parser$add_argument("--pval_id", type = "integer", default = 1, help = "1: CAD_HARD, 2:CAD_SOFT")
+parser$add_argument("--pval_id", type = "integer", default = 1, help = "1: CAD_HARD, 2:CAD_SOFT") # modify code to make dependent on pval_id
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
 args <- parser$parse_args()
@@ -36,16 +35,16 @@ pval_FDR_CAD <- args$pval_FDR_CAD
 pval_id <- args$pval_id
 outFold <- args$outFold
 
-#########################################################################################################################
-phenoFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/INPUT_DATA_GTEx/CAD/Covariates/UKBB/'
-tissue_name <- 'Liver'
-inputFold_CADrel <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/'
-inputFile_CADUKBB <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/pval_CAD_pheno_covCorr.RData'
-outFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/'
-pval_FDR_CADrel <- 0.05
-pval_FDR_CAD <- 0.05
-pval_id <- 1
-##########################################################################################################################
+# #########################################################################################################################
+# phenoFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/INPUT_DATA_GTEx/CAD/Covariates/UKBB/'
+# tissue_name <- 'Liver'
+# inputFold_CADrel <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Adipose_Subcutaneous/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/'
+# inputFile_CADUKBB <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Adipose_Subcutaneous/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/pval_CAD_pheno_covCorr.RData'
+# outFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Adipose_Subcutaneous/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/'
+# pval_FDR_CADrel <- 0.05
+# pval_FDR_CAD <- 0.05
+# pval_id <- 1
+# ##########################################################################################################################
 
 ### load PGC res and filter significant ###
 res_pval <- get(load(inputFile_CADUKBB))
@@ -136,7 +135,7 @@ for(j in 1:length(pheno_name)){
   }
   # compute fisher test
   id_notnull <- which(sapply(vect_UKBB, function(x) any(x == 1)))
-  if(length(id_notnull)>0){
+  if(length(id_notnull)>0 & any(vect_CAD == 1)){
     test_tscore[[j]]$fisher_pval[id_notnull] <- sapply(vect_UKBB[id_notnull], function(x) fisher.test(x = vect_CAD, y =x, alternative = 'greater')$p.value)
     test_tscore[[j]]$fisher_OR[id_notnull] <- sapply(vect_UKBB[id_notnull], function(x) fisher.test(x = vect_CAD, y =x, alternative = 'greater')$estimate)
   }
@@ -149,7 +148,7 @@ for(j in 1:length(pheno_name)){
   }
   # compute fisher test
   id_notnull <- which(sapply(vect_UKBB, function(x) any(x == 1)))
-  if(length(id_notnull) > 0){
+  if(length(id_notnull) > 0 & any(vect_CAD == 1)){
     test_pathR[[j]]$fisher_pval[id_notnull]<- sapply(vect_UKBB[id_notnull], function(x) fisher.test(x = vect_CAD, y =x, alternative = 'greater')$p.value)
     test_pathR[[j]]$fisher_OR[id_notnull]<- sapply(vect_UKBB[id_notnull], function(x) fisher.test(x = vect_CAD, y =x, alternative = 'greater')$estimate)
   }
@@ -162,7 +161,7 @@ for(j in 1:length(pheno_name)){
   }
   # compute fisher test
   id_notnull <- which(sapply(vect_UKBB, function(x) any(x == 1)))
-  if(length(id_notnull) > 0){
+  if(length(id_notnull) > 0 & any(vect_CAD == 1)){
     test_pathGO[[j]]$fisher_pval[id_notnull]<- sapply(vect_UKBB[id_notnull], function(x) fisher.test(x = vect_CAD, y =x, alternative = 'greater')$p.value)
     test_pathGO[[j]]$fisher_OR[id_notnull]<- sapply(vect_UKBB[id_notnull], function(x) fisher.test(x = vect_CAD, y =x, alternative = 'greater')$estimate)
   }
@@ -226,12 +225,30 @@ test_tscore <- do.call(rbind, test_tscore)
 test_pathR <- do.call(rbind, test_pathR)
 test_pathGO <- do.call(rbind, test_pathGO)
 # correct pvalues
-test_tscore$fisher_qval <- qvalue(test_tscore$fisher_pval)$qvalue
-test_tscore$fisher_pval_BHcorr <- p.adjust(test_tscore$fisher_pval, method = 'BH')
-test_pathR$fisher_qval <- qvalue(test_pathR$fisher_pval)$qvalue
-test_pathR$fisher_pval_BHcorr <- p.adjust(test_pathR$fisher_pval, method = 'BH')
-test_pathGO$fisher_qval <- qvalue(test_pathGO$fisher_pval)$qvalue
-test_pathGO$fisher_pval_BHcorr <- p.adjust(test_pathGO$fisher_pval, method = 'BH')
+if(any(!is.na(test_tscore$fisher_pval))){
+  test_tscore$fisher_qval <- qvalue(test_tscore$fisher_pval)$qvalue
+  test_tscore$fisher_pval_BHcorr <- p.adjust(test_tscore$fisher_pval, method = 'BH')
+}else{
+  test_tscore$fisher_qval <- NA
+  test_tscore$fisher_pval_BHcorr <- NA
+}
+
+if(any(!is.na(test_pathR$fisher_pval))){
+  test_pathR$fisher_qval <- qvalue(test_pathR$fisher_pval)$qvalue
+  test_pathR$fisher_pval_BHcorr <- p.adjust(test_pathR$fisher_pval, method = 'BH')
+}else{
+  test_pathR$fisher_qval <- NA
+  test_pathR$fisher_pval_BHcorr <- NA
+}
+
+if(any(!is.na(test_pathGO$fisher_pval))){
+  test_pathGO$fisher_qval <- qvalue(test_pathGO$fisher_pval)$qvalue
+  test_pathGO$fisher_pval_BHcorr <- p.adjust(test_pathGO$fisher_pval, method = 'BH')
+}else{
+  test_pathGO$fisher_qval <- NA
+  test_pathGO$fisher_pval_BHcorr <- NA
+}
+
 # add pheno name
 test_tscore$names_field <- pheno_info$names_field
 test_pathR$names_field <- pheno_info$names_field
@@ -253,58 +270,64 @@ genes_int <- df_zscore_tscore[[1]][,c(1:2)] # genes are always the same!
 df_zscore_tscore_all <- data.frame(genes_int)
 df_pval_tscore_all <- data.frame(genes_int)
 df_pvalcorr_tscore_all <- data.frame(genes_int)
-for(j in 1:length(df_zscore_tscore)){
-  df_zscore_tscore_all <- cbind(df_zscore_tscore_all, df_zscore_tscore[[j]][, -c(1:2)])
-  df_pval_tscore_all <- cbind(df_pval_tscore_all, df_pval_tscore[[j]][, -c(1:2)])
-  df_pvalcorr_tscore_all <- cbind(df_pvalcorr_tscore_all, df_pvalcorr_tscore[[j]][, -c(1:2)])
-}
-colnames(df_zscore_tscore_all)[-c(1:2)] <- pheno_info$pheno
-colnames(df_pval_tscore_all)[-c(1:2)] <- pheno_info$pheno
-colnames(df_pvalcorr_tscore_all)[-c(1:2)] <- pheno_info$pheno
-##### filter out based on pvalcorr #####
-id_notsign <- df_pvalcorr_tscore_all[,-c(1:2)] > pval_FDR_CADrel
-df_zscore_tscore_all[,-c(1:2)][id_notsign] <- 0
-id_keep <- list(row = rowSums(df_zscore_tscore_all[, -c(1:2)], na.rm = T) != 0, col = colSums(df_zscore_tscore_all[, -c(1:2)],  na.rm = T) != 0)
-df_zscore_tscore_all <- df_zscore_tscore_all[id_keep$row,c(T,T, id_keep$col)]
 
+if(length(genes_int)>0){
+for(j in 1:length(df_zscore_tscore)){
+    df_zscore_tscore_all <- cbind(df_zscore_tscore_all, df_zscore_tscore[[j]][, -c(1:2)])
+    df_pval_tscore_all <- cbind(df_pval_tscore_all, df_pval_tscore[[j]][, -c(1:2)])
+    df_pvalcorr_tscore_all <- cbind(df_pvalcorr_tscore_all, df_pvalcorr_tscore[[j]][, -c(1:2)])
+  }
+  colnames(df_zscore_tscore_all)[-c(1:2)] <- pheno_info$pheno
+  colnames(df_pval_tscore_all)[-c(1:2)] <- pheno_info$pheno
+  colnames(df_pvalcorr_tscore_all)[-c(1:2)] <- pheno_info$pheno
+  ##### filter out based on pvalcorr #####
+  id_notsign <- df_pvalcorr_tscore_all[,-c(1:2)] > pval_FDR_CADrel
+  df_zscore_tscore_all[,-c(1:2)][id_notsign] <- 0
+  id_keep <- list(row = rowSums(df_zscore_tscore_all[, -c(1:2)], na.rm = T) != 0, col = colSums(df_zscore_tscore_all[, -c(1:2)],  na.rm = T) != 0)
+  df_zscore_tscore_all <- df_zscore_tscore_all[id_keep$row,c(T,T, id_keep$col)]
+}
 # pathR
 path_int <- df_zscore_pathR[[1]][,1] # path are always the same!
 df_zscore_pathR_all <- data.frame(path  = path_int)
 df_pval_pathR_all <- data.frame(path  = path_int)
 df_pvalcorr_pathR_all <- data.frame(path  = path_int)
-for(j in 1:length(df_zscore_pathR)){
-  df_zscore_pathR_all <- cbind(df_zscore_pathR_all, df_zscore_pathR[[j]][, -1])
-  df_pval_pathR_all <- cbind(df_pval_pathR_all, df_pval_pathR[[j]][, -1])
-  df_pvalcorr_pathR_all <- cbind(df_pvalcorr_pathR_all, df_pvalcorr_pathR[[j]][, -1])
+if(length(path_int)>0){
+  for(j in 1:length(df_zscore_pathR)){
+    df_zscore_pathR_all <- cbind(df_zscore_pathR_all, df_zscore_pathR[[j]][, -1])
+    df_pval_pathR_all <- cbind(df_pval_pathR_all, df_pval_pathR[[j]][, -1])
+    df_pvalcorr_pathR_all <- cbind(df_pvalcorr_pathR_all, df_pvalcorr_pathR[[j]][, -1])
+  }
+  colnames(df_zscore_pathR_all)[-1] <- pheno_info$pheno
+  colnames(df_pval_pathR_all)[-1] <- pheno_info$pheno
+  colnames(df_pvalcorr_pathR_all)[-1] <- pheno_info$pheno
+  ##### filter out based on pvalcorr #####
+  id_notsign <- df_pvalcorr_pathR_all[,-c(1)] > pval_FDR_CADrel
+  df_zscore_pathR_all[,-c(1)][id_notsign] <- 0
+  id_keep <- list(row = rowSums(df_zscore_pathR_all[, -c(1)], na.rm = T) != 0, col = colSums(df_zscore_pathR_all[, -c(1)],  na.rm = T) != 0)
+  df_zscore_pathR_all <- df_zscore_pathR_all[id_keep$row,c(T, id_keep$col)]
 }
-colnames(df_zscore_pathR_all)[-1] <- pheno_info$pheno
-colnames(df_pval_pathR_all)[-1] <- pheno_info$pheno
-colnames(df_pvalcorr_pathR_all)[-1] <- pheno_info$pheno
-##### filter out based on pvalcorr #####
-id_notsign <- df_pvalcorr_pathR_all[,-c(1)] > pval_FDR_CADrel
-df_zscore_pathR_all[,-c(1)][id_notsign] <- 0
-id_keep <- list(row = rowSums(df_zscore_pathR_all[, -c(1)], na.rm = T) != 0, col = colSums(df_zscore_pathR_all[, -c(1)],  na.rm = T) != 0)
-df_zscore_pathR_all <- df_zscore_pathR_all[id_keep$row,c(T, id_keep$col)]
+
 
 # pathGO
 path_int <- df_zscore_pathGO[[1]][,1] # path are always the same!
 df_zscore_pathGO_all <- data.frame(path  = path_int)
 df_pval_pathGO_all <- data.frame(path  = path_int)
 df_pvalcorr_pathGO_all <- data.frame(path  = path_int)
-for(j in 1:length(df_zscore_pathGO)){
-  df_zscore_pathGO_all <- cbind(df_zscore_pathGO_all, df_zscore_pathGO[[j]][, -1])
-  df_pval_pathGO_all <- cbind(df_pval_pathGO_all, df_pval_pathGO[[j]][, -1])
-  df_pvalcorr_pathGO_all <- cbind(df_pvalcorr_pathGO_all, df_pvalcorr_pathGO[[j]][, -1])
+if(length(path_int)>0){
+  for(j in 1:length(df_zscore_pathGO)){
+    df_zscore_pathGO_all <- cbind(df_zscore_pathGO_all, df_zscore_pathGO[[j]][, -1])
+    df_pval_pathGO_all <- cbind(df_pval_pathGO_all, df_pval_pathGO[[j]][, -1])
+    df_pvalcorr_pathGO_all <- cbind(df_pvalcorr_pathGO_all, df_pvalcorr_pathGO[[j]][, -1])
+  }
+  colnames(df_zscore_pathGO_all)[-1] <- pheno_info$pheno
+  colnames(df_pval_pathGO_all)[-1] <- pheno_info$pheno
+  colnames(df_pvalcorr_pathGO_all)[-1] <- pheno_info$pheno
+  ##### filter out based on pvalcorr #####
+  id_notsign <- df_pvalcorr_pathGO_all[,-c(1)] > pval_FDR_CADrel
+  df_zscore_pathGO_all[,-c(1)][id_notsign] <- 0
+  id_keep <- list(row = rowSums(df_zscore_pathGO_all[, -c(1)], na.rm = T) != 0, col = colSums(df_zscore_pathGO_all[, -c(1)], na.rm = T) != 0)
+  df_zscore_pathGO_all <- df_zscore_pathGO_all[id_keep$row,c(T, id_keep$col)]
 }
-colnames(df_zscore_pathGO_all)[-1] <- pheno_info$pheno
-colnames(df_pval_pathGO_all)[-1] <- pheno_info$pheno
-colnames(df_pvalcorr_pathGO_all)[-1] <- pheno_info$pheno
-##### filter out based on pvalcorr #####
-id_notsign <- df_pvalcorr_pathGO_all[,-c(1)] > pval_FDR_CADrel
-df_zscore_pathGO_all[,-c(1)][id_notsign] <- 0
-id_keep <- list(row = rowSums(df_zscore_pathGO_all[, -c(1)], na.rm = T) != 0, col = colSums(df_zscore_pathGO_all[, -c(1)], na.rm = T) != 0)
-df_zscore_pathGO_all <- df_zscore_pathGO_all[id_keep$row,c(T, id_keep$col)]
-
 res_zscore <- list(tscore = df_zscore_tscore_all, path_Reactome = df_zscore_pathR_all, path_GO = df_zscore_pathGO_all, pheno = pheno_info)
 save(res_zscore, file = sprintf("%s/%s_Zstatistic_intersection_pvalFDR-CAD%.2f_pvalFDR-CADrel%.2f.RData", outFold, tissue_name, pval_FDR_CAD, pval_FDR_CADrel))
 
@@ -549,10 +572,18 @@ plot_heatmap_split <- function(type_mat, df_zscore, CAD_res, id_to_rm, id_col, i
 
 
 # plot heatmap
-plot_heatmap_split(type_mat = 'tscore', id_col_match = 1, df_zscore = df_zscore_tscore_all, CAD_res = tscore_CAD_red, 
-                        id_to_rm = c(1:2), id_col = 2, pheno_info = pheno_info, color_cat = color_pheno_cat)
-plot_heatmap_split(type_mat = 'pathScore_Reactome', id_col_match = 1, df_zscore = df_zscore_pathR_all, CAD_res = pathR_CAD_red, 
-                        id_to_rm = c(1), id_col = 1, pheno_info = pheno_info, color_cat = color_pheno_cat, width_pl = 12, height_pl = 7)
-plot_heatmap_split(type_mat = 'pathScore_GO', id_col_match = 2, df_zscore = df_zscore_pathGO_all, CAD_res = pathGO_CAD_red, 
-                        id_to_rm = c(1), id_col = 1, pheno_info = pheno_info, color_cat = color_pheno_cat)
+if(nrow(df_zscore_tscore_all)>0){
+  plot_heatmap_split(type_mat = 'tscore', id_col_match = 1, df_zscore = df_zscore_tscore_all, CAD_res = tscore_CAD_red, 
+                     id_to_rm = c(1:2), id_col = 2, pheno_info = pheno_info, color_cat = color_pheno_cat)
+}
+if(nrow(df_zscore_pathR_all)>0){
+  plot_heatmap_split(type_mat = 'pathScore_Reactome', id_col_match = 1, df_zscore = df_zscore_pathR_all, CAD_res = pathR_CAD_red, 
+                     id_to_rm = c(1), id_col = 1, pheno_info = pheno_info, color_cat = color_pheno_cat, width_pl = 12, height_pl = 7)
+}
+if(nrow(df_zscore_pathGO_all)>0){
+  plot_heatmap_split(type_mat = 'pathScore_GO', id_col_match = 2, df_zscore = df_zscore_pathGO_all, CAD_res = pathGO_CAD_red, 
+                     id_to_rm = c(1), id_col = 1, pheno_info = pheno_info, color_cat = color_pheno_cat)
+  
+}
+
 
