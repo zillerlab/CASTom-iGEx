@@ -97,10 +97,10 @@ geneAnn <- geneAnn[geneAnn$test_dev_geno > thr_reliableGenes[2],]
 tscoreMat <- fread(sprintf('%spredictedTscores.txt', inputFold), header = T, stringsAsFactors = F, sep = '\t', check.names = F, data.table = F)
 genesID <- tscoreMat[,1]
 tscoreMat <- tscoreMat[,-1]
-samplesID <- sapply(colnames(tscoreMat), function(x) strsplit(x, split = '.vs')[[1]][1])
-samplesID <- unname(samplesID)
-colnames(tscoreMat) <- samplesID
-print(identical(samplesID, sampleAnn$Individual_ID))
+#samplesID <- sapply(colnames(tscoreMat), function(x) strsplit(x, split = '.vs')[[1]][1])
+#samplesID <- unname(samplesID)
+#colnames(tscoreMat) <- samplesID
+print(identical(colnames(tscoreMat), sampleAnn$Individual_ID))
 tscoreMat <- t(tscoreMat) # samples on the rows
 
 # remove sample that have NAs
