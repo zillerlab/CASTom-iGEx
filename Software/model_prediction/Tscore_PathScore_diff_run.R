@@ -278,8 +278,11 @@ tscoreTables[[paste(curComparison,collapse="::")]] = tTable
 
 # save
 tscoreTables[[1]]=tscoreTables[[1]][is.element(tscoreTables[[1]][,1], geneInfo$external_gene_name),] ##### modify, there are repetitons!
-tmp <- sapply(colnames(tscoreTables[[1]])[-1], function(x) paste(strsplit(x,' ')[[1]][-1], collapse = " "))
-colnames(tscoreTables[[1]])[-1] <- mapply(function(x,y) paste(x, y),x= sampleAnn$Individual_ID, y=tmp)
+#tmp <- sapply(colnames(tscoreTables[[1]])[-1], function(x) paste(strsplit(x,' ')[[1]][-1], collapse = " "))
+print(str(sampleAnn$Individual_ID))
+print(str(sapply(colnames(tscoreTables[[1]])[-1], function(x) strsplit(x,' ')[[1]][1])))
+#colnames(tscoreTables[[1]])[-1] <- mapply(function(x,y) paste(x, y),x= sampleAnn$Individual_ID, y=tmp)
+colnames(tscoreTables[[1]])[-1] <- sampleAnn$Individual_ID
 write.table(tscoreTables[[1]],sprintf("%spredictedTscores.txt", outFold),sep="\t",row.names=F,quote=F)
 
 #################################################
@@ -331,9 +334,9 @@ pvalues = pvalues[valid,]
 # for each lineage / group of gene sets, take the mean of the gene set scores of all contributing gene sets
 # export lineage scorecard
 output = data.frame(rownames(scores),scores)
-names(output) = c("sampleName",colnames(scores))
+names(output) = c("pathID",colnames(scores))
 output2 = data.frame(rownames(scores),pvalues)
-names(output2) = c("sampleName",colnames(pvalues))
+names(output2) = c("pathID",colnames(pvalues))
 write.table(output,sprintf("%sPathway_%s_scores.txt", outFold, geneSetName),sep="\t",quote=F,row.names=F)     
 write.table(output2,sprintf("%sPathway_%s_pval.txt", outFold,geneSetName),sep="\t",quote=F,row.names=F)      
 scorecards[[curComparison]] = output
@@ -436,9 +439,9 @@ pvalues = pvalues[valid,]
 # for each lineage / group of gene sets, take the mean of the gene set scores of all contributing gene sets
 # export lineage scorecard
 output = data.frame(rownames(scores),scores)
-names(output) = c("sampleName",colnames(scores))
+names(output) = c("pathID",colnames(scores))
 output2 = data.frame(rownames(scores),pvalues)
-names(output2) = c("sampleName",colnames(pvalues))
+names(output2) = c("pathID",colnames(pvalues))
 write.table(output,sprintf("%sPathway_%s_scores.txt", outFold, geneSetName),sep="\t",quote=F,row.names=F)     
 write.table(output2,sprintf("%sPathway_%s_pval.txt", outFold,geneSetName),sep="\t",quote=F,row.names=F)      
 scorecards[[curComparison]] = output
