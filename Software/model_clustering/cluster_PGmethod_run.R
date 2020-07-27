@@ -20,6 +20,9 @@ options(bitmapType = 'cairo', device = 'png')
 parser <- ArgumentParser(description="clustering using PG method")
 parser$add_argument("--inputFile", type = "character", default = 'NA', help = "file to be loaded (predicted tscore or pathScore)")
 parser$add_argument("--sampleAnnFile", type = "character", help = "file with samples to be used")
+parser$add_argument("--tissues_name", type = "character", help = "name tissue")
+parser$add_argument("--color_file", type = "character", help = "file with color based on phenotype")
+parser$add_argument("--covDatFile", type = "character", default = 'NA', help = "additional cov to test")
 parser$add_argument("--type_cluster", type = "character", default = 'All', help = "All, Cases, Controls")
 parser$add_argument("--split_tot", type = "integer", default = 0, help = "if 0 then inpuntFile load alone, otherwise splitted version")
 parser$add_argument("--pvalresFile", type = "character", default = 'NA', help = "file with pvalue results")
@@ -35,8 +38,11 @@ parser$add_argument("--outFold", type="character", help = "Output file [basename
 
 args <- parser$parse_args()
 pvalresFile <- args$pvalresFile
+tissues_name <- args$tissues_name
+color_file <- args$color_file
 pval_id <- args$pval_id
 inputFile <- args$inputFile
+covDatFile <- args$covDatFile
 sampleAnnFile <- args$sampleAnnFile
 type_cluster <- args$type_cluster
 split_tot <- args$split_tot
@@ -49,22 +55,25 @@ type_input <- args$type_input
 kNN_par <- args$kNN_par
 outFold <- args$outFold
 
-# #####################################################################################################################
-# inputFile <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/predictedTscores_splitGenes'
-# sampleAnnFile <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_clustering/covariateMatrix_CADsubset.txt'
+#####################################################################################################################
+# inputFile <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_UKBB/Whole_Blood/200kb/noGWAS/devgeno0.01_testdevgeno0/predictedTscores_splitGenes'
+# sampleAnnFile <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/INPUT_DATA/Covariates/MDD_pheno_def/covariateMatrix_MDDRecur.txt'
+# covDatFile <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/INPUT_DATA/Covariates/covariatesMatrix_batchInfo.txt'
 # split_tot <- 100
-# pvalresFile <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/pval_CAD_pheno_covCorr.RData'
+# pvalresFile <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_UKBB/Whole_Blood/200kb/noGWAS/devgeno0.01_testdevgeno0/MDDRecur_pheno/pval_MDDRecur_pheno_covCorr.RData'
 # pval_id <- 1
 # min_genes_path <- 2
 # type_data <- 'tscore'
 # type_cluster <- 'Cases'
 # type_sim <- 'HK'
-# outFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/'
-# functR <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/RSCRIPTS/SCRIPTS_v2/clustering_functions.R'
+# outFold <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_UKBB/Whole_Blood/200kb/noGWAS/devgeno0.01_testdevgeno0/MDDRecur_pheno/'
+# functR <- '/psycl/g/mpsziller/lucia/priler_project/Software//model_clustering/clustering_functions.R'
 # corr_thr <- 0.9
 # type_input <- 'zscaled'
 # kNN_par <- 30
-# #####################################################################################################################
+# color_file <- '/psycl/g/mpsziller/lucia/priler_project/Figures/color_tissues.txt'
+# tissues_name <- 'Whole_Blood'
+#####################################################################################################################
 
 source(functR)
 
@@ -80,6 +89,14 @@ if(type_cluster == 'Cases'){
       stop('type_cluster must be either Cases or Controls or All')
   }
 }
+
+if(covDatFile != 'NA'){
+  covDat <- read.table(covDatFile, h=T, stringsAsFactors = F, sep = '\t')
+  covDat <- covDat[match(sampleAnn$Individual_ID, covDat$Individual_ID), ]
+  sampleAnn$Batch <- covDat$Batch
+  sampleAnn$Array <- covDat$Array
+  sampleAnn$initial_assessment_centre <- covDat$initial_assessment_centre
+}  
 
 # load pval res
 res_pval <- get(load(pvalresFile))
@@ -125,7 +142,7 @@ if(split_tot == 0){
   rownames(scoreMat) <- common_samples
   colnames(scoreMat) <- id_el
   res_pval <- res_pval[match(id_el, res_pval[, id_info]),]
-
+  
 }else{
   
   ###### load score Mat #######
@@ -171,7 +188,7 @@ if(split_tot == 0){
   sampleAnn <- sampleAnn[match(common_samples, sampleAnn$Individual_ID),]
   scoreMat <- scoreMat[match(common_samples,rownames(scoreMat)),]
   res_pval <- res_pval[match(id_el, res_pval[, id_info]),]
-
+  
 }
 print(identical(colnames(scoreMat), res_pval[, id_info]))
 
@@ -215,7 +232,7 @@ for(i in 1:length(kNN_par)){
   print(PG_cl[[i]]$info)
   # cluster depend on PC?
   id <- PG_cl[[i]]$cl$membership
-  df <- cbind(data.frame(cl = id), sampleAnn[,! colnames(sampleAnn) %in% c('Individual_ID', 'Dx')])
+  df <- cbind(data.frame(cl = id), sampleAnn[,! colnames(sampleAnn) %in% c('Individual_ID', 'Dx', 'genoSample_ID')])
   test_cov[[i]] <- data.frame(cov_id = colnames(df)[-(1)])
   test_cov[[i]]$test_type <- test_cov[[i]]$statistic <- test_cov[[i]]$pval <- NA
   for(j in 1:(ncol(df)-1)){
@@ -244,25 +261,46 @@ opt_k <- kNN_par[which.max(info_hyperParam$DB_mean)]
 # if type_clster == 'All' compute percentage for each group
 df_perc <- df_perc_test <- list()
 if(type_cluster == 'All'){
-
+  
   for(i in 1:length(kNN_par)){
     perc <- table(PG_cl[[i]]$cl$membership, sampleAnn$Dx)/rowSums(table(PG_cl[[i]]$cl$membership, sampleAnn$Dx))
     # test fisher for each group
     cl_id <- sort(unique(PG_cl[[i]]$cl$membership))
     df_perc[[i]] <- data.frame(gr = rep(cl_id,2), Dx = c(rep(0,nrow(perc)), rep(1,nrow(perc))), 
-                          perc = as.vector(perc), count = as.vector(table(PG_cl[[i]]$cl$membership, sampleAnn$Dx)))
+                               perc = as.vector(perc), count = as.vector(table(PG_cl[[i]]$cl$membership, sampleAnn$Dx)))
     df_perc_test[[i]] <- data.frame(gr = c(cl_id, 'all'), 
-                               fisher_test = c(sapply(cl_id, function(x) fisher.test(table(PG_cl[[i]]$cl$membership == x, sampleAnn$Dx))$p.value), 
-                                              chisq.test(table(PG_cl[[i]]$cl$membership, sampleAnn$Dx))$p.value))
+                                    fisher_test = c(sapply(cl_id, function(x) fisher.test(table(PG_cl[[i]]$cl$membership == x, sampleAnn$Dx))$p.value), 
+                                                    chisq.test(table(PG_cl[[i]]$cl$membership, sampleAnn$Dx))$p.value))
   }
 }
 
-output <- list(best_k = opt_k, cl_res = PG_cl, test_cov = test_cov, info_tune = info_hyperParam, feat = colnames(input_data))
+output <- list(best_k = opt_k, cl_res = PG_cl, test_cov = test_cov, info_tune = info_hyperParam, feat = colnames(input_data), 
+               cl_best = data.frame(id = sampleAnn$Individual_ID, gr = PG_cl[[which.max(info_hyperParam$DB_mean)]]$cl$membership))
 output$Dx_perc <- list(perc = df_perc, test = df_perc_test)
 output$samples_id <- rownames(input_data)
 # most significant elements
-test_diff <- data.frame(id = colnames(input_data), pval = apply(input_data, 2, function(x) kruskal.test(x = x, g = factor(PG_cl[[which(kNN_par == opt_k)]]$cl$membership))$p.value))
+test_diff <- data.frame(id = colnames(input_data), pval = apply(input_data, 2, function(x) kruskal.test(x = x, g = factor(output$cl_best$gr))$p.value))
+test_diff$pval_corr <- p.adjust(test_diff$pval, method = 'BH')
 output$test_diff_gr <- test_diff
+# compute mean for each gr
+df_gr_mean <- matrix(ncol = length(unique(output$cl_best$gr)), nrow = nrow(test_diff))
+df_gr_sd <- matrix(ncol = length(unique(output$cl_best$gr)), nrow = nrow(test_diff))
+
+df_gr_mean[,] <- t(apply(input_data, 2, function(x) 
+  sapply(sort(unique(output$cl_best$gr)), function(y) mean(x[output$cl_best$gr == y]) )))
+  
+df_gr_sd[,] <- t(apply(input_data, 2, function(x) 
+    sapply(sort(unique(output$cl_best$gr)), function(y) sd(x[output$cl_best$gr == y]) )))
+
+df_gr_cv <- df_gr_mean/df_gr_sd
+colnames(df_gr_cv) <- colnames(df_gr_mean) <- colnames(df_gr_sd) <- paste0('gr_', sort(unique(output$cl_best$gr)))
+df_gr_cv <- as.data.frame(df_gr_cv)
+df_gr_mean <- as.data.frame(df_gr_mean)
+df_gr_sd <- as.data.frame(df_gr_sd)
+df_gr_mean$id <- df_gr_sd$id <- df_gr_cv$id <- colnames(input_data)
+
+output$gr_input <- list(mean = df_gr_mean, sd = df_gr_sd, cv = df_gr_cv)
+
 # save results:
 save(output, file = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric.RData', outFold, type_data, type_input, type_cluster, type_sim))
 
@@ -280,12 +318,12 @@ custom.settings$random_state <- seed_umap
 
 umap_res <- umap::umap(input_data, custom.settings)
 
-df <- data.frame(component_1=umap_res$layout[,1], component_2=umap_res$layout[,2], gr = PG_cl[[which(kNN_par == opt_k)]]$cl$membership)
+df <- data.frame(component_1=umap_res$layout[,1], component_2=umap_res$layout[,2], gr = output$cl_best$gr)
 df$gr <- factor(df$gr)
 
 tot_pl <- ggplot(df, aes(x = component_1, y = component_2, color = gr))+
   geom_point(size = 0.05)+
-  theme_bw()+theme(legend.position = 'none')
+  theme_bw()+theme(legend.position = 'right')
 width_pl <- 4
 if(type_cluster == 'All'){
   df$Dx <- factor(sampleAnn$Dx)
@@ -326,10 +364,42 @@ tot_pl <- ggarrange(plotlist = list(pl1, pl2, pl3, pl4, pl5), ncol = 3, nrow = 2
 ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_umap_cov.png', outFold, type_data, type_input, type_cluster, type_sim), width = 12, height = 8, plot = tot_pl, device = 'png')
 ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_umap_cov.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = 12, height = 8, plot = tot_pl, device = 'pdf')
 
-
 ### plot: heatmap
-cl <- data.frame(gr = PG_cl[[which(kNN_par == opt_k)]]$cl$membership, id = output$samples_id, stringsAsFactors = F)
-pheat_pl(mat = input_data[,order(test_diff$pval)[1:100]], type_mat = type_data, cl = cl, height_pl = 8, width_pl = 6, outFile = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_heatmap', outFold, type_data, type_input, type_cluster, type_sim))
-pheat_pl(mat = scale(input_data[,order(test_diff$pval)[1:100]]), type_mat = type_data, cl = cl, height_pl = 8, width_pl = 6, outFile = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_heatmap_scaled', outFold, type_data, type_input, type_cluster, type_sim))
+file_name <- sprintf('%s%s_%s_cluster%s_PGmethod_%smetric', outFold, type_data, type_input, type_cluster, type_sim)
+tmp <- test_diff[test_diff$pval_corr < 0.05,]
+if(nrow(tmp)>50){
+  keep_feat <- test_diff[order(test_diff$pval)[1:50],]
+}else{
+  keep_feat <- tmp
+}
+
+
+pheat_pl(mat = input_data[,keep_feat$id], type_mat = type_data, cl = output$cl_best, height_pl = 7, width_pl = 5, 
+           outFile = paste0(file_name, '_heatmap'))
+if(type_input == 'zscaled'){
+    pheat_pl(mat = scale(input_data[,keep_feat$id]), type_mat = type_data, cl = output$cl_best, height_pl = 7, width_pl = 5, 
+             outFile = paste0(file_name, '_heatmap_scaled'))
+}
+
+color_tissues <- read.table(color_file, h=T, stringsAsFactors = F)
+color_tissues <- color_tissues[match(tissues_name, color_tissues$tissues),]
+
+mat <- output$gr_input$cv[output$gr_input$cv$id %in%  keep_feat$id, ]
+width_pl <- 7
+if(type_data == 'path_GO'){
+  mat$id <- res_pval$path[match(mat$id, res_pval[, id_info])]
+  width_pl <- 9
+  print(str(mat))
+}
+if(type_data == 'path_Reactome'){
+  width_pl <- 9
+}
+
+# remove duplicated
+mat <- mat[!duplicated(mat$id),]
+mat$tissue <- tissues_name
+
+pheat_pl_gr(mat, type_mat = type_data, height_pl = 7, width_pl = width_pl, color_df = color_tissues, outFile = paste0(file_name, '_heatmap_gr'))
+
 
 

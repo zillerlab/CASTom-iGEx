@@ -21,6 +21,8 @@ options(bitmapType = 'cairo', device = 'png')
 
 parser <- ArgumentParser(description="clustering using SNF + louvain cluster")
 parser$add_argument("--tissues_name", type = "character", nargs = '*', help = "tissues")
+parser$add_argument("--color_file", type = "character", help = "file with color based on phenotype")
+parser$add_argument("--covDatFile", type = "character", default = 'NA', help = "additional cov to test")
 parser$add_argument("--inputFile", type = "character", nargs = '*', help = "file to be loaded (predicted tscore or pathScore)")
 parser$add_argument("--sampleAnnFile", type = "character", help = "file with samples to be used")
 parser$add_argument("--type_cluster", type = "character", default = 'All', help = "All, Cases, Controls")
@@ -40,6 +42,8 @@ parser$add_argument("--outFold", type="character", help = "Output file [basename
 args <- parser$parse_args()
 tissues_name <- args$tissues_name
 pvalresFile <- args$pvalresFile
+color_file <- args$color_file
+covDatFile <- args$covDatFile
 pval_id <- args$pval_id
 inputFile <- args$inputFile
 sampleAnnFile <- args$sampleAnnFile
@@ -57,23 +61,23 @@ outFold <- args$outFold
 
 
 # ####################################################################################################################
-# tissues_name <- c('Liver', 'Artery_Aorta', 'Artery_Coronary')
-# inputFile <- c('OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/predictedTscores_splitGenes',
-#                'OUTPUT_GTEx/predict_CAD/Artery_Aorta/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/predictedTscores_splitGenes',
-#                'OUTPUT_GTEx/predict_CAD/Artery_Coronary/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/predictedTscores_splitGenes')
-# sampleAnnFile <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_clustering/covariateMatrix_CADsubset.txt'
-# split_tot <- 100
-# pvalresFile <- c('OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/pval_CAD_pheno_covCorr.RData',
-#                  'OUTPUT_GTEx/predict_CAD/Artery_Aorta/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/pval_CAD_pheno_covCorr.RData',
-#                  'OUTPUT_GTEx/predict_CAD/Artery_Coronary/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/pval_CAD_pheno_covCorr.RData')
+# tissues_name <- c('DLPC_CMC', 'Whole_Blood')
+# inputFile <- c('/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_CMC/predict_UKBB/200kb/devgeno0.01_testdevgeno0/MDDRecur_pheno/predictedTscores_splitGenes',
+# '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_UKBB/Whole_Blood/200kb/noGWAS/devgeno0.01_testdevgeno0/MDDRecur_pheno/predictedTscores_splitGenes')
+# sampleAnnFile <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/INPUT_DATA/Covariates/MDD_pheno_def/covariateMatrix_MDDRecur.txt'
+# covDatFile <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/INPUT_DATA/Covariates/covariatesMatrix_batchInfo.txt'
+# split_tot <- 0
+# pvalresFile <- c('/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_CMC/predict_UKBB/200kb/devgeno0.01_testdevgeno0/MDDRecur_pheno/pval_MDDRecur_pheno_covCorr.RData',
+# '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_UKBB/Whole_Blood/200kb/noGWAS/devgeno0.01_testdevgeno0/MDDRecur_pheno/pval_MDDRecur_pheno_covCorr.RData')
 # pval_id <- 1
 # min_genes_path <- 2
 # type_data <- 'tscore'
-# type_cluster <- 'All'
-# outFold <- 'OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/'
+# type_cluster <- 'Cases'
+# outFold <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_all/MDDRecur_pheno/'
 # functR <- '/psycl/g/mpsziller/lucia/priler_project/Software/model_clustering/clustering_functions.R'
 # corr_thr <- 0.9
-# type_input <- 'original'
+# type_input <- 'zscaled'
+# color_file <- '/psycl/g/mpsziller/lucia/priler_project/Figures/color_tissues.txt'
 # ####################################################################################################################
 
 source(functR)
@@ -90,6 +94,14 @@ if(type_cluster == 'Cases'){
       stop('type_cluster must be either Cases or Controls or All')
   }
 }
+
+if(covDatFile != 'NA'){
+  covDat <- read.table(covDatFile, h=T, stringsAsFactors = F, sep = '\t')
+  covDat <- covDat[match(sampleAnn$Individual_ID, covDat$Individual_ID), ]
+  sampleAnn$Batch <- covDat$Batch
+  sampleAnn$Array <- covDat$Array
+  sampleAnn$initial_assessment_centre <- covDat$initial_assessment_centre
+}  
 
 res_pval <- list()
 scoreMat <- list()
@@ -271,6 +283,7 @@ test_cov <- vector(mode = 'list', length = length(kNN_par))
 SNF_matrix <- vector(mode = 'list', length = length(kNN_par))
 
 for(i in 1:length(kNN_par)){
+  
   print(i)
   
   W_single <- lapply(dist_scoreMat, function(x) affinityMatrix(x, kNN_par[i], alphapar_SNF))
@@ -326,17 +339,42 @@ if(type_cluster == 'All'){
   }
 }
 
-output <- list(best_k = opt_k, cl_res = PG_cl, test_cov = test_cov, info_tune = info_hyperParam, feat = lapply(input_data, colnames), tissues = tissues_name)
+output <- list(best_k = opt_k, cl_res = PG_cl, test_cov = test_cov, info_tune = info_hyperParam, 
+               cl_best = data.frame(id = sampleAnn$Individual_ID, gr = PG_cl[[which.max(info_hyperParam$DB_mean)]]$cl$membership), 
+               feat = lapply(input_data, colnames),  res_pval = res_pval_tot, tissues = tissues_name)
 output$Dx_perc <- list(perc = df_perc, test = df_perc_test)
 output$samples_id <- sampleAnn$Individual_ID
 output$SNF_matrix <- SNF_matrix
+
 # most significant element (for each tissue)
 test_diff <- data.frame(tissue = unlist(mapply(function(x,y) rep(x, ncol(y)), x = tissues_name, y = input_data, SIMPLIFY = F)), 
                         id = unlist(lapply(input_data, colnames)), pval = NA)
 for(i in 1:length(tissues_name)){
-  test_diff$pval[test_diff$tissue == tissues_name[i]] <- apply(input_data[[i]], 2, function(x) kruskal.test(x = x, g = factor(PG_cl[[which(kNN_par == opt_k)]]$cl$membership))$p.value)
+  test_diff$pval[test_diff$tissue == tissues_name[i]] <- apply(input_data[[i]], 2, function(x) kruskal.test(x = x, g = factor(output$cl_best$gr))$p.value)
 }
+test_diff$pval_corr <- p.adjust(test_diff$pval, method = 'BH')
 output$test_diff_gr <- test_diff
+# compute mean for each gr
+df_gr_mean <- matrix(ncol = length(unique(output$cl_best$gr)), nrow = nrow(test_diff))
+df_gr_sd <- matrix(ncol = length(unique(output$cl_best$gr)), nrow = nrow(test_diff))
+
+for(i in 1:length(tissues_name)){
+  df_gr_mean[test_diff$tissue == tissues_name[i],] <- t(apply(input_data[[i]], 2, function(x) 
+    sapply(sort(unique(output$cl_best$gr)), function(y) mean(x[output$cl_best$gr == y]) )))
+  
+  df_gr_sd[test_diff$tissue == tissues_name[i],] <- t(apply(input_data[[i]], 2, function(x) 
+    sapply(sort(unique(output$cl_best$gr)), function(y) sd(x[output$cl_best$gr == y]) )))
+}
+df_gr_cv <- df_gr_mean/df_gr_sd
+colnames(df_gr_cv) <- colnames(df_gr_mean) <- colnames(df_gr_sd) <- paste0('gr_', sort(unique(output$cl_best$gr)))
+df_gr_cv <- as.data.frame(df_gr_cv)
+df_gr_mean <- as.data.frame(df_gr_mean)
+df_gr_sd <- as.data.frame(df_gr_sd)
+df_gr_mean$id <- df_gr_sd$id <- df_gr_cv$id <- unlist(lapply(input_data, colnames))
+df_gr_mean$tissue <- df_gr_sd$tissue <- df_gr_cv$tissue <- unlist(mapply(function(x, y) rep(x, ncol(y)), x = tissues_name, y = input_data, SIMPLIFY = F))
+
+output$gr_input <- list(mean = df_gr_mean, sd = df_gr_sd, cv = df_gr_cv)
+
 # save results:
 save(output, file = sprintf('%s%s_%s_cluster%s_PGmethod_SNFmetric.RData', outFold, type_data, type_input, type_cluster))
 
@@ -352,12 +390,12 @@ dist_mat <- as.dist(dist_mat)
 set.seed(seed_umap)
 umap_res <- uwot::umap(dist_mat, n_neighbors = n_neigh_umap, n_components = n_comp_umap, min_dist = min_dist_umap)
 
-df <- data.frame(component_1=umap_res[,1], component_2=umap_res[,2], gr = PG_cl[[which(kNN_par == opt_k)]]$cl$membership)
+df <- data.frame(component_1=umap_res[,1], component_2=umap_res[,2], gr = output$cl_best$gr)
 df$gr <- factor(df$gr)
 
 tot_pl <- ggplot(df, aes(x = component_1, y = component_2, color = gr))+
   geom_point(size = 0.05)+
-  theme_bw()+theme(legend.position = 'none')
+  theme_bw()+theme(legend.position = 'right')
 width_pl <- 4
 if(type_cluster == 'All'){
   df$Dx <- factor(sampleAnn$Dx)
@@ -399,14 +437,46 @@ ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_SNFmetric_umap_cov.png', o
 ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_SNFmetric_umap_cov.pdf', outFold, type_data, type_input, type_cluster), width = 12, height = 8, plot = tot_pl, device = 'pdf')
 
 
-
 ### plot: heatmap
-cl <- data.frame(gr = PG_cl[[which(kNN_par == opt_k)]]$cl$membership, id = output$samples_id, stringsAsFactors = F)
-keep_feat <- test_diff[order(test_diff$pval)[1:300],]
-for(i in 1:length(tissues_name)){
-  pheat_pl(mat = input_data[[i]][,keep_feat$id[keep_feat$tissue == tissues_name[i]]], type_mat = type_data, cl = cl, height_pl = 9, width_pl = 7, outFile = sprintf('%s%s_%s_cluster%s_PGmethod_heatmap%s', outFold, type_data, type_input, type_cluster, tissues_name[i]))
-  pheat_pl(mat = scale(input_data[[i]][,keep_feat$id[keep_feat$tissue == tissues_name[i]]]), type_mat = type_data, cl = cl, height_pl = 9, width_pl = 7, outFile = sprintf('%s%s_%s_cluster%s_PGmethod_heatmap%s_scaled', outFold, type_data, type_input, type_cluster, tissues_name[i]))
+file_name <- sprintf('%s%s_%s_cluster%s_PGmethod_SNFmetric', outFold, type_data, type_input, type_cluster)
+tmp <- test_diff[test_diff$pval_corr < 0.05,]
+if(nrow(tmp)>50){
+  keep_feat <- test_diff[order(test_diff$pval)[1:50],]
+}else{
+  keep_feat <- tmp
 }
+
+for(i in 1:length(tissues_name)){
+  
+  pheat_pl(mat = input_data[[i]][,keep_feat$id[keep_feat$tissue == tissues_name[i]]], type_mat = type_data, cl = output$cl_best, height_pl = 7, width_pl = 5, 
+           outFile = paste0(file_name, '_heatmap', tissues_name[i]))
+  if(type_input == 'zscaled'){
+    pheat_pl(mat = scale(input_data[[i]][,keep_feat$id[keep_feat$tissue == tissues_name[i]]]), type_mat = type_data, cl = output$cl_best, height_pl = 7, width_pl = 5, 
+             outFile = paste0(file_name, '_heatmap_scaled', tissues_name[i]))
+  }
+}
+
+color_tissues <- read.table(color_file, h=T, stringsAsFactors = F)
+color_tissues <- color_tissues[match(tissues_name, color_tissues$tissues),]
+
+mat <- output$gr_input$cv[paste(output$gr_input$cv$tissue, output$gr_input$cv$id, sep = '_') %in% paste(keep_feat$tissue, keep_feat$id, sep = '_'), ]
+width_pl <- 7
+if(type_data == 'path_GO'){
+  for(i in 1:length(tissues_name)){
+    mat$id[mat$tissue == tissues_name[i]] <- res_pval[[i]]$path[match(mat$id[mat$tissue == tissues_name[i]], res_pval[[i]][, id_info])]
+  }
+  width_pl <- 9
+  print(str(mat))
+}
+if(type_data == 'path_Reactome'){
+  width_pl <- 9
+}
+
+# remove duplicated
+mat <- mat[!duplicated(mat$id),]
+
+pheat_pl_gr(mat, type_mat = type_data, height_pl = 7, width_pl = width_pl, color_df = color_tissues, outFile = paste0(file_name, '_heatmap_gr'))
+
 
 
 
