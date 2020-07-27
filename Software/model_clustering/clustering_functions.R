@@ -212,3 +212,39 @@ pheat_pl <- function(mat, cl, type_mat, height_pl = 10, width_pl = 7, outFile ){
   save_pheatmap_pdf(hm_pl, paste0(outFile, '.pdf'), height =height_pl , width =width_pl)
   
 }
+
+pheat_pl_gr <- function(mat, type_mat, height_pl = 10, width_pl = 7, color_df, outFile){
+  
+  coul <- rev(colorRampPalette(brewer.pal(11, "RdBu"))(100))
+
+  tmp_mat <- as.matrix(mat[, !colnames(mat) %in% c('id', 'tissue')])
+  
+  val <- max(abs(tmp_mat))
+  mat_breaks <- seq(-val, val, length.out = 100)
+  
+  tmp_mat[tmp_mat>=val] <- val
+  tmp_mat[tmp_mat<=-val] <- -val
+  rownames(tmp_mat) <- mat$id
+  # id <- order(cl$gr)
+  # P <- length(unique(cl$gr))
+  # tmp_mat <- tmp_mat[id,]
+  
+  mat_row <- data.frame(tissue = mat$tissue)
+  rownames(mat_row) <- rownames(tmp_mat)
+  
+  mat_colors_gr <- list(tissue = color_df$color)
+  names(mat_colors_gr$tissue) <- unique(mat$tissue)
+  
+  
+  hm_pl <- pheatmap(mat=tmp_mat, color=coul, show_colnames = T, show_rownames = T, annotation_names_col = F, annotation_names_row = F, 
+                    cluster_rows=T, cluster_cols=F, border_color = NA,
+                    annotation_colors = mat_colors_gr,
+                    annotation_row = mat_row, drop_levels = TRUE, fontsize_row = 8, fontsize_col = 10, fontsize = 10, 
+                    main =  sprintf("%s", type_mat),
+                    cellwidth = 15, 
+                    breaks = mat_breaks, treeheight_row = 0, treeheight_col = 0)
+  
+  save_pheatmap_png(hm_pl, paste0(outFile, '.png'), height =height_pl , width =width_pl)
+  save_pheatmap_pdf(hm_pl, paste0(outFile, '.pdf'), height =height_pl , width =width_pl)
+  
+}
