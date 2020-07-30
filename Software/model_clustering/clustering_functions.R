@@ -213,6 +213,7 @@ pheat_pl <- function(mat, cl, type_mat, height_pl = 10, width_pl = 7, outFile ){
   
 }
 
+
 pheat_pl_gr <- function(mat, type_mat, height_pl = 10, width_pl = 7, color_df, outFile){
   
   coul <- rev(colorRampPalette(brewer.pal(11, "RdBu"))(100))
@@ -248,3 +249,51 @@ pheat_pl_gr <- function(mat, type_mat, height_pl = 10, width_pl = 7, color_df, o
   save_pheatmap_pdf(hm_pl, paste0(outFile, '.pdf'), height =height_pl , width =width_pl)
   
 }
+
+
+compute_reg_endopheno <- function(fmla, type_pheno, mat){
+  
+  
+  if(type_pheno == 'CONTINUOUS'){
+    
+    res <- glm(fmla, data = mat, family = 'gaussian')
+    output <- coef(summary(res))[rownames(coef(summary(res))) == 'gr_id1',1:4]
+  }
+  
+  if((type_pheno %in% c('CAT_SINGLE_UNORDERED', 'CAT_SINGLE_BINARY', 'CAT_MUL_BINARY_VAR')) | (type_pheno == 'CAT_ORD' & length(unique(na.omit(mat[, 'pheno']))) == 2)){
+    
+    if(!all(unique(na.omit(mat[, 'pheno']) %in% c(0,1)))){
+      
+      min_id <- which(mat[, 'pheno'] == min(mat[,'pheno'], na.rm = T))
+      mat[min_id,  'pheno'] <- 0
+      max_id <- which(mat[, 'pheno'] == max(mat[,  'pheno'], na.rm = T))
+      mat[max_id,  'pheno'] <- 1
+      
+    }
+    
+    res <- glm(fmla, data = mat, family = 'binomial')
+    output <- coef(summary(res))[rownames(coef(summary(res))) == 'gr_id1',1:4]
+    
+  }
+  
+  if(type_pheno == 'CAT_ORD' & length(unique(na.omit(mat[, 'pheno']))) > 2){
+    
+    mat$pheno <- factor(mat$pheno)
+    res <- polr(fmla, data = mat, Hess=TRUE)
+    if(!any(is.na(res$Hess))){
+      ct <- coeftest(res)  
+      output <- ct[rownames(ct) == 'gr_id1',1:4]
+    }else{
+      output <- rep(NA, 4)
+    }
+    
+  }
+  
+  if(! type_pheno %in% c('CAT_ORD', 'CAT_SINGLE_UNORDERED', 'CAT_SINGLE_BINARY', 'CAT_MUL_BINARY_VAR', 'CONTINUOUS')){
+    output <- 'wrong pheno type annotation'
+  }
+  
+  return(output)
+  
+}
+

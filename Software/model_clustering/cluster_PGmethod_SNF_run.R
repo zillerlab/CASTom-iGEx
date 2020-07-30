@@ -374,6 +374,7 @@ df_gr_mean$id <- df_gr_sd$id <- df_gr_cv$id <- unlist(lapply(input_data, colname
 df_gr_mean$tissue <- df_gr_sd$tissue <- df_gr_cv$tissue <- unlist(mapply(function(x, y) rep(x, ncol(y)), x = tissues_name, y = input_data, SIMPLIFY = F))
 
 output$gr_input <- list(mean = df_gr_mean, sd = df_gr_sd, cv = df_gr_cv)
+output$input_data <- input_data
 
 # save results:
 save(output, file = sprintf('%s%s_%s_cluster%s_PGmethod_SNFmetric.RData', outFold, type_data, type_input, type_cluster))

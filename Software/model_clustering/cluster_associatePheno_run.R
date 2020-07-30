@@ -39,18 +39,18 @@ type_input <- args$type_input
 clusterFile <- args$clusterFile
 outFold <- args$outFold
 
-# #####################################################################################################################
-# phenoDatFile <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/phenotypeMatrix_CADHARD_All.txt'
-# phenoDescFile <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/phenotypeDescription.txt'
-# sampleAnnFile <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/covariateMatrix_CADHARD_All.txt'
-# clusterFile <- 'OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/tscore_zscaled_clusterCases_PGmethod_HKmetric.RData'
+#####################################################################################################################
+# phenoDatFile <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/INPUT_DATA/Covariates/MDD_pheno_def/phenotypeMatrix_endoPh_LifetimeMDD.txt'
+# phenoDescFile <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/INPUT_DATA/Covariates/MDD_pheno_def/phenotypeDescription_endoPh_LifetimeMDD.txt'
+# sampleAnnFile <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/INPUT_DATA/Covariates/MDD_pheno_def/covariateMatrix_LifetimeMDD.txt'
+# clusterFile <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_UKBB/Whole_Blood/200kb/noGWAS/devgeno0.01_testdevgeno0/LifetimeMDD_pheno/path_Reactome_zscaled_clusterCases_PGmethod_HKmetric.RData'
 # type_cluster <- 'Cases'
-# type_data <- 'tscore'
+# type_data <- 'path_Reactome'
 # type_sim <- 'HK'
-# outFold <- 'OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/'
+# outFold <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_CMC/predict_UKBB/200kb/devgeno0.01_testdevgeno0/LifetimeMDD_pheno/'
 # functR <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/RSCRIPTS/SCRIPTS_v2/clustering_functions.R'
 # type_input <- 'zscaled'
-# #####################################################################################################################
+#####################################################################################################################
 
 source(functR)
 
@@ -76,7 +76,7 @@ identical(sampleAnn$Individual_ID, cluster_output$samples_id)
 phenoDat <- phenoDat[match(sampleAnn$Individual_ID, phenoDat$Individual_ID),]
 phenoDat <- phenoDat[, -1]
 # remove columns with too many NAs
-phenoDat <- phenoDat[,colSums(!is.na(phenoDat))>=200]
+phenoDat <- phenoDat[,colSums(!is.na(phenoDat))>=100]
 # remove binary with too few T
 id_bin <- rep(F, ncol(phenoDat))
 for(i in 1:ncol(phenoDat)){
@@ -87,7 +87,10 @@ phenoDat <- phenoDat[,!colnames(phenoDat) %in% rm_col]
 
 phenoInfo <- read.delim(phenoDescFile, h=T, stringsAsFactors = F, sep = '\t')
 phenoInfo <- phenoInfo[match(colnames(phenoDat), phenoInfo$pheno_id),]
-cl <- cluster_output$cl_res[[1]]$cl$membership
+phenoInfo$Field[phenoInfo$Path == 'Online follow-up > Cognitive function online > Fluid intelligence'] <- paste(phenoInfo$Field[phenoInfo$Path == 'Online follow-up > Cognitive function online > Fluid intelligence'], '(Online)')
+cl <- cluster_output$cl_best$gr
+
+output <- list(phenoDat = phenoDat, phenoInfo = phenoInfo, cl = cluster_output$cl_best)
 
 # test phenotype
 test_pheno <- data.frame(pheno_id = colnames(phenoDat), Field = phenoInfo$Field,meaning= phenoInfo$Coding_meaning, stringsAsFactors = F)
@@ -114,6 +117,8 @@ test_pheno$pval_BHcorr <- p.adjust(test_pheno$pval, method = 'BH')
 
 # save
 write.table(x = test_pheno, sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation.txt', outFold, type_data, type_input, type_cluster, type_sim), col.names = T, row.names = F, sep = '\t', quote = F)
+
+output$test_pheno = test_pheno
 
 ###############################################################################
 # plot association to covariates, to endophenotypes and Dx_nmi if available
@@ -155,9 +160,10 @@ if(type_cluster == 'All'){
     theme(legend.position = 'right', plot.title = element_text(size=9), axis.text.y = element_text(size = 7))+ggtitle(paste(type_data, type_input))
   ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_DxPerc.png', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = 3, plot = pl, device = 'png')
   ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_DxPerc.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = 3, plot = pl, device = 'pdf')
-
+  
 }
 
+save(output, file = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation.RData', outFold, type_data, type_input, type_cluster, type_sim))
 
 test_pheno$sign <- 'no'
 test_pheno$sign[test_pheno$pval_BHcorr <= 0.05] <- 'yes'
@@ -175,8 +181,8 @@ pl <-  ggplot(test_pheno, aes(x = new_id, y = logpval, fill = sign))+
   scale_fill_manual(values=c("#999999", "#E69F00"))+
   theme(legend.position = 'none', plot.title = element_text(size=9), axis.text.y = element_text(size = 7))+ggtitle(paste(type_data, type_input, 'cluster', type_cluster))+
   coord_flip()
-ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation.png', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = 5, plot = pl, device = 'png')
-ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = 5, plot = pl, device = 'pdf')
+ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation.png', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = 4, plot = pl, device = 'png')
+ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = 4, plot = pl, device = 'pdf')
 
 
 # spider plot for the 10 best phenotypes
@@ -188,7 +194,8 @@ phenoDat_red <- phenoDat[,match(test_pheno$pheno_id[1:10],colnames(phenoDat))]
 gr_id <- sort(unique(cl))
 perc_gr <- matrix(ncol = length(gr_id),nrow = ncol(phenoDat_red))
 for(i in 1:ncol(phenoDat_red)){
-  if((is.integer(phenoDat_red[,i]) | is.character(phenoDat_red[,i])) & length(unique(phenoDat_red[,i])) == 2){
+  if((is.integer(phenoDat_red[,i]) | is.character(phenoDat_red[,i])) & length(unique(phenoDat_red[,i][!is.na(phenoDat_red[,i])])) == 2){
+    print(i)
     perc_gr[i,] <- table(cl, phenoDat_red[,i])[,2]/rowSums(table(cl, phenoDat_red[,i]))
   }else{
     perc_gr[i,] <- sapply(gr_id, function(x) mean(phenoDat_red[cl == x,i], na.rm = T))
@@ -232,5 +239,4 @@ radarchart(df_mat  , axistype=0, maxmin = F,
            vlcex=1.2)
 legend(x=1, y=1.4, legend = rownames(df_mat), bty = "n", pch=20 , col=coul , text.col = "darkgrey", cex=1.2, pt.cex=3)
 dev.off()
-
 

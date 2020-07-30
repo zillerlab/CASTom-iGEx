@@ -13,7 +13,7 @@ options(bitmapType = 'cairo', device = 'png')
 
 parser <- ArgumentParser(description="plot pheno association")
 parser$add_argument("--fold", type = "character", help = "fold output")
-parser$add_argument("--fold_tissue", type = "character", help = "fold input case example enrichment")
+parser$add_argument("--fold_tissue", type = "character",default = 'NA', help = "fold input case example enrichment")
 parser$add_argument("--fold_geno_input", type = "character", default = 'NA',help = "fold genotype input info (for case pathway)")
 parser$add_argument("--train_fold", type = "character", help = "train model fold")
 parser$add_argument("--color_file", type = "character", help = "file with tissues color code")
@@ -32,14 +32,14 @@ type_dat <- args$type_dat
 pval_FDR <- args$pval_FDR
 fold_geno_input <- args$fold_geno_input
 
-# fold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/'
-# fold_tissue <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Artery_Aorta/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/'
-# color_tissues <- read.table('/psycl/g/mpsziller/lucia/color_tissues.txt', h=T, stringsAsFactors = F)
+# fold <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_all/MDDRecur_pheno/'
+# fold_tissue <- '/NA'
+# color_file <- '/psycl/g/mpsziller/lucia/priler_project/Figures/color_tissues.txt'
 # pval_FDR <- 0.05
-# train_fold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/train_GTEx/'
-# pheno <- 'CAD_HARD'
-# type_dat <- 'CAD_HARD-UKBB'
-# fold_geno_input <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/INPUT_DATA_GTEx/GTEX_v6/Genotyping_data/Genotype_VariantsInfo_GTEx-PGCgwas-CADgwas-CADall-UKBB_'
+# train_fold <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_all/train_all/'
+# pheno <- 'MDDRecur'
+# type_dat <- 'MDD-UKBB'
+# fold_geno_input <- 'NA'
 
 color_tissues <- read.table(color_file, h=T, stringsAsFactors = F)
 
@@ -297,11 +297,11 @@ pl_manhattan_function <- function(data_input, type_mat, outFold, type_dat){
   
   if(gene){
     pl <- pl+scale_x_continuous(breaks=data_input$df_chr$pos_start, labels=data_input$df_chr$chr)+xlab('chromosome')+
-     theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
-     #geom_hline(yintercept = 8, linetype = 2, size = 0.3)
+      theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
+    #geom_hline(yintercept = 8, linetype = 2, size = 0.3)
   }else{
     pl <- pl + xlab('pathways')+ theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
-      #geom_hline(yintercept = 6, linetype = 2, size = 0.3)
+    #geom_hline(yintercept = 6, linetype = 2, size = 0.3)
   }
   
   ggsave(filename = paste0(file_name, '.pdf'), plot = pl, width = 11, height = 4, dpi = 500, compress = F)
@@ -433,15 +433,16 @@ plot_best_path <- function(best_res, tissues, color_tissues, title_plot, type_ma
 
 ###################################################################################################################################################
 
-### correlation tissues ###
-tscore_cor <- create_cor(tissues_name = tissues, res = tscore, id_z = 7)
-pathR_cor <- create_cor(tissues_name = tissues, res = pathR, id_z = 12)
-pathGO_cor <- create_cor(tissues_name = tissues, res = pathGO, id_z = 14)
+if(length(tissues)>2){
+  ### correlation tissues ###
+  tscore_cor <- create_cor(tissues_name = tissues, res = tscore, id_z = 7)
+  pathR_cor <- create_cor(tissues_name = tissues, res = pathR, id_z = 12)
+  pathGO_cor <- create_cor(tissues_name = tissues, res = pathGO, id_z = 14)
 
-pl_corr(tscore_cor, type_mat = 'tscore', type_dat = type_dat, tissues_name = tissues, df_color = color_tissues, outFold = fold)
-pl_corr(pathR_cor, type_mat = 'path_Reactome', type_dat = type_dat, tissues_name = tissues, df_color = color_tissues, outFold = fold)
-pl_corr(pathGO_cor, type_mat = 'path_GO', type_dat = type_dat, tissues_name = tissues, df_color = color_tissues, outFold = fold)
-
+  pl_corr(tscore_cor, type_mat = 'tscore', type_dat = type_dat, tissues_name = tissues, df_color = color_tissues, outFold = fold)
+  pl_corr(pathR_cor, type_mat = 'path_Reactome', type_dat = type_dat, tissues_name = tissues, df_color = color_tissues, outFold = fold)
+  pl_corr(pathGO_cor, type_mat = 'path_GO', type_dat = type_dat, tissues_name = tissues, df_color = color_tissues, outFold = fold)
+}
 ### number of associated elements ###
 tscore_nsgin <- creat_dfnsign(tissues_name = tissues, res = tscore, id_pval_corr = 10, pval_FDR = pval_FDR, df_color = color_tissues)
 pathR_nsgin <- creat_dfnsign(tissues_name = tissues, res = pathR, id_pval_corr = 15, pval_FDR = pval_FDR, df_color = color_tissues)
@@ -454,6 +455,7 @@ pl_number_function(df = pathGO_nsgin, type_mat = 'path_GO', outFold = fold, type
 ### manhattan plot ###
 if(grepl('SCZ', pheno)){n_sign=10}
 if(grepl('CAD', pheno)){n_sign=3}
+if(grepl('MDD', pheno)){n_sign=20}
 
 tscore_df <- create_df_manhattan_plot(tissues_name = tissues, res = tscore, id_pval = 8, pval_FDR = pval_FDR, df_color = color_tissues, id_name = 2, n_sign = n_sign, gene = T)
 pathR_df <- create_df_manhattan_plot(tissues_name = tissues, res = pathR, id_pval = 13, pval_FDR = pval_FDR, df_color = color_tissues, id_name = 1, n_sign = 2)
@@ -482,26 +484,38 @@ if(grepl('CAD', pheno)){
                  tissues = c('Adipose_Visceral_Omentum', 'Artery_Aorta', 'Colon_Sigmoid', 'Heart_Left_Ventricle', 'Liver'), height_plot = 6.5)
   plot_best_path(best_res = best_pathR, color_tissues = color_tissues, title_plot = sprintf('Reactome pathways %s', pheno), type_mat = 'path_Reactome', outFold = fold, type_dat = paste0(type_dat, 'v2'),
                  tissues = c('Adipose_Subcutaneous', 'Artery_Coronary', 'Colon_Transverse', 'Heart_Atrial_Appendage', 'Adrenal_Gland'), height_plot = 6.5)
-
+  
   
   plot_best_path(best_res = best_pathGO, color_tissues = color_tissues, title_plot = sprintf('GO pathways %s', pheno),  type_mat = 'path_GO', outFold = fold, type_dat = type_dat, 
                  tissues = c('Adipose_Visceral_Omentum', 'Artery_Aorta', 'Colon_Sigmoid', 'Heart_Left_Ventricle', 'Liver'), height_plot = 6.5)
   plot_best_path(best_res = best_pathGO, color_tissues = color_tissues, title_plot = sprintf('GO pathways %s', pheno),  type_mat = 'path_GO', outFold = fold, type_dat =  paste0(type_dat, 'v2'),
                  tissues = c('Adipose_Subcutaneous', 'Artery_Coronary', 'Colon_Transverse', 'Heart_Atrial_Appendage', 'Adrenal_Gland'), height_plot = 6.5)
-
+  
   
 }
 
 if(grepl('SCZ', pheno)){
-
+  
   best_pathR <- best_res_fun(pathR, tissues, id_pval = 13)
   best_pathGO <- best_res_fun(pathGO, tissues, id_pval = 15)
   plot_best_path(best_res = best_pathR, color_tissues = color_tissues, title_plot = sprintf('Reactome pathways %s', pheno), type_mat = 'path_Reactome',outFold = fold, type_dat = type_dat,
-  tissues = c('DLPC_CMC', 'Brain_Cerebellum', 'Brain_Hypothalamus', 'Cells_EBV-transformed_lymphocytes', 'Colon_Transverse'), height_plot = 6.5)
+                 tissues = c('DLPC_CMC', 'Brain_Cerebellum', 'Brain_Hypothalamus', 'Cells_EBV-transformed_lymphocytes', 'Colon_Transverse'), height_plot = 6.5)
   plot_best_path(best_res = best_pathGO, color_tissues = color_tissues, title_plot = sprintf('GO pathways %s', pheno),  type_mat = 'path_GO', outFold = fold, type_dat = type_dat,
-  tissues = c('DLPC_CMC', 'Brain_Cerebellum', 'Brain_Hypothalamus', 'Cells_EBV-transformed_lymphocytes', 'Colon_Transverse'), height_plot = 6.5)
-
+                 tissues = c('DLPC_CMC', 'Brain_Cerebellum', 'Brain_Hypothalamus', 'Cells_EBV-transformed_lymphocytes', 'Colon_Transverse'), height_plot = 6.5)
+  
 }
+
+if(grepl('MDD', pheno)){
+  
+  best_pathR <- best_res_fun(pathR, tissues, id_pval = 13, n_top = 10)
+  best_pathGO <- best_res_fun(pathGO, tissues, id_pval = 15,  n_top = 10)
+  plot_best_path(best_res = best_pathR, color_tissues = color_tissues, title_plot = sprintf('Reactome pathways %s', pheno), type_mat = 'path_Reactome',outFold = fold, type_dat = type_dat,
+                 tissues = c('DLPC_CMC', 'Whole_Blood'), height_plot = 5)
+  plot_best_path(best_res = best_pathGO, color_tissues = color_tissues, title_plot = sprintf('GO pathways %s', pheno),  type_mat = 'path_GO', outFold = fold, type_dat = type_dat,
+                 tissues = c('DLPC_CMC', 'Whole_Blood'), height_plot = 5)
+  
+}
+
 
 ### example pathway enrichment
 if(grepl('CAD', pheno)){
@@ -520,7 +534,7 @@ if(grepl('CAD', pheno)){
   genes_path <- info_res$info_pathScore_reactome[[id_pval]][[id]]
   gene_res <- info_res$tscore[[id_pval]]
   gene_info <- read.table(sprintf('%s/resPrior_regEval_allchr.txt', train_fold[grepl(tissue, train_fold)]), h=T,stringsAsFactors = F)
-
+  
   id <- sapply(gene_res$external_gene_name, function(x) which(gene_info$external_gene_name == x))
   if(any(sapply(id, length)>1)){
     rm_id <- names(which(sapply(id, length)>1))
