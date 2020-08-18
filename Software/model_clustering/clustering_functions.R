@@ -272,19 +272,24 @@ compute_reg_endopheno <- function(fmla, type_pheno, mat){
     }
     
     res <- glm(fmla, data = mat, family = 'binomial')
-    output <- coef(summary(res))[rownames(coef(summary(res))) == 'gr_id1',1:4]
-    
+    if(res$converged){
+    	output <- coef(summary(res))[rownames(coef(summary(res))) == 'gr_id1',1:4]
+    }else{
+	output <- rep(NA, 4)
+    }
   }
   
   if(type_pheno == 'CAT_ORD' & length(unique(na.omit(mat[, 'pheno']))) > 2){
     
     mat$pheno <- factor(mat$pheno)
-    res <- polr(fmla, data = mat, Hess=TRUE)
+    output <- rep(NA, 4)
+    res <- list()
+    res$Hess <- NA
+
+    try(res <- polr(fmla, data = mat, Hess=TRUE), TRUE)
     if(!any(is.na(res$Hess))){
       ct <- coeftest(res)  
       output <- ct[rownames(ct) == 'gr_id1',1:4]
-    }else{
-      output <- rep(NA, 4)
     }
     
   }

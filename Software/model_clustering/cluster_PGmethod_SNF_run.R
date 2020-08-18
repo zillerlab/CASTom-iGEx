@@ -447,14 +447,18 @@ if(nrow(tmp)>50){
   keep_feat <- tmp
 }
 
+
+
 for(i in 1:length(tissues_name)){
-  
-  pheat_pl(mat = input_data[[i]][,keep_feat$id[keep_feat$tissue == tissues_name[i]]], type_mat = type_data, cl = output$cl_best, height_pl = 7, width_pl = 5, 
-           outFile = paste0(file_name, '_heatmap', tissues_name[i]))
-  if(type_input == 'zscaled'){
-    pheat_pl(mat = scale(input_data[[i]][,keep_feat$id[keep_feat$tissue == tissues_name[i]]]), type_mat = type_data, cl = output$cl_best, height_pl = 7, width_pl = 5, 
-             outFile = paste0(file_name, '_heatmap_scaled', tissues_name[i]))
-  }
+  print(tissues_name[i])
+  if(any(keep_feat$tissue == tissues_name[i])){
+  	pheat_pl(mat = input_data[[i]][,keep_feat$id[keep_feat$tissue == tissues_name[i]]], type_mat = type_data, cl = output$cl_best, height_pl = 7, width_pl = 5, 
+        	   outFile = paste0(file_name, '_heatmap', tissues_name[i]))
+  	if(type_input == 'zscaled'){
+    	pheat_pl(mat = scale(input_data[[i]][,keep_feat$id[keep_feat$tissue == tissues_name[i]]]), type_mat = type_data, cl = output$cl_best, height_pl = 7, width_pl = 5, 
+        	     outFile = paste0(file_name, '_heatmap_scaled', tissues_name[i]))
+  	}
+   }
 }
 
 color_tissues <- read.table(color_file, h=T, stringsAsFactors = F)
@@ -464,11 +468,15 @@ mat <- output$gr_input$cv[paste(output$gr_input$cv$tissue, output$gr_input$cv$id
 width_pl <- 7
 if(type_data == 'path_GO'){
   for(i in 1:length(tissues_name)){
-    mat$id[mat$tissue == tissues_name[i]] <- res_pval[[i]]$path[match(mat$id[mat$tissue == tissues_name[i]], res_pval[[i]][, id_info])]
+    print(tissues_name[i])
+    if(any(mat$tissue == tissues_name[i])){
+      mat$id[mat$tissue == tissues_name[i]] <- res_pval[[i]]$path[match(mat$id[mat$tissue == tissues_name[i]], res_pval[[i]][, id_info])]
+    }
   }
   width_pl <- 9
   print(str(mat))
 }
+
 if(type_data == 'path_Reactome'){
   width_pl <- 9
 }

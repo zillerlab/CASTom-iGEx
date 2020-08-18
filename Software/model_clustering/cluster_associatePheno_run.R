@@ -169,11 +169,22 @@ test_pheno$sign <- 'no'
 test_pheno$sign[test_pheno$pval_BHcorr <= 0.05] <- 'yes'
 test_pheno$logpval <- -log10(test_pheno$pval)
 test_pheno$sign <- factor(test_pheno$sign, levels = c('no', 'yes'))
-test_pheno$new_id <- test_pheno$Field
-test_pheno$new_id[!is.na(test_pheno$meaning)] <- paste(test_pheno$meaning[!is.na(test_pheno$meaning)], test_pheno$Field[!is.na(test_pheno$meaning)], sep = '\n')
+test_pheno$new_Field <- test_pheno$Field
+test_pheno$new_Field[test_pheno$Field == 'Blood clot, DVT, bronchitis, emphysema, asthma, rhinitis, eczema, allergy diagnosed by doctor'] <- 'Blood clot, etc. diagnosed by doctor'
+test_pheno$new_id <- test_pheno$new_Field
+
+test_pheno$new_id[!is.na(test_pheno$meaning)] <- paste(test_pheno$meaning[!is.na(test_pheno$meaning)], test_pheno$new_Field[!is.na(test_pheno$meaning)], sep = '\n')
 test_pheno <- test_pheno[order(test_pheno$pval),]
-test_pheno <- test_pheno[1:20,]
+
+if(length(which(test_pheno$sign == 'yes'))>=20){
+  test_pheno <- test_pheno[1:(length(which(test_pheno$sign == 'yes'))+1),]
+  height_pl <- 4 + (nrow(test_pheno)-20)*0.2  
+}else{
+  test_pheno <- test_pheno[1:20,]
+  height_pl <- 4
+}
 test_pheno$new_id <- factor(test_pheno$new_id, levels = test_pheno$new_id)
+
 
 pl <-  ggplot(test_pheno, aes(x = new_id, y = logpval, fill = sign))+
   geom_bar(stat = 'identity', position = position_dodge(), width = 0.5) + theme_bw()+ 
@@ -181,8 +192,8 @@ pl <-  ggplot(test_pheno, aes(x = new_id, y = logpval, fill = sign))+
   scale_fill_manual(values=c("#999999", "#E69F00"))+
   theme(legend.position = 'none', plot.title = element_text(size=9), axis.text.y = element_text(size = 7))+ggtitle(paste(type_data, type_input, 'cluster', type_cluster))+
   coord_flip()
-ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation.png', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = 4, plot = pl, device = 'png')
-ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = 4, plot = pl, device = 'pdf')
+ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation.png', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = height_pl, plot = pl, device = 'png')
+ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = height_pl, plot = pl, device = 'pdf')
 
 
 # spider plot for the 10 best phenotypes
