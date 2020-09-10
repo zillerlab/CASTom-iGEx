@@ -397,7 +397,138 @@ SVM_model_test <- function(model, data, info_sample){
   
 }
 
+RF_model <- function(data, info_sample, n_cv = 5, ncores = 5){
+  
+  if(!identical(rownames(data), info_sample$Individual_ID)){stop('sample name does not match')}
+  colnames(data) <- paste0('f',1:ncol(data))
+  data$y <- factor(info_sample$Dx)
+  
+  ## split data ##
+  set.seed(20)
+  fold_cv_out <- generateCVRuns(labels = info_sample$Dx, ntimes = 1, nfold = n_cv, stratified = T)
+  val_id <- train_id <- test_cv_id <- output_nCV <- vector(mode = 'list', length = n_cv)
+  n_tree <- c(50, 100, 150, 200, 250, 300, 400, 500)
 
+  
+  # change name "illegal" variables
+  # colnames(data)[grepl('-', colnames(data))] <- sapply(colnames(data)[grepl('-', colnames(data))], function(x) paste0(strsplit(x, split = '[-]')[[1]], collapse = '.'))
+  # colnames(data)[grepl('+', colnames(data))] <- sapply(colnames(data)[grepl('+', colnames(data))], function(x) paste0(strsplit(x, split = '[+]')[[1]], collapse = '.'))
+  # colnames(data)[grepl(':', colnames(data))] <- sapply(colnames(data)[grepl(':', colnames(data))], function(x) paste0(strsplit(x, split = '[:]')[[1]], collapse = '.'))
+  # colnames(data)[grepl(',', colnames(data))] <- sapply(colnames(data)[grepl(',', colnames(data))], function(x) paste0(strsplit(x, split = '[,]')[[1]], collapse = '.'))
+  # colnames(data)[grepl(' ', colnames(data))] <- sapply(colnames(data)[grepl(' ', colnames(data))], function(x) paste0(strsplit(x, split = '[ ]')[[1]], collapse = '_'))
+  # colnames(data)[grepl('/', colnames(data))] <- sapply(colnames(data)[grepl('/', colnames(data))], function(x) paste0(strsplit(x, split = '[/]')[[1]], collapse = '.'))
+  # colnames(data)[grepl('[(]', colnames(data))] <- sapply(colnames(data)[grepl('[(]', colnames(data))], function(x) paste0(strsplit(x, split = '[(]')[[1]], collapse = ''))
+  # colnames(data)[grepl('[)]', colnames(data))] <- sapply(colnames(data)[grepl('[)]', colnames(data))], function(x) paste0(strsplit(x, split = '[)]')[[1]], collapse = ''))
+  # colnames(data)[grepl('off', colnames(data))] <- sapply(colnames(data)[grepl('off', colnames(data))], function(x) paste0(strsplit(x, split = '[off]')[[1]], collapse = 'OFF'))
+
+  
+  # nested 5-fold CV split
+  for(n in 1:n_cv){
+    
+    print(paste0('outer fold', n))
+    
+    val_id[[n]] <- info_sample$Individual_ID[sort(fold_cv_out[[1]][[n]])]
+    train_id[[n]] <- info_sample$Individual_ID[-sort(fold_cv_out[[1]][[n]])]
+    
+    set.seed(782)
+    fold_cv <- generateCVRuns(labels = info_sample$Dx[match(train_id[[n]], info_sample$Individual_ID)], ntimes = 1, nfold = n_cv, stratified = T)
+    fold_cv <- fold_cv[[1]]
+    test_cv_id[[n]] <- lapply(fold_cv, function(x) train_id[[n]][x])
+    
+    ### 5-fold CV ###
+    registerDoParallel(min(c(ncores, n_cv)))
+    
+    res <- foreach(id_cv=1:n_cv)%dopar%{
+      #for(id_cv in 1:n_cv){
+      
+      print(id_cv)
+      
+      train_cv_id <- setdiff(train_id[[n]], test_cv_id[[n]][[id_cv]])
+      tmp_train <- data[match(train_cv_id,rownames(data)),]
+      tmp_test <- data[match(test_cv_id[[n]][[id_cv]], rownames(data)),]
+      mat_error <- data.frame(n_tree = n_tree, balanced_acc = NA, mcc = NA)
+
+      for(g in 1:length(n_tree)){
+          set.seed(1243)
+          rf_model <- randomForest(y~., data = tmp_train, ntree = n_tree[g], importance = T)
+          pred <- predict(rf_model, tmp_test)
+          mat_error[mat_error$n_tree == n_tree[g], 2:3] <- c(balanced_acc_error(tmp_test$y, pred), MCC_err(tmp_test$y, pred))
+      }
+      
+      mat_error$fold <- id_cv
+      mat_error
+    }
+    
+    # best parameter combination
+    balanced_acc <- sapply(res, function(x) x$balanced_acc)
+    m_cv_bacc <- max(rowMeans(balanced_acc))
+    sd_cv_bacc <- sd(balanced_acc[which.max(rowMeans(balanced_acc)),])
+    id_max <- which.max(rowMeans(balanced_acc))
+    best_par <- data.frame(n_tree = res[[1]]$n_tree[id_max])
+    
+    # create final model
+    tmp_train <- data[match(train_id[[n]],rownames(data)),]
+    tmp_test <- data[match(val_id[[n]], rownames(data)),]
+    
+    # rf model
+    set.seed(1243)
+    rf_model <- randomForest(y~., data = tmp_train, ntree = best_par$n_tree, importance = T)
+    pred <- predict(rf_model, tmp_test)
+    prob_val <- predict(rf_model, tmp_test, type = 'prob')
+    prob_val <- prob_val[, colnames(prob_val) == 1]
+    output_nCV[[n]] <- list(sample_config = list(train = train_id[[n]], val = val_id[[n]], test_cv_id = test_cv_id[[n]]), cv_performance = res, best_par_cv = best_par, 
+                            train_rf = rf_model, pred_val = data.frame(y = tmp_test$y, pred = pred, prob = prob_val))
+    output_nCV[[n]]$perf <- cbind(best_par, data.frame(bacc_cv_mean = m_cv_bacc, bacc_cv_sd = sd_cv_bacc, bacc_train = balanced_acc_error(tmp_train$y,rf_model$predicted), 
+                                                       bacc_val = balanced_acc_error(tmp_test$y, pred), auc_val = as.numeric(roc(tmp_test$y,prob_val)$auc)))
+  }
+  
+  tot_perf <- as.data.frame(do.call(rbind,lapply(output_nCV, function(x) x$perf)))
+  tot_perf$cv <- 1:n_cv
+  
+  output <- list(nested_cv = output_nCV, performance_nestedCV = tot_perf)
+  
+  # create final model (5-fold CV to find best parameters)
+  # 5-fold CV split
+  test_cv_id <- lapply(fold_cv_out[[1]], function(x) info_sample$Individual_ID[x])
+  
+  registerDoParallel(min(c(ncores, n_cv)))
+  res <- foreach(id_cv=1:n_cv)%dopar%{
+    #for(id_cv in 1:n_cv){
+    
+    print(id_cv)
+    
+    train_cv_id <- setdiff(info_sample$Individual_ID, test_cv_id[[id_cv]])
+    tmp_train <- data[match(train_cv_id,rownames(data)),]
+    tmp_test <- data[match(test_cv_id[[id_cv]], rownames(data)),]
+    mat_error <- data.frame(n_tree = n_tree, balanced_acc = NA, mcc = NA)
+    
+    for(g in 1:length(n_tree)){
+      set.seed(1243)
+      rf_model <- randomForest(y~., data = tmp_train, ntree = n_tree[g], importance = T)
+      pred <- predict(rf_model, tmp_test)
+      mat_error[mat_error$n_tree == n_tree[g], 2:3] <- c(balanced_acc_error(tmp_test$y, pred), MCC_err(tmp_test$y, pred))
+    }
+    
+    mat_error$fold <- id_cv
+    mat_error
+  }
+  
+  # best parameter combination
+  balanced_acc <- sapply(res, function(x) x$balanced_acc)
+  m_cv_bacc <- max(rowMeans(balanced_acc))
+  sd_cv_bacc <- sd(balanced_acc[which.max(rowMeans(balanced_acc)),])
+  id_max <- which.max(rowMeans(balanced_acc))
+  best_par <- data.frame(n_tree = res[[1]]$n_tree[id_max])
+
+  # svm model
+  set.seed(1243)
+  rf_model <- randomForest(y~., data = data, ntree = best_par$n_tree, importance = T)
+  output$rf_model <- rf_model
+  output$performance_CV <- cbind(best_par, data.frame(bacc_cv_mean = m_cv_bacc, bacc_cv_sd = sd_cv_bacc, bacc_final = balanced_acc_error(data$y, rf_model$predicted)))
+  
+  return(output)
+  
+}
 
 
 

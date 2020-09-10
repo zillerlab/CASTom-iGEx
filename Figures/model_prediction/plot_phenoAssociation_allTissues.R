@@ -7,7 +7,6 @@ library(ggrepel)
 library(argparse)
 library(Matrix)
 
-
 Sys.setlocale("LC_NUMERIC", "C")
 options(bitmapType = 'cairo', device = 'png')
 
@@ -32,13 +31,13 @@ type_dat <- args$type_dat
 pval_FDR <- args$pval_FDR
 fold_geno_input <- args$fold_geno_input
 
-# fold <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_all/MDDRecur_pheno/'
-# fold_tissue <- '/NA'
+# fold <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_UKBB/AllTissues/200kb/noGWAS/T1D_pheno/'
+# fold_tissue <- 'NA'
 # color_file <- '/psycl/g/mpsziller/lucia/priler_project/Figures/color_tissues.txt'
 # pval_FDR <- 0.05
-# train_fold <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_all/train_all/'
-# pheno <- 'MDDRecur'
-# type_dat <- 'MDD-UKBB'
+# train_fold <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_GTEx/train_GTEx/'
+# pheno <- 'T1D'
+# type_dat <- 'T1D-UKBB'
 # fold_geno_input <- 'NA'
 
 color_tissues <- read.table(color_file, h=T, stringsAsFactors = F)
@@ -52,7 +51,11 @@ tissues <- unique(tscore$tissue)
 if(grepl('CAD', pheno)){
   train_fold <- paste0(train_fold, tissues, '/200kb/CAD_GWAS_bin5e-2/')  
 }else{
-  train_fold <- paste0(train_fold, tissues, '/')
+  if(grepl('T1D', pheno)){
+    train_fold <- paste0(train_fold, tissues, '/200kb/noGWAS/')   
+  }else{
+    train_fold <- paste0(train_fold, tissues, '/')
+  }
 }
 
 
@@ -161,7 +164,7 @@ pl_corr <- function(res_cor, type_mat, type_dat, tissues_name, df_color, outFold
 
 #### number of associated element ####
 
-creat_dfnsign <- function(tissues_name, res, id_pval_corr, pval_FDR, df_color){
+creat_dfnsign <- function(tissues_name, res, id_pval_corr, pval_FDR, df_color, id_pval_corr_tot){
   
   df_number <- data.frame(tissue = tissues_name, color = df_color$color[match(tissues_name, df_color$tissue)], 
                           type = df_color$type[match(tissues_name, df_color$tissue)], 
@@ -174,7 +177,12 @@ creat_dfnsign <- function(tissues_name, res, id_pval_corr, pval_FDR, df_color){
   df_number$nsign_unique <- sapply(tmp_unique, length)
   df_number$nsign_unique_perc <- df_number$nsign_unique/df_number$nsign
   
-  return(df_number)
+  
+  df_tot <- data.frame(tissue = tissues_name, n_tot = df_number$ntot, n_sign = df_number$nsign, n_unique = df_number$ntot, n_unique_sign = df_number$nsign)
+  df_tot <- rbind(df_tot, data.frame(tissue = 'All', n_tot = nrow(res), n_sign = length(which(res[, id_pval_corr_tot] <= pval_FDR)), 
+                                     n_unique = length(unique(res[,1])), n_unique_sign = length(unique(res[res[, id_pval_corr_tot] <= pval_FDR,1]))))
+  
+  return(list(plot = df_number, table = df_tot))
 }
 
 # plot
@@ -275,7 +283,7 @@ create_df_manhattan_plot <- function(tissues_name, res, pval_FDR, df_color, id_p
 pl_manhattan_function <- function(data_input, type_mat, outFold, type_dat){
   
   gene <-  type_mat == 'tscore'
-  file_name <- sprintf('%s/manhattan_%s_%s', outFold,  type_mat, type_dat)
+  file_name <- sprintf('%smanhattan_%s_%s', outFold,  type_mat, type_dat)
   
   df <- data_input$df
   info_df <- data_input$color
@@ -396,21 +404,21 @@ best_res_fun <- function(df, tissues, n_top = 5, id_pval){
   
 }
 
-plot_best_path <- function(best_res, tissues, color_tissues, title_plot, type_mat, type_dat, width_plot = 5.5, height_plot = 5, outFold){
+plot_best_path <- function(best_res, tissues, color_tissues, title_plot, type_mat, type_dat, width_plot = 5.5, height_plot = 5, outFold, id_name=1){
   best_res <- best_res[best_res$tissue %in% tissues, ]
   color_tmp <- color_tissues[match(tissues, color_tissues$tissues),]
   best_res$tissue <- factor(best_res$tissue, levels = tissues)
   
-  id <- which(nchar(best_res[,1])>70)
+  id <- which(nchar(best_res[,id_name])>70)
   if(length(id)>0){
     for(i in 1:length(id)){
-      new <- strsplit(best_res[id[i],1], split = '[ ]')[[1]]
+      new <- strsplit(best_res[id[i],id_name], split = '[ ]')[[1]]
       split_i <- round(length(new)/2)
       new <- paste0(paste0(new[1:split_i], collapse = ' '), '\n', paste0(new[(split_i+1):length(new)], collapse = ' '))
-      best_res[id[i],1] <- new
+      best_res[id[i],id_name] <- new
     }
   }
-  best_res[,1] <- factor(best_res[,1], levels = rev(unique(best_res[,1])))
+  best_res[,id_name] <- factor(best_res[,id_name], levels = rev(unique(best_res[,id_name])))
   
   # plot significnace
   path_pval_pl <- ggplot(best_res, aes(x=path, y=logpval, fill = tissue))+
@@ -444,18 +452,32 @@ if(length(tissues)>2){
   pl_corr(pathGO_cor, type_mat = 'path_GO', type_dat = type_dat, tissues_name = tissues, df_color = color_tissues, outFold = fold)
 }
 ### number of associated elements ###
-tscore_nsgin <- creat_dfnsign(tissues_name = tissues, res = tscore, id_pval_corr = 10, pval_FDR = pval_FDR, df_color = color_tissues)
-pathR_nsgin <- creat_dfnsign(tissues_name = tissues, res = pathR, id_pval_corr = 15, pval_FDR = pval_FDR, df_color = color_tissues)
-pathGO_nsgin <- creat_dfnsign(tissues_name = tissues, res = pathGO, id_pval_corr = 17, pval_FDR = pval_FDR, df_color = color_tissues)
+tscore_nsgin <- creat_dfnsign(tissues_name = tissues, res = tscore, id_pval_corr = 10, pval_FDR = pval_FDR, df_color = color_tissues, id_pval_corr_tot = 12)
+pathR_nsgin <- creat_dfnsign(tissues_name = tissues, res = pathR, id_pval_corr = 15, pval_FDR = pval_FDR, df_color = color_tissues, id_pval_corr_tot = 17)
+pathGO_nsgin <- creat_dfnsign(tissues_name = tissues, res = pathGO, id_pval_corr = 17, pval_FDR = pval_FDR, df_color = color_tissues, id_pval_corr_tot = 19)
 
-pl_number_function(df = tscore_nsgin, type_mat = 'tscore', outFold = fold, type_dat = type_dat)
-pl_number_function(df = pathR_nsgin, type_mat = 'path_Reactome', outFold = fold, type_dat = type_dat)
-pl_number_function(df = pathGO_nsgin, type_mat = 'path_GO', outFold = fold, type_dat = type_dat)
+write.table(file = sprintf('%snsignificant_tscore.txt', fold), x = tscore_nsgin$table, quote = F, col.names = T, row.names = F, sep = '\t')
+write.table(file = sprintf('%snsignificant_pathR.txt', fold), x = tscore_nsgin$table, quote = F, col.names = T, row.names = F, sep = '\t')
+write.table(file = sprintf('%snsignificant_pathGO.txt', fold), x = tscore_nsgin$table, quote = F, col.names = T, row.names = F, sep = '\t')
+
+pl_number_function(df = tscore_nsgin$plot, type_mat = 'tscore', outFold = fold, type_dat = type_dat)
+pl_number_function(df = pathR_nsgin$plot, type_mat = 'path_Reactome', outFold = fold, type_dat = type_dat)
+pl_number_function(df = pathGO_nsgin$plot, type_mat = 'path_GO', outFold = fold, type_dat = type_dat)
+
+if(grepl('T1D', pheno)){
+  
+  tscore_red <- tscore
+  HLA_reg <- c(28000000, 34000000)
+  tscore_red <- tscore_red[!(tscore_red$chrom %in% 'chr6' & tscore_red$start_position <=HLA_reg[2] & tscore_red$start_position >= HLA_reg[1]) , ]
+  tscore_nsgin <- creat_dfnsign(tissues_name = tissues, res = tscore_red, id_pval_corr = 10, pval_FDR = pval_FDR, df_color = color_tissues, id_pval_corr_tot = 12)
+  write.table(file = sprintf('%snsignificant_tscore_noMHC.txt', fold), x = tscore_nsgin$table, quote = F, col.names = T, row.names = F, sep = '\t')
+}
 
 ### manhattan plot ###
 if(grepl('SCZ', pheno)){n_sign=10}
 if(grepl('CAD', pheno)){n_sign=3}
 if(grepl('MDD', pheno)){n_sign=20}
+if(grepl('T1D', pheno)){n_sign=10}
 
 tscore_df <- create_df_manhattan_plot(tissues_name = tissues, res = tscore, id_pval = 8, pval_FDR = pval_FDR, df_color = color_tissues, id_name = 2, n_sign = n_sign, gene = T)
 pathR_df <- create_df_manhattan_plot(tissues_name = tissues, res = pathR, id_pval = 13, pval_FDR = pval_FDR, df_color = color_tissues, id_name = 1, n_sign = 2)
@@ -464,6 +486,17 @@ pathGO_df <- create_df_manhattan_plot(tissues_name = tissues, res = pathGO, id_p
 pl_manhattan_function(data_input = tscore_df, type_mat = 'tscore', outFold = fold, type_dat = type_dat)
 pl_manhattan_function(data_input = pathR_df, type_mat = 'path_Reactome', outFold = fold, type_dat = type_dat)
 pl_manhattan_function(data_input = pathGO_df, type_mat = 'path_GO', outFold = fold, type_dat = type_dat)
+
+# if T1D remove MHC6 and plot again
+if(grepl('T1D', pheno)){
+  
+  tscore_red <- tscore
+  HLA_reg <- c(28000000, 34000000)
+  tscore_red <- tscore_red[!(tscore_red$chrom %in% 'chr6' & tscore_red$start_position <=HLA_reg[2] & tscore_red$start_position >= HLA_reg[1]) , ]
+  tscore_red_df <- create_df_manhattan_plot(tissues_name = tissues, res = tscore_red, id_pval = 8, pval_FDR = pval_FDR, df_color = color_tissues, id_name = 2, n_sign = 10, gene = T)
+  pl_manhattan_function(data_input = tscore_red_df, type_mat = 'tscore', outFold = fold, type_dat = paste(type_dat, '(no MHC region)'))
+  
+}
 
 ### pathway plot ngenes info ###
 pathR_df <- create_df_manhattan_plot_path(tissues_name = tissues,  res = pathR, id_pval = 13, thr_genes = 0.1, pval_thr = 10^-4, pval_FDR = pval_FDR, df_color = color_tissues, id_name = 1)
@@ -513,6 +546,28 @@ if(grepl('MDD', pheno)){
                  tissues = c('DLPC_CMC', 'Whole_Blood'), height_plot = 5)
   plot_best_path(best_res = best_pathGO, color_tissues = color_tissues, title_plot = sprintf('GO pathways %s', pheno),  type_mat = 'path_GO', outFold = fold, type_dat = type_dat,
                  tissues = c('DLPC_CMC', 'Whole_Blood'), height_plot = 5)
+  
+}
+
+if(grepl('T1D', pheno)){
+  
+  best_pathR <- best_res_fun(pathR, tissues, id_pval = 13, n_top = 15)
+  best_pathGO <- best_res_fun(pathGO, tissues, id_pval = 15,  n_top = 15)
+  
+  plot_best_path(best_res = best_pathR, color_tissues = color_tissues, title_plot = sprintf('Reactome pathways %s', pheno), type_mat = 'path_Reactome',outFold = fold, type_dat = type_dat,
+                 tissues = c('Adipose_Subcutaneous'), height_plot = 3.5)
+  plot_best_path(best_res = best_pathGO, color_tissues = color_tissues, title_plot = sprintf('GO pathways %s', pheno),  type_mat = 'path_GO', outFold = fold, type_dat = type_dat,
+                 tissues = c('Adipose_Subcutaneous'), height_plot = 3.5, id_name = 2)
+  
+  plot_best_path(best_res = best_pathR, color_tissues = color_tissues, title_plot = sprintf('Reactome pathways %s', pheno), type_mat = 'path_Reactome',outFold = fold, type_dat = paste0(type_dat, 'v2'),
+                 tissues = c('Pancreas'), height_plot = 3.5)
+  plot_best_path(best_res = best_pathGO, color_tissues = color_tissues, title_plot = sprintf('GO pathways %s', pheno), type_mat = 'path_GO',outFold = fold, type_dat = paste0(type_dat, 'v2'),
+                 tissues = c('Pancreas'), height_plot = 3.5,  id_name = 2)
+  
+  plot_best_path(best_res = best_pathR, color_tissues = color_tissues, title_plot = sprintf('Reactome pathways %s', pheno), type_mat = 'path_Reactome',outFold = fold, type_dat = paste0(type_dat, 'v3'),
+                 tissues = c('Whole_Blood'), height_plot = 3.5)
+  plot_best_path(best_res = best_pathGO, color_tissues = color_tissues, title_plot = sprintf('GO pathways %s', pheno), type_mat = 'path_GO',outFold = fold, type_dat = paste0(type_dat, 'v3'),
+                 tissues = c('Whole_Blood'), height_plot = 3.5, id_name = 2)
   
 }
 
@@ -659,3 +714,4 @@ if(grepl('CAD', pheno)){
   ggsave(filename = sprintf('%smanhattanPlot_GWASsnps_genes_%s_%s_%s.png', fold, pheno, tissue, new_path), plot = pl_manh_snps, width = 10, height = 3, dpi=500, device = 'png')
   ggsave(filename = sprintf('%smanhattanPlot_GWASsnps_genes_%s_%s_%s.pdf', fold, pheno, tissue, new_path), plot = pl_manh_snps, width = 10, height = 3, device = 'pdf')
 }
+

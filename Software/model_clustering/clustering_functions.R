@@ -62,6 +62,59 @@ clust_PGmethod_HKsim <- function(kNN, score, type_Dx, multiple_cohorts = F, samp
 }
 
 
+project_clust_PGmethod_HKsim <- function(kNN, score, data_mod, sample_info, euclDist, cl_mod){
+  
+  # build graph based on HK
+  # 2) find kNN based on eucl_dist
+  sigma_kNN <- apply(euclDist, 1, function(x) mean(x[order(x)[(2:kNN+1)]]))
+  # 3) compute for each pair the customized sigma and HK similarity
+  tmp <- sapply(1:(nrow(score)-1), function(x) c(rep(0,x), (sigma_kNN[x] + sigma_kNN[(x+1):nrow(data_tot)] + ed_dist[x, (x+1):nrow(data_tot)])/3))
+  tmp <- cbind(tmp, rep(0, nrow(score)))
+  eps <- tmp+t(tmp)
+  rm(tmp)
+  W <- exp(-euclDist/(0.5*eps))
+  rm(eps)
+  print(mem_used())
+  print('matrix W built')
+  # 4) find shared neigbours based on W
+  list_kNN_W <- apply(W, 1, function(x) order(x, decreasing = T)[1:kNN])
+  rm(W)
+  # 5) build weigths based on shared neighbours
+  tmp <- vector(mode = 'list', length = ncol(list_kNN_W))
+  id_tmp <- vector(mode = 'list', length = ncol(list_kNN_W))
+  for(i in 1:(nrow(score)-1)){
+    # print(i)
+    tmp[[i]] <- sapply((i+1):ncol(list_kNN_W), function(x) length(intersect(list_kNN_W[,i],list_kNN_W[,x])))
+    tmp[[i]] <- tmp[[i]]/(kNN*2 - tmp[[i]])
+    id_tmp[[i]] <- which(tmp[[i]]!=0)+i
+    tmp[[i]] <- tmp[[i]][tmp[[i]]!=0]
+  }
+  W_sNN <- sparseMatrix(i = unlist(lapply(1:nrow(score), function(x) rep(x, length(id_tmp[[x]])))), 
+                        j = unlist(id_tmp), x = unlist(tmp), symmetric = T)
+  rm(tmp)
+  rm(id_tmp)
+  print(mem_used())
+  print('matrix W_sNN built')
+  # 6) build final graph
+  # graph_W_sNN <- graph_from_adjacency_matrix(W_sNN, weighted=TRUE, mode = 'undirected')
+  # 7) build laplacian of the graph
+  L <- Matrix(diag(rowSums(W_sNN)), sparse = T) - W_sNN 
+  # 8) decompoase laplacian in blocks + create label Matrix
+  L_u <- L[(nrow(data_mod)+1):nrow(L), (nrow(data_mod)+1):nrow(L)]
+  Bt <- L[(nrow(data_mod)+1):nrow(L), 1:nrow(data_mod)]
+  Q <- model.matrix(~0+factor(cl_mod$gr, levels = sort(unique(cl_mod$gr))))
+  Q <- Matrix(Q)
+  RHS <- -Bt %*% Q
+  # 9) solve linear equation system
+  P <- SparseM::solve(a = L_u, b = RHS)
+  prob_mat <- as.data.frame(as.matrix(P))
+  colnames(prob_mat) <- paste0('gr_', sort(unique(cl_mod$gr)))
+  prob_mat <- cbind(data.frame(Individiual_ID = sample_info$Individual_ID, Dx = sample_info$Dx),prob_mat)
+  
+  return(list(probability = prob_mat, tot_W_sNN = W_sNN))
+}
+
+
 clust_PGmethod_EDdist <- function(kNN, score, type_Dx, multiple_cohorts = F, sample_info, euclDist){
   
   print(kNN)
@@ -271,8 +324,8 @@ compute_reg_endopheno <- function(fmla, type_pheno, mat){
       
     }
     
-    res <- glm(fmla, data = mat, family = 'binomial')
-    if(res$converged){
+    res <- tryCatch(glm(fmla, data = mat, family = 'binomial'),warning=function(...) NA)
+    if(is.list(res)){
     	output <- coef(summary(res))[rownames(coef(summary(res))) == 'gr_id1',1:4]
     }else{
 	output <- rep(NA, 4)
@@ -283,14 +336,15 @@ compute_reg_endopheno <- function(fmla, type_pheno, mat){
     
     mat$pheno <- factor(mat$pheno)
     output <- rep(NA, 4)
-    res <- list()
-    res$Hess <- NA
 
-    try(res <- polr(fmla, data = mat, Hess=TRUE), TRUE)
-    if(!any(is.na(res$Hess))){
-      ct <- coeftest(res)  
-      output <- ct[rownames(ct) == 'gr_id1',1:4]
+    res <- tryCatch(polr(fmla, data = mat, Hess=TRUE),warning=function(...) NA)
+    if(is.list(res)){
+      if(!any(is.na(res$Hess))){
+        ct <- coeftest(res)  
+        output <- ct[rownames(ct) == 'gr_id1',1:4]
+      }
     }
+
     
   }
   

@@ -128,7 +128,7 @@ for(i in 1:(length(gr_names)-1)){
     new <- new[,!p_rm]
     # remove phenotype with few true overall (find binomial)
     id_b <- intersect(colnames(new), paste0('p',phenoInfo$pheno_id[!phenoInfo$transformed_type %in% c('CONTINUOUS', 'CAT_ORD')]))
-    id_rm <- names(which(colSums(new[, id_b], na.rm = T) < 20))
+    id_rm <- names(which(colSums(new[, id_b], na.rm = T) < 50))
     if(length(id_rm)>0){
       new <- new[, !colnames(new) %in% id_rm]
     }
@@ -148,7 +148,7 @@ for(i in 1:(length(gr_names)-1)){
     
     bin_reg[[i]][[j-1]] <- cbind(data.frame(pheno_id = phenoInfo_tmp$pheno_id, Field = phenoInfo_tmp$Field, meaning = phenoInfo_tmp$Coding_meaning), res_glm)
     bin_reg[[i]][[j-1]]$pval_corr <- p.adjust(bin_reg[[i]][[j-1]]$pvalue, method = 'BH')
-    bin_reg[[i]][[j-1]]$comp <- sprintf('gr%i_vs_gr%i', gr_names[i], gr_names[i:length(gr_names)][j])
+    bin_reg[[i]][[j-1]]$comp <- sprintf('gr%i_vs_gr%i', gr_names[i:length(gr_names)][j], gr_names[i])
     
   }
   
