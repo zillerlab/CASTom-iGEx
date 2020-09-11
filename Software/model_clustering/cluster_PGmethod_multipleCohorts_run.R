@@ -22,8 +22,10 @@ parser <- ArgumentParser(description="clustering using PG method")
 parser$add_argument("--inputFile", type = "character", default = 'NA', nargs = '*', help = "file to be loaded (predicted tscore or pathScore)")
 parser$add_argument("--name_cohorts", type = "character", nargs = '*', help = "name of the single cohorts")
 parser$add_argument("--sampleAnnFile", type = "character", nargs = '*', help = "file with samples to be used")
+parser$add_argument("--geneRegionFile", type = "character", default='NA', help = "used if tscore and exclude_MHC")
 parser$add_argument("--tissues_name", type = "character", help = "name tissue")
 parser$add_argument("--color_file", type = "character", help = "file with color based on phenotype")
+parser$add_argument("--exclude_MHC", type = "logical", default = F, help = "if true, MHC region excluded (only ossible for tscore)")
 # parser$add_argument("--covDatFile", type = "character", default = 'NA', nargs = '*', help = "additional cov to test")
 parser$add_argument("--type_cluster", type = "character", default = 'All', help = "All, Cases, Controls")
 parser$add_argument("--split_tot", type = "integer", default = 0, help = "if 0 then inpuntFile load alone, otherwise splitted version")
@@ -45,6 +47,8 @@ tissues_name <- args$tissues_name
 color_file <- args$color_file
 pval_id <- args$pval_id
 inputFile <- args$inputFile
+exclude_MHC <- args$exclude_MHC
+geneRegionFile <- args$geneRegionFile
 #covDatFile <- args$covDatFile
 sampleAnnFile <- args$sampleAnnFile
 type_cluster <- args$type_cluster
@@ -60,6 +64,8 @@ outFold <- args$outFold
 
 #####################################################################################################################
 # name_cohorts <- read.table('/home/luciat/eQTL_PROJECT/INPUT_DATA/SCZ_cohort_names_CLUST', header = F, stringsAsFactors = F)$V1[1:2]
+# geneRegionFile <- '/archive/luciat/eQTL_PROJECT/OUTPUT_CMC/train_CMC/200kb/resPrior_regEval_allchr.txt'
+# exclude_MHC <- T
 # inputFile <- paste0('/home/luciat/eQTL_PROJECT/OUTPUT_CMC/predict_PGC/200kb/',name_cohorts, '/devgeno0.01_testdevgeno0/predictedTscores.txt')
 # sampleAnnFile <- paste0('/home/luciat/eQTL_PROJECT/INPUT_DATA/Covariates/',name_cohorts,'.covariateMatrix_old.txt')
 # covDatFile <- paste0('/home/luciat/eQTL_PROJECT/INPUT_DATA/Covariates/',name_cohorts,'.covariateMatrix_old.txt')
@@ -77,7 +83,7 @@ outFold <- args$outFold
 # kNN_par <- 30
 # color_file <- '/home/luciat/priler_project/Figures/color_tissues.txt'
 # tissues_name <- 'DLPC_CMC'
-#####################################################################################################################
+# #####################################################################################################################
 
 source(functR)
 
@@ -110,6 +116,17 @@ if(min_genes_path > 1 & grepl('path',type_data)){
   res_pval[,id_pval+2] <- p.adjust(res_pval[,id_pval], method = 'BH')
 }
 
+if(exclude_MHC & type_data == 'tscore'){
+  res_pval$start_position <- NA
+  res_pval$chrom <- NA
+  tmp <- read.table(geneRegionFile, h=T,stringsAsFactors = F)
+  tmp <- tmp[match(res_pval$ensembl_gene_id, tmp$ensembl_gene_id),]
+  res_pval$start_position <- tmp$start_position
+  res_pval$chrom <- tmp$chrom
+  HLA_reg <- c(26000000, 34000000)
+  res_pval <- res_pval[!(res_pval$chrom %in% 'chr6' & res_pval$start_position <=HLA_reg[2] & res_pval$start_position >= HLA_reg[1]) , ]
+}
+
 ### load score data ###
 sampleAnn <- vector(mode = 'list', length = length(name_cohorts))
 scoreMat <- vector(mode = 'list', length = length(name_cohorts))
@@ -132,7 +149,7 @@ for(c_id in 1:length(name_cohorts)){
   
   sampleAnn[[c_id]]$Temp_ID <- sampleAnn[[c_id]]$Individual_ID
   sampleAnn[[c_id]]$cohort <- rep(name_cohorts[c_id], nrow(sampleAnn[[c_id]]))
-
+  
   ### load score ###
   if(substr(inputFile[c_id], nchar(inputFile[c_id])-3, nchar(inputFile[c_id])) == '.txt'){
     tmp <- read.delim(inputFile[c_id], h=T, stringsAsFactors = F, check.names = F)
@@ -301,7 +318,7 @@ df_gr_mean$id <- df_gr_sd$id <- df_gr_cv$id <- colnames(input_data)
 output$gr_input <- list(mean = df_gr_mean, sd = df_gr_sd, cv = df_gr_cv)
 output$input_data <- input_data
 output$sampleInfo <- sampleAnn
-  
+
 # save also euclidian distance
 output$ed_dist <- ed_dist[,]
 
@@ -404,6 +421,5 @@ mat <- mat[!duplicated(mat$id),]
 mat$tissue <- tissues_name
 
 pheat_pl_gr(mat, type_mat = type_data, height_pl = 7, width_pl = width_pl, color_df = color_tissues, outFile = paste0(file_name, '_heatmap_gr'))
-
 
 
