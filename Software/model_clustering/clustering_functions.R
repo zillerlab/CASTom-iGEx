@@ -309,9 +309,13 @@ compute_reg_endopheno <- function(fmla, type_pheno, mat){
   
   if(type_pheno == 'CONTINUOUS'){
     
-    res <- glm(fmla, data = mat, family = 'gaussian')
-    output <- coef(summary(res))[rownames(coef(summary(res))) == 'gr_id1',1:4]
-  }
+    res <- tryCatch(glm(fmla, data = mat, family = 'gaussian'),warning=function(...) NA, error=function(...) NA)
+    if(is.list(res)){
+       output <- coef(summary(res))[rownames(coef(summary(res))) == 'gr_id1',1:4]
+    }else{
+       output <- rep(NA, 4)
+    }
+  }else{
   
   if((type_pheno %in% c('CAT_SINGLE_UNORDERED', 'CAT_SINGLE_BINARY', 'CAT_MUL_BINARY_VAR')) | (type_pheno == 'CAT_ORD' & length(unique(na.omit(mat[, 'pheno']))) == 2)){
     
@@ -324,20 +328,20 @@ compute_reg_endopheno <- function(fmla, type_pheno, mat){
       
     }
     
-    res <- tryCatch(glm(fmla, data = mat, family = 'binomial'),warning=function(...) NA)
+    res <- tryCatch(glm(fmla, data = mat, family = 'binomial'),warning=function(...) NA, error=function(...) NA)
     if(is.list(res)){
     	output <- coef(summary(res))[rownames(coef(summary(res))) == 'gr_id1',1:4]
     }else{
 	output <- rep(NA, 4)
     }
-  }
+  }else{
   
   if(type_pheno == 'CAT_ORD' & length(unique(na.omit(mat[, 'pheno']))) > 2){
     
     mat$pheno <- factor(mat$pheno)
     output <- rep(NA, 4)
 
-    res <- tryCatch(polr(fmla, data = mat, Hess=TRUE),warning=function(...) NA)
+    res <- tryCatch(polr(fmla, data = mat, Hess=TRUE),warning=function(...) NA, error=function(...) NA)
     if(is.list(res)){
       if(!any(is.na(res$Hess))){
         ct <- coeftest(res)  
@@ -346,12 +350,12 @@ compute_reg_endopheno <- function(fmla, type_pheno, mat){
     }
 
     
+  }else{
+  output <- rep(NA, 4)
   }
-  
-  if(! type_pheno %in% c('CAT_ORD', 'CAT_SINGLE_UNORDERED', 'CAT_SINGLE_BINARY', 'CAT_MUL_BINARY_VAR', 'CONTINUOUS')){
-    output <- 'wrong pheno type annotation'
   }
-  
+  }
+
   return(output)
   
 }
