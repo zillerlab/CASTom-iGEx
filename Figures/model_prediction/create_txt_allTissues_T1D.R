@@ -2,7 +2,7 @@
 library(qvalue)
 
 setwd('/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_GTEx/')
-tissues_name <- c('Adipose_Subcutaneous', 'Pancreas', 'Whole_Blood')
+tissues_name <- c('Adipose_Subcutaneous', 'Liver', 'Pancreas', 'Whole_Blood')
 
 df_tscore <- df_pathR <- df_pathGO <- list()
 

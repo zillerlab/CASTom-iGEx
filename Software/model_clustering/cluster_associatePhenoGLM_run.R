@@ -90,7 +90,9 @@ phenoDat <- phenoDat[,!colnames(phenoDat) %in% rm_col]
 
 phenoInfo <- read.delim(phenoDescFile, h=T, stringsAsFactors = F, sep = '\t')
 phenoInfo <- phenoInfo[match(colnames(phenoDat), phenoInfo$pheno_id),]
-phenoInfo$Field[phenoInfo$Path == 'Online follow-up > Cognitive function online > Fluid intelligence'] <- paste(phenoInfo$Field[phenoInfo$Path == 'Online follow-up > Cognitive function online > Fluid intelligence'], '(Online)')
+if(any(phenoInfo$Path %in% 'Online follow-up > Cognitive function online > Fluid intelligence')){
+  phenoInfo$Field[phenoInfo$Path == 'Online follow-up > Cognitive function online > Fluid intelligence'] <- paste(phenoInfo$Field[phenoInfo$Path == 'Online follow-up > Cognitive function online > Fluid intelligence'], '(Online)')
+}
 cl <- cluster_output$cl_best$gr
 
 output <- list(phenoDat = phenoDat, phenoInfo = phenoInfo, cl = cluster_output$cl_best)
@@ -147,7 +149,7 @@ for(i in 1:(length(gr_names)-1)){
     phenoInfo_tmp <- phenoInfo[match(colnames(new), paste0('p',phenoInfo$pheno_id)),]
     
     bin_reg[[i]][[j-1]] <- cbind(data.frame(pheno_id = phenoInfo_tmp$pheno_id, Field = phenoInfo_tmp$Field, meaning = phenoInfo_tmp$Coding_meaning), res_glm)
-    bin_reg[[i]][[j-1]]$pval_corr <- p.adjust(bin_reg[[i]][[j-1]]$pvalue, method = 'BH')
+    bin_reg[[i]][[j-1]]$pval_corr <- p.adjust(bin_reg[[i]][[j-1]]$pvalue, method = 'BY')
     bin_reg[[i]][[j-1]]$comp <- sprintf('gr%i_vs_gr%i', gr_names[i:length(gr_names)][j], gr_names[i])
     
   }
@@ -156,7 +158,7 @@ for(i in 1:(length(gr_names)-1)){
 }
 
 tot_bin_reg <- do.call(rbind, do.call(c,bin_reg))
-tot_bin_reg$pval_corr_overall <-  p.adjust(tot_bin_reg$pvalue, method = 'BH')
+tot_bin_reg$pval_corr_overall <-  p.adjust(tot_bin_reg$pvalue, method = 'BY')
 
 # save
 write.table(x = tot_bin_reg, sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation_GLMpairwise.txt', outFold, type_data, type_input, type_cluster, type_sim), col.names = T, row.names = F, sep = '\t', quote = F)

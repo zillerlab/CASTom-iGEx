@@ -457,8 +457,8 @@ pathR_nsgin <- creat_dfnsign(tissues_name = tissues, res = pathR, id_pval_corr =
 pathGO_nsgin <- creat_dfnsign(tissues_name = tissues, res = pathGO, id_pval_corr = 17, pval_FDR = pval_FDR, df_color = color_tissues, id_pval_corr_tot = 19)
 
 write.table(file = sprintf('%snsignificant_tscore.txt', fold), x = tscore_nsgin$table, quote = F, col.names = T, row.names = F, sep = '\t')
-write.table(file = sprintf('%snsignificant_pathR.txt', fold), x = tscore_nsgin$table, quote = F, col.names = T, row.names = F, sep = '\t')
-write.table(file = sprintf('%snsignificant_pathGO.txt', fold), x = tscore_nsgin$table, quote = F, col.names = T, row.names = F, sep = '\t')
+write.table(file = sprintf('%snsignificant_pathR.txt', fold), x = pathR_nsgin$table, quote = F, col.names = T, row.names = F, sep = '\t')
+write.table(file = sprintf('%snsignificant_pathGO.txt', fold), x = pathGO_nsgin$table, quote = F, col.names = T, row.names = F, sep = '\t')
 
 pl_number_function(df = tscore_nsgin$plot, type_mat = 'tscore', outFold = fold, type_dat = type_dat)
 pl_number_function(df = pathR_nsgin$plot, type_mat = 'path_Reactome', outFold = fold, type_dat = type_dat)
@@ -568,6 +568,11 @@ if(grepl('T1D', pheno)){
                  tissues = c('Whole_Blood'), height_plot = 3.5)
   plot_best_path(best_res = best_pathGO, color_tissues = color_tissues, title_plot = sprintf('GO pathways %s', pheno), type_mat = 'path_GO',outFold = fold, type_dat = paste0(type_dat, 'v3'),
                  tissues = c('Whole_Blood'), height_plot = 3.5, id_name = 2)
+  
+  plot_best_path(best_res = best_pathR, color_tissues = color_tissues, title_plot = sprintf('Reactome pathways %s', pheno), type_mat = 'path_Reactome',outFold = fold, type_dat = paste0(type_dat, 'v4'),
+                 tissues = c('Liver'), height_plot = 3.5)
+  plot_best_path(best_res = best_pathGO, color_tissues = color_tissues, title_plot = sprintf('GO pathways %s', pheno), type_mat = 'path_GO',outFold = fold, type_dat = paste0(type_dat, 'v4'),
+                 tissues = c('Liver'), height_plot = 3.5, id_name = 2)
   
 }
 
@@ -714,4 +719,3 @@ if(grepl('CAD', pheno)){
   ggsave(filename = sprintf('%smanhattanPlot_GWASsnps_genes_%s_%s_%s.png', fold, pheno, tissue, new_path), plot = pl_manh_snps, width = 10, height = 3, dpi=500, device = 'png')
   ggsave(filename = sprintf('%smanhattanPlot_GWASsnps_genes_%s_%s_%s.pdf', fold, pheno, tissue, new_path), plot = pl_manh_snps, width = 10, height = 3, device = 'pdf')
 }
-
