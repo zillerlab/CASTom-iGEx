@@ -286,7 +286,7 @@ plot_cverr_test<- ggplot(data = df_cv_test, aes(x = it, y = error)) +
 if(id_opt == id_con){
   file_name <- sprintf("%s/plot_CVmse_TEST_Eopt.png", outFold)
 }else{
-  file_name <- sprintf("%s/plot_CVmse_TEST_Efixed%i.png", outFold, Epar[id_con])
+  file_name <- sprintf("%s/plot_CVmse_TEST_Efixed%s.png", outFold, as.character(Epar[id_con]))
 }
 ggsave(file_name, plot = plot_cverr_test, width = 8, height = 8, units = "in")
 
@@ -303,7 +303,7 @@ plot_cverr_train <- ggplot(data = df_cv_train, aes(x = it, y = error)) +
 if(id_opt == id_con){
   file_name <- sprintf("%s/plot_CVmse_TRAIN_Eopt.png", outFold)
 }else{
-  file_name <- sprintf("%s/plot_CVmse_TRAIN_Efixed%i.png", outFold, Epar[id_con])
+  file_name <- sprintf("%s/plot_CVmse_TRAIN_Efixed%s.png", outFold, as.character(Epar[id_con]))
 }
 ggsave(file_name, plot = plot_cverr_train, width = 8, height = 8, units = "in")
 
@@ -329,7 +329,7 @@ plot_cvobjerr_train<- ggplot(data = df_objcv_train, aes(x = it, y = error)) +
 if(id_opt == id_con){
   file_name <- sprintf("%s/plot_CVobj_TRAIN_Eopt.png", outFold)
 }else{
-  file_name <- sprintf("%s/plot_CVobj_TRAIN_Efixed%i.png", outFold, Epar[id_con])
+  file_name <- sprintf("%s/plot_CVobj_TRAIN_Efixed%s.png", outFold, as.character(Epar[id_con]))
 }
 ggsave(file_name, plot = plot_cvobjerr_train, width = 8, height = 8, units = "in")
 
@@ -353,7 +353,7 @@ plot_cvobjerr_test<- ggplot(data = df_objcv_test, aes(x = it, y = error)) +
 if(id_opt == id_con){
   file_name <- sprintf("%s/plot_CVobj_TEST_Eopt.png", outFold)
 }else{
-  file_name <- sprintf("%s/plot_CVobj_TEST_Efixed%i.pmg", outFold, Epar[id_con])
+  file_name <- sprintf("%s/plot_CVobj_TEST_Efixed%s.png", outFold, as.character(Epar[id_con]))
 }
 ggsave(file_name, plot = plot_cvobjerr_test, width = 8, height = 8, units = "in")
 

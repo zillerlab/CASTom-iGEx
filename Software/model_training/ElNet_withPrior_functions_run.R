@@ -107,11 +107,16 @@ expPrediction_cv_noPrior_fold <- function(X, alpha, fold, seed, nfolds){
       
       set.seed(seed)
       print(paste('alpha val', alpha[i]))
-      cv_res[[i]] <- cv.glmnet(x = genotype, y = expressionValue, alpha = alpha[i], lambda = lambda_set[[i]], foldid = foldid_vect, intercept = T, standardize = F, 
-                               penalty.factor = c(rep(1, length(which(ind_SNPs))), rep(0, ncol(covDat)))) 
-      
+      # some values could be constant for a fold, remove gene
+      cv_res[[i]] <- tryCatch(cv.glmnet(x = genotype, y = expressionValue, alpha = alpha[i], lambda = lambda_set[[i]], foldid = foldid_vect, intercept = T, standardize = F, 
+                               penalty.factor = c(rep(1, length(which(ind_SNPs))), rep(0, ncol(covDat)))), 
+      error=function(...) list(lambda.min=NA)) 
+     
     }
-    
+    if(is.na(cv_res[[1]]$lambda.min)){
+     return(c(X,NA,NA,NA,NA,NA,NA,NA,NA,NA, NA, NA))
+    }else{
+
     # keep only the best (lambda,alpha) pair in terms of cvm, 
     id_lambda <- sapply(cv_res, function(x) which(x$lambda == x$lambda.min))
     cvm_min <- sapply(1:length(alpha), function(x) cv_res[[x]]$cvm[id_lambda[x]])
@@ -157,7 +162,7 @@ expPrediction_cv_noPrior_fold <- function(X, alpha, fold, seed, nfolds){
     cor_pval <- cor.test(expressionValue_geno,as.numeric(pred_geno))$p.value
         
     return(cbind(X,r,c(selBeta,as.numeric(selIntercept)),selLambda,selAlpha, res$glmnet.fit$dev.ratio[ind], dev_geno, dev_cov, dev_geno_cov, dev_lmgeno, cor_est, cor_pval))
-    
+    }
   }else{
     
     return(c(X,NA,NA,NA,NA,NA,NA,NA,NA,NA, NA, NA))
@@ -576,7 +581,7 @@ expPrediction_Prior_fold <- function(X, prior, lambda, alpha, fold){
   ind_SNPs=geneSnpDist[,X]!=0 #&pDat[,2]!=0
   nSnp=sum(ind_SNPs)
   
-  if (nSnp>2){
+  if (nSnp>2 & !is.na(lambda)){
     
     # # ######
     # cons <- setdiff(which(ind_SNPs)[1]:which(ind_SNPs)[length(which(ind_SNPs))], which(ind_SNPs))
