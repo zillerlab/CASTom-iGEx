@@ -62,9 +62,9 @@ type_input <- args$type_input
 kNN_par <- args$kNN_par
 outFold <- args$outFold
 
-#####################################################################################################################
-# name_cohorts <- read.table('/home/luciat/eQTL_PROJECT/INPUT_DATA/SCZ_cohort_names_CLUST', header = F, stringsAsFactors = F)$V1[1:2]
-# geneRegionFile <- '/archive/luciat/eQTL_PROJECT/OUTPUT_CMC/train_CMC/200kb/resPrior_regEval_allchr.txt'
+####################################################################################################################
+# name_cohorts <- read.table('/home/luciat/eQTL_PROJECT/INPUT_DATA/SCZ_cohort_names_CLUST', header = F, stringsAsFactors = F)$V1[c(1:2, 16)]
+# geneRegionFile <- '/home/luciat/eQTL_PROJECT/OUTPUT_CMC/train_CMC/200kb/resPrior_regEval_allchr.txt'
 # exclude_MHC <- T
 # inputFile <- paste0('/home/luciat/eQTL_PROJECT/OUTPUT_CMC/predict_PGC/200kb/',name_cohorts, '/devgeno0.01_testdevgeno0/predictedTscores.txt')
 # sampleAnnFile <- paste0('/home/luciat/eQTL_PROJECT/INPUT_DATA/Covariates/',name_cohorts,'.covariateMatrix_old.txt')
@@ -83,7 +83,7 @@ outFold <- args$outFold
 # kNN_par <- 30
 # color_file <- '/home/luciat/priler_project/Figures/color_tissues.txt'
 # tissues_name <- 'DLPC_CMC'
-# #####################################################################################################################
+#####################################################################################################################
 
 source(functR)
 
@@ -108,6 +108,9 @@ if(type_data == 'tscore'){
     }
   }
 }
+
+# remove features that are not concordant across cohorts (meta analysis random model)
+res_pval <- res_pval[res_pval[, grepl('_model', colnames(res_pval))] == 'fixed',]
 
 # recompute pvalue if ngenes_tscore > 1
 if(min_genes_path > 1 & grepl('path',type_data)){
@@ -149,7 +152,7 @@ for(c_id in 1:length(name_cohorts)){
   
   sampleAnn[[c_id]]$Temp_ID <- sampleAnn[[c_id]]$Individual_ID
   sampleAnn[[c_id]]$cohort <- rep(name_cohorts[c_id], nrow(sampleAnn[[c_id]]))
-  
+
   ### load score ###
   if(substr(inputFile[c_id], nchar(inputFile[c_id])-3, nchar(inputFile[c_id])) == '.txt'){
     tmp <- read.delim(inputFile[c_id], h=T, stringsAsFactors = F, check.names = F)
@@ -210,6 +213,54 @@ if(type_input == 'zscaled'){
   colnames(input_data) <- colnames(scoreMat)
 }
 
+### plot: UMAP
+# remove samples that are outliers (from PCA)
+n_comp_umap <- 2
+n_neigh_umap <- 30
+min_dist_umap <- 0.01
+seed_umap <- 67
+
+custom.settings = umap.defaults
+custom.settings$min_dist = min_dist_umap
+custom.settings$n_components = n_comp_umap
+custom.settings$n_neighbors = n_neigh_umap
+custom.settings$random_state <- seed_umap
+
+umap_tot <- umap::umap(input_data, custom.settings)
+id_out <- unlist(apply(umap_tot$layout, 2, function(x) which(abs(x - median(x)) > (6 * sd(x)) )))
+sampleAnn_out <- NULL
+df_umap_tot <- NULL
+
+if(length(id_out)>0){
+  
+  print(sprintf('remove outliers (%s)', length(id_out)))
+  df_umap_tot <- data.frame(component_1=umap_tot$layout[,1], component_2=umap_tot$layout[,2], outlier = rep('no', nrow(umap_tot$layout)))
+  df_umap_tot$outlier[id_out] <- 'yes'
+  df_umap_tot$outlier <- factor(df_umap_tot$outlier, levels = c('yes', 'no'))
+  
+  # plot
+  tot_pl <- ggplot(df_umap_tot, aes(x = component_1, y = component_2, color = outlier))+
+    geom_point(size = 0.05)+
+    theme_bw()+theme(legend.position = 'right')
+  width_pl <- 4
+  ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_umap_ouliers.png', outFold, type_data, type_input, type_cluster, type_sim), width = width_pl, height = 4, plot = tot_pl, device = 'png')
+  ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_umap_outliers.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = width_pl, height = 4, plot = tot_pl, device = 'pdf')
+  
+  # remove outliers
+  input_data <- scale(scoreMat[-id_out,])
+  attr(input_data, "scaled:scale") <- NULL
+  attr(input_data, "scaled:center") <- NULL
+  
+  if(type_input == 'zscaled'){
+    input_data <- sapply(1:ncol(input_data), function(x) input_data[, x]*res_pval[res_pval[,id_info] == colnames(input_data)[x], id_pval-1])
+    colnames(input_data) <- colnames(scoreMat)
+  }
+  sampleAnn <- sampleAnn[-id_out,]
+  sampleAnn_out <- sampleAnn[id_out, ]
+  
+}
+
+
 ###############################################################
 ## pheno graph clustering:
 # specific for cluster with low computational power (LISA PGC)
@@ -226,10 +277,10 @@ if(nrow(sampleAnn)>10000){
     ed_dist[i,(i+1):nrow(input_data)] <- tmp
     ed_dist[(i+1):nrow(input_data),i] <- tmp
   }
+  rm(tmp)
 }else{
   ed_dist <- as.matrix(dist(input_data, method = 'euclidian'))^2
 }
-rm(tmp)
 print(mem_used())
 print('euclidian distance computed')
 
@@ -321,9 +372,7 @@ output$sampleInfo <- sampleAnn
 
 # save also euclidian distance
 output$ed_dist <- ed_dist[,]
-
-# save results:
-save(output, file = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric.RData', outFold, type_data, type_input, type_cluster, type_sim))
+output$sampleOutliers <- list(sample = sampleAnn_out, tot_umap = df_umap_tot)
 
 ### plot: UMAP
 n_comp_umap <- 2
@@ -385,6 +434,10 @@ pl1 <- ggplot(df, aes(x = component_1, y=component_2, color = cohort))+
 ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_umap_cov.png', outFold, type_data, type_input, type_cluster, type_sim), width = 4, height = 4, plot = pl1, device = 'png')
 ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_umap_cov.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = 4, height = 4, plot = pl1, device = 'pdf')
 
+# save results:
+output$umap <- df
+save(output, file = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric.RData', outFold, type_data, type_input, type_cluster, type_sim))
+
 ### plot: heatmap
 file_name <- sprintf('%s%s_%s_cluster%s_PGmethod_%smetric', outFold, type_data, type_input, type_cluster, type_sim)
 tmp <- test_diff[test_diff$pval_corr < 0.05,]
@@ -421,5 +474,6 @@ mat <- mat[!duplicated(mat$id),]
 mat$tissue <- tissues_name
 
 pheat_pl_gr(mat, type_mat = type_data, height_pl = 7, width_pl = width_pl, color_df = color_tissues, outFile = paste0(file_name, '_heatmap_gr'))
+
 
 
