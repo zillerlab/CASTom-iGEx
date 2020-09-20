@@ -312,8 +312,11 @@ compute_reg_endopheno <- function(fmla, type_pheno, mat){
     res <- tryCatch(glm(fmla, data = mat, family = 'gaussian'),warning=function(...) NA, error=function(...) NA)
     if(is.list(res)){
        output <- coef(summary(res))[rownames(coef(summary(res))) == 'gr_id1',1:4]
+       output[5] <- output[1]
+       output[6] <-  output[1] + qnorm(0.025)*output[2]
+       output[7] <-  output[1] + qnorm(0.975)*output[2]
     }else{
-       output <- rep(NA, 4)
+       output <- rep(NA, 7)
     }
   }else{
   
@@ -331,27 +334,33 @@ compute_reg_endopheno <- function(fmla, type_pheno, mat){
     res <- tryCatch(glm(fmla, data = mat, family = 'binomial'),warning=function(...) NA, error=function(...) NA)
     if(is.list(res)){
     	output <- coef(summary(res))[rownames(coef(summary(res))) == 'gr_id1',1:4]
+    	output[5] <- exp(output[1])
+    	output[6] <- exp(output[1] + qnorm(0.025)*output[2])
+    	output[7] <- exp(output[1] + qnorm(0.975)*output[2])
     }else{
-	output <- rep(NA, 4)
+	output <- rep(NA, 7)
     }
   }else{
   
   if(type_pheno == 'CAT_ORD' & length(unique(na.omit(mat[, 'pheno']))) > 2){
     
     mat$pheno <- factor(mat$pheno)
-    output <- rep(NA, 4)
+    output <- rep(NA, 7)
 
     res <- tryCatch(polr(fmla, data = mat, Hess=TRUE),warning=function(...) NA, error=function(...) NA)
     if(is.list(res)){
       if(!any(is.na(res$Hess))){
         ct <- coeftest(res)  
         output <- ct[rownames(ct) == 'gr_id1',1:4]
+        output[5] <- exp(output[1])
+        output[6] <- exp(output[1] + qnorm(0.025)*output[2])
+        output[7] <- exp(output[1] + qnorm(0.975)*output[2])
       }
     }
 
     
   }else{
-  output <- rep(NA, 4)
+  output <- rep(NA, 7)
   }
   }
   }
@@ -360,3 +369,22 @@ compute_reg_endopheno <- function(fmla, type_pheno, mat){
   
 }
 
+# compute_reg_features <- function(fmla, mat){
+#   
+#   res <- tryCatch(glm(fmla, data = mat, family = 'gaussian'),warning=function(...) NA, error=function(...) NA)
+#   if(is.list(res)){
+#     output <- coef(summary(res))[rownames(coef(summary(res))) == 'gr_id1',1:4]
+#   }else{
+#     output <- rep(NA, 4)
+#   }
+#   
+#   # res <- tryCatch(glm(fmla, data = mat, family = 'binomial'),warning=function(...) NA, error=function(...) NA)
+#   # if(is.list(res)){
+#   #   output <- coef(summary(res))[rownames(coef(summary(res))) == 'gene',1:4]
+#   # }else{
+#   #   output <- rep(NA, 4)
+#   # }
+#   
+#   return(output)
+#   
+# }
