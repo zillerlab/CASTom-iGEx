@@ -68,7 +68,7 @@ project_clust_PGmethod_HKsim <- function(kNN, score, data_mod, sample_info, eucl
   # 2) find kNN based on eucl_dist
   sigma_kNN <- apply(euclDist, 1, function(x) mean(x[order(x)[(2:kNN+1)]]))
   # 3) compute for each pair the customized sigma and HK similarity
-  tmp <- sapply(1:(nrow(score)-1), function(x) c(rep(0,x), (sigma_kNN[x] + sigma_kNN[(x+1):nrow(data_tot)] + ed_dist[x, (x+1):nrow(data_tot)])/3))
+  tmp <- sapply(1:(nrow(score)-1), function(x) c(rep(0,x), (sigma_kNN[x] + sigma_kNN[(x+1):nrow(data_tot)] + euclDist[x, (x+1):nrow(data_tot)])/3))
   tmp <- cbind(tmp, rep(0, nrow(score)))
   eps <- tmp+t(tmp)
   rm(tmp)
@@ -388,3 +388,4 @@ compute_reg_endopheno <- function(fmla, type_pheno, mat){
 #   return(output)
 #   
 # }
+
