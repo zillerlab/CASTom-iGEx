@@ -246,7 +246,7 @@ for(i in 1:length(gr_names)){
   print(paste0('group', gr_names[i], '_vs_all'))
   
   # j vs all
-  gr_id <- as.factor(as.numeric(cl == gr_names[i]))
+  gr_id <- as.factor(as.numeric(cl != gr_names[i]))
   test_feat[[i]] <- data.frame(feat = colnames(scale_data), comp = rep(sprintf('gr%i_vs_all', i), ncol(scale_data)))
   test_feat[[i]]$pval<- NA
   test_feat[[i]]$estimates<- NA
