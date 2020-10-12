@@ -274,6 +274,6 @@ test_feat$pval_corr_overall <-  p.adjust(test_feat$pval, method = 'BH')
 output$test_feat = test_feat
 
 # Save
-save(output, file = sprintf('%s%sOriginal_%sCluster%s_featAssociation.RData', outFold, type_data_cluster, type_data, type_cluster))
+save(output, file = sprintf('%s%sOriginal_%sCluster%s_featAssociation.RData', outFold, type_data, type_data_cluster, type_cluster))
 
 

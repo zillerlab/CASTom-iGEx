@@ -27,6 +27,7 @@ parser$add_argument("--type_cluster", type = "character", default = 'All', help 
 parser$add_argument("--split_tot", type = "integer", default = 0, help = "if 0 then inpuntFile load alone, otherwise splitted version")
 parser$add_argument("--pvalresFile", type = "character", default = 'NA', help = "file with pvalue results")
 parser$add_argument("--pval_id", type = "integer", default = 0, help = "id to be used on pvalue file")
+parser$add_argument("--pval_thr", type = "double", default = 1, help = "threshold to filter features")
 parser$add_argument("--corr_thr", type = "double", default = -1, help = "correlation among features threshold")
 parser$add_argument("--functR", type = "character", help = "functions to be used")
 parser$add_argument("--type_data", type = "character", help = "tscore, path_Reactome or path_GO")
@@ -34,14 +35,20 @@ parser$add_argument("--type_sim", type = "character", default = 'HK', help = "HK
 parser$add_argument("--type_input", type = "character", default = 'original', help = "original or zscaled")
 parser$add_argument("--kNN_par", type = "integer", nargs = '*', default = 30, help = "parameter used for PG method")
 parser$add_argument("--min_genes_path", type = "integer", default = 1, help = "minimum number of genes for a pathway, if > 1 recompute corrected pvalues")
+parser$add_argument("--exclude_MHC", type = "logical", default = F, help = "if true, MHC region excluded (only ossible for tscore)")
+parser$add_argument("--capped_zscore", type = "logical", default = F, help = "if true, zstat is capped based on distribution")
+parser$add_argument("--geneRegionFile", type = "character", default='NA', help = "used if tscore and exclude_MHC")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
 args <- parser$parse_args()
 pvalresFile <- args$pvalresFile
 tissues_name <- args$tissues_name
+capped_zscore <- args$capped_zscore
 color_file <- args$color_file
 pval_id <- args$pval_id
 inputFile <- args$inputFile
+geneRegionFile <- args$geneRegionFile
+exclude_MHC <- args$exclude_MHC
 covDatFile <- args$covDatFile
 sampleAnnFile <- args$sampleAnnFile
 type_cluster <- args$type_cluster
@@ -52,6 +59,7 @@ corr_thr <- args$corr_thr
 min_genes_path <- args$min_genes_path
 type_sim <- args$type_sim
 type_input <- args$type_input
+pval_thr <- args$pval_thr
 kNN_par <- args$kNN_par
 outFold <- args$outFold
 
@@ -126,6 +134,21 @@ if(min_genes_path > 1 & grepl('path',type_data)){
   res_pval[,id_pval+1] <- qvalue(res_pval[,id_pval])$qvalues
   res_pval[,id_pval+2] <- p.adjust(res_pval[,id_pval], method = 'BH')
 }
+
+if(exclude_MHC & type_data == 'tscore'){
+  res_pval$start_position <- NA
+  res_pval$chrom <- NA
+  tmp <- read.table(geneRegionFile, h=T,stringsAsFactors = F)
+  tmp <- tmp[match(res_pval$ensembl_gene_id, tmp$ensembl_gene_id),]
+  res_pval$start_position <- tmp$start_position
+  res_pval$chrom <- tmp$chrom
+  HLA_reg <- c(26000000, 34000000)
+  res_pval <- res_pval[!(res_pval$chrom %in% 'chr6' & res_pval$start_position <=HLA_reg[2] & res_pval$start_position >= HLA_reg[1]) , ]
+}
+
+# filter based on pvalue thr:
+res_pval <- res_pval[res_pval[,id_pval+2] <= pval_thr,]
+print(dim(res_pval))
 
 # load input matrix 
 if(split_tot == 0){
@@ -211,7 +234,17 @@ attr(input_data, "scaled:scale") <- NULL
 attr(input_data, "scaled:center") <- NULL
 
 if(type_input == 'zscaled'){
-  input_data <- sapply(1:ncol(input_data), function(x) input_data[, x]*res_pval[res_pval[,id_info] == colnames(input_data)[x], id_pval-1])
+  
+  # cap zscores (cap values)
+  if(capped_zscore){
+    tmp_val <- res_pval[, id_pval-1]
+    thr_val <- quantile(tmp_val, probs=c(0.005, 0.995))
+    tmp_val[tmp_val<=thr_val[1]] <- thr_val[1]
+    tmp_val[tmp_val>=thr_val[2]] <- thr_val[2]
+  }else{
+    tmp_val <- res_pval[, id_pval-1]
+  }
+  input_data <- sapply(1:ncol(input_data), function(x) input_data[, x]*tmp_val[res_pval[,id_info] == colnames(input_data)[x]])
   colnames(input_data) <- colnames(scoreMat)
 }
 

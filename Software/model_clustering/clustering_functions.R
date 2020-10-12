@@ -303,6 +303,383 @@ pheat_pl_gr <- function(mat, type_mat, height_pl = 10, width_pl = 7, color_df, o
   
 }
 
+pheat_pl_tscore <- function(mat, cl, info_feat = NA, test_feat = NA, height_pl = 10, width_pl = 7, outFile, cap = NA, res_pl = 200){
+  
+  coul <- rev(colorRampPalette(brewer.pal(11, "RdBu"))(100))
+  # cap mat if necessary
+  tmp_mat <- as.matrix(mat)
+  if(!is.na(cap)){
+    val <- abs(cap)
+  }else{
+    val <- max(abs(tmp_mat))  
+  }
+  mat_breaks <- seq(-val, val, length.out = 100)
+  
+  tmp_mat[tmp_mat>=val] <- val
+  tmp_mat[tmp_mat<=-val] <- -val
+  
+  # sort cl, match mat according cl
+  id <- order(cl$gr)
+  P <- length(unique(cl$gr))
+  cl <- cl[id, ]
+  tmp_mat <- tmp_mat[match(cl$id, rownames(tmp_mat)),]
+  
+  # order gene according location
+  info_feat <- info_feat[order(info_feat$start_position), ]
+  info_feat <- info_feat[order(as.numeric(sapply(info_feat$chrom, function(x) strsplit(x, split = 'chr')[[1]][2]))), ]
+  keep_gene <- info_feat$external_gene_name
+  tmp_mat <- tmp_mat[, match(keep_gene, colnames(tmp_mat))]
+  tmp_mat <- t(tmp_mat)
+  chr_fact <- factor(info_feat$chrom, levels = unique(info_feat$chrom))
+  test_feat <- test_feat[test_feat$feat %in% keep_gene, ]
+  
+  mat_colors_gr <- list(cluster = pal_d3(palette = 'category20')(P))
+  names(mat_colors_gr$cluster) <- paste0('gr', 1:P)
+  
+  mat_colors_chr <- list(chrom = rep(c('#7C7C7C', '#C1C1C1'),length(unique(info_feat$chrom)))[1:length(unique(info_feat$chrom))])
+  names(mat_colors_chr$chrom) <- unique(info_feat$chrom)
+  
+  column_ha <- HeatmapAnnotation(cluster = anno_block(gp = gpar(fill = mat_colors_gr$cluster),
+                                                       labels = names(mat_colors_gr$cluster),
+                                                       labels_gp = gpar(col = "white", fontsize = 12,  fontface = "bold")))
+  
+  row_ha <- rowAnnotation(chrom = anno_block(gp = gpar(fill = mat_colors_chr$chrom),
+                                             labels = factor(names(mat_colors_chr$chrom), levels = names(mat_colors_chr$chrom)),
+                                             labels_gp = gpar(col = "black", fontsize = 10), 
+                                             labels_rot = 0))
+  
+  # add pvalue info for each group
+  estimate_col_fun = colorRamp2(c(min(test_feat$estimates), 0, max(test_feat$estimates)), c("darkgreen", "#F0F0F0", "darkorange"))
+  # estimate_col_fun = colorRamp2(c(min(test_feat$estimates), 0, max(test_feat$estimates)), c(brewer.pal(11, "RdBu")[11], "white", brewer.pal(11, "RdBu")[1]))
+  
+  df_pch <- list()
+  df_est <- list()
+  for(i in 1:P){
+    tmp_gr <- test_feat[test_feat$comp == sprintf('gr%i_vs_all', i), ]
+    df_est[[i]] <- tmp_gr$estimates[match(keep_gene, tmp_gr$feat)]
+    is_sign <- tmp_gr$pval_corr[match(keep_gene, tmp_gr$feat)] < 0.05
+    df_pch[[i]] <- rep("*", length(is_sign))
+    df_pch[[i]][!is_sign] = NA
+  }
+  df_est <- do.call(cbind, df_est)
+  colnames(df_est) <- paste0('gr', 1:P)
+  df_pch <- do.call(cbind, df_pch)
+  colnames(df_pch) <- paste0('gr', 1:P)
+  df_font <- matrix(rep("bold", P), nrow = 1)
+  df_font <- as.data.frame(df_font)
+  colnames(df_font) <- paste0('gr', 1:P)
+  
+  lgd_est = Legend(title = "wilcoxon\nestimates", col = estimate_col_fun, at = round(c(seq(min(test_feat$estimates), 0, length.out = 4), seq(0, max(test_feat$estimates), length.out = 4)[-1]), digits = 2),
+                   labels = as.character(round(c(seq(min(test_feat$estimates), 0, length.out = 4), seq(0, max(test_feat$estimates), length.out = 4)[-1]), digits = 2)))
+  # and one for the significant p-values
+  lgd_sig = Legend(pch = "*", type = "points", labels = "FDR pvalue < 0.05")
+  
+  hm_pl <- Heatmap(tmp_mat, name = "scaled\nT-scores", col = coul, cluster_rows = FALSE, cluster_columns = FALSE,  show_column_names = F, 
+                   top_annotation = column_ha, column_split = cl$gr, column_title = NULL,
+                   row_names_side = "left", row_names_gp = gpar(fontsize = 10),
+                   left_annotation = row_ha,  row_split  = factor(info_feat$chrom, levels = unique(info_feat$chrom)), row_title = NULL, row_gap = unit(0, "mm"),
+                   # right_annotation = gr_row_ha, 
+                   border = TRUE, use_raster = T)
+  tot_pl <- hm_pl
+  for(i in 1:P){
+    gr_row_ha <- rowAnnotation(gr = anno_simple(df_est[,i], col = estimate_col_fun, pch = df_pch[,i], border = T, pt_gp = gpar(fontface = df_font[,i])), 
+                               annotation_label = paste0('gr', i), annotation_name_side = 'top', annotation_name_rot = 0, simple_anno_size_adjust = T)
+    tot_pl <- tot_pl + gr_row_ha
+  }
+  
+  png(file=paste0(outFile, '.png'), res = res_pl, units = 'in', width = width_pl, height = height_pl)
+  draw(tot_pl , annotation_legend_list = list(lgd_est, lgd_sig), merge_legend = T, auto_adjust = T)
+  dev.off()
+  
+  pdf(file=paste0(outFile, '.pdf'), width = width_pl, height = height_pl)
+  draw(tot_pl , annotation_legend_list = list(lgd_est, lgd_sig), merge_legend = T, auto_adjust = F)
+  dev.off()
+  
+  # note: not possible to change label color of the annotation (use illustrator)
+  
+}
+
+
+pheat_pl_path <- function(mat, cl, info_feat = NA, test_feat = NA, height_pl = 10, width_pl = 7, outFile, cap = NA, res_pl = 200){
+  
+  coul <- rev(colorRampPalette(brewer.pal(11, "RdBu"))(100))
+  # cap mat if necessary
+  tmp_mat <- as.matrix(mat)
+  if(!is.na(cap)){
+    val <- abs(cap)
+  }else{
+    val <- max(abs(tmp_mat))  
+  }
+  mat_breaks <- seq(-val, val, length.out = 100)
+  
+  tmp_mat[tmp_mat>=val] <- val
+  tmp_mat[tmp_mat<=-val] <- -val
+  
+  # sort cl, match mat according cl
+  id <- order(cl$gr)
+  P <- length(unique(cl$gr))
+  cl <- cl[id, ]
+  tmp_mat <- tmp_mat[match(cl$id, rownames(tmp_mat)),]
+  
+  # order gene according location
+  keep_path <- info_feat[,1]
+  tmp_mat <- tmp_mat[, match(keep_path, colnames(tmp_mat))]
+  tmp_mat <- t(tmp_mat)
+  test_feat <- test_feat[test_feat$feat %in% keep_path, ]
+  
+  # mat_col <- data.frame(group = paste0('gr', cl$gr))
+  # rownames(mat_col) <- colnames(tmp_mat)
+  
+  mat_colors_gr <- list(cluster = pal_d3(palette = 'category20')(P))
+  names(mat_colors_gr$cluster) <- paste0('gr', 1:P)
+  
+  column_ha <- HeatmapAnnotation(cluster = anno_block(gp = gpar(fill = mat_colors_gr$cluster),
+                                                      labels = names(mat_colors_gr$cluster),
+                                                      labels_gp = gpar(col = "white", fontsize = 12,  fontface = "bold")))
+  
+  ngenes_col_fun = colorRamp2(c(min(info_feat$ngenes_tscore),max(info_feat$ngenes_tscore)), c("white", "#7a2048"))
+  perc_col_fun = colorRamp2(c(min(info_feat$ngenes_tscore/info_feat$ngenes_path), max(info_feat$ngenes_tscore/info_feat$ngenes_path)), c("white", "#316879"))
+  row_ha <- rowAnnotation(n_genes = info_feat$ngenes_tscore, perc = info_feat$ngenes_tscore/info_feat$ngenes_path, 
+                          annotation_label = list(n_genes = 'n. genes', perc = '% tot genes'), 
+                          col = list(n_genes = ngenes_col_fun, perc = perc_col_fun))
+ 
+  # add pvalue info for each group
+  estimate_col_fun = colorRamp2(c(min(test_feat$estimates), 0, max(test_feat$estimates)), c("darkgreen", "#F0F0F0", "darkorange"))
+  df_pch <- list()
+  df_est <- list()
+  for(i in 1:P){
+    tmp_gr <- test_feat[test_feat$comp == sprintf('gr%i_vs_all', i), ]
+    df_est[[i]] <- tmp_gr$estimates[match(keep_path, tmp_gr$feat)]
+    is_sign <- tmp_gr$pval_corr[match(keep_path, tmp_gr$feat)] < 0.05
+    df_pch[[i]] <- rep("*", length(is_sign))
+    df_pch[[i]][!is_sign] = NA
+  }
+  df_est <- do.call(cbind, df_est)
+  colnames(df_est) <- paste0('gr', 1:P)
+  df_pch <- do.call(cbind, df_pch)
+  colnames(df_pch) <- paste0('gr', 1:P)
+  df_font <- matrix(rep("bold", P), nrow = 1)
+  df_font <- as.data.frame(df_font)
+  colnames(df_font) <- paste0('gr', 1:P)
+  
+  lgd_est = Legend(title = "wilcoxon\nestimates", col = estimate_col_fun, at = round(c(seq(min(test_feat$estimates), 0, length.out = 4), seq(0, max(test_feat$estimates), length.out = 4)[-1]), digits = 2),
+                   labels = as.character(round(c(seq(min(test_feat$estimates), 0, length.out = 4), seq(0, max(test_feat$estimates), length.out = 4)[-1]), digits = 2)))
+  # and one for the significant p-values
+  lgd_sig = Legend(pch = "*", type = "points", labels = "FDR pvalue < 0.05")
+  
+  hm_pl <- Heatmap(tmp_mat, name = "scaled\nPathway-scores", col = coul, cluster_rows = F, cluster_columns = FALSE,  show_column_names = F, 
+                   top_annotation = column_ha, column_split = cl$gr, column_title = NULL, 
+                   row_names_side = "left", row_names_gp = gpar(fontsize = 10),
+                   left_annotation = row_ha,
+                   border = TRUE, use_raster = T)
+  tot_pl <- hm_pl
+  for(i in 1:P){
+    gr_row_ha <- rowAnnotation(gr = anno_simple(df_est[,i], col = estimate_col_fun, pch = df_pch[,i], border = T, pt_gp = gpar(fontface = df_font[,i])), 
+                               annotation_label = paste0('gr', i), annotation_name_side = 'top', annotation_name_rot = 0, simple_anno_size_adjust = T)
+    tot_pl <- tot_pl + gr_row_ha
+  }
+  side_par <- round(max(sapply(rownames(tmp_mat), nchar))*0.9)
+  
+  png(file=paste0(outFile, '.png'), res = res_pl, units = 'in', width = width_pl, height = height_pl)
+  draw(tot_pl , annotation_legend_list = list(lgd_est, lgd_sig), merge_legend = T, auto_adjust = T, padding = unit(c(2, 2 + side_par, 2, 2), "mm"))
+  dev.off()
+  
+  pdf(file=paste0(outFile, '.pdf'), width = width_pl, height = height_pl)
+  draw(tot_pl , annotation_legend_list = list(lgd_est, lgd_sig), merge_legend = T, auto_adjust = F)
+  dev.off()
+  
+  # note: not possible to change label color of the annotation (use illustrator)
+  
+}
+
+###################################################################################################
+
+pheat_pl_tot <- function(pheno_name, mat_tscore, info_feat_tscore, test_feat_tscore, pval_thr_est = 0.05, 
+                         mat_path, info_feat_path, test_feat_path,
+                         cl, height_pl = 10, width_pl = 7, outFile, cap = NA, res_pl = 200){
+  
+  ################
+  #### Tscore ####
+  ################
+  
+  coul <- rev(colorRampPalette(brewer.pal(11, "RdBu"))(100))
+  # cap mat if necessary
+  tmp_mat <- as.matrix(mat_tscore)
+  if(!is.na(cap)){
+    val <- abs(cap)
+  }else{
+    val <- max(abs(tmp_mat))  
+  }
+  mat_breaks <- seq(-val, val, length.out = 100)
+  
+  tmp_mat[tmp_mat>=val] <- val
+  tmp_mat[tmp_mat<=-val] <- -val
+  
+  # sort cl, match mat according cl
+  id <- order(cl$gr)
+  P <- length(unique(cl$gr))
+  cl <- cl[id, ]
+  tmp_mat <- tmp_mat[match(cl$id, rownames(tmp_mat)),]
+  
+  # order gene according location
+  info_feat_tscore <- info_feat_tscore[order(info_feat_tscore$start_position), ]
+  info_feat_tscore <- info_feat_tscore[order(as.numeric(sapply(info_feat_tscore$chrom, function(x) strsplit(x, split = 'chr')[[1]][2]))), ]
+  keep_gene <- info_feat_tscore$external_gene_name
+  tmp_mat <- tmp_mat[, match(keep_gene, colnames(tmp_mat))]
+  tmp_mat <- t(tmp_mat)
+  chr_fact <- factor(info_feat_tscore$chrom, levels = unique(info_feat_tscore$chrom))
+  test_feat_tscore <- test_feat_tscore[test_feat_tscore$feat %in% keep_gene, ]
+  
+  mat_colors_gr <- list(cluster = pal_d3(palette = 'category20')(P))
+  names(mat_colors_gr$cluster) <- paste0('gr', 1:P)
+  
+  mat_colors_chr <- list(chrom = rep(c('#7C7C7C', '#C1C1C1'),length(unique(info_feat_tscore$chrom)))[1:length(unique(info_feat_tscore$chrom))])
+  names(mat_colors_chr$chrom) <- unique(info_feat_tscore$chrom)
+  
+  zstat_col_fun = colorRamp2(c(min(c(info_feat_tscore$Zstat, info_feat_path$Zstat), na.rm = T), 0, max(c(info_feat_tscore$Zstat, info_feat_path$Zstat), na.rm = T)), 
+                             c("blue","#F0F0F0", "red"))
+  # add pvalue info for each group
+  estimate_col_fun = colorRamp2(c(min(c(test_feat_tscore$estimates, test_feat_path$estimates)), 0, max(c(test_feat_tscore$estimates, test_feat_path$estimates))), 
+                                c("#00677B", "#F0F0F0", "#BF443B"))
+  lgd_est = Legend(title = "wilcoxon estimates", col = estimate_col_fun, 
+                   at = round(c(seq(min(c(test_feat_tscore$estimates, test_feat_path$estimates)), 0, length.out = 4), 
+                                seq(0, max(c(test_feat_tscore$estimates, test_feat_path$estimates)), length.out = 4)[-1]), digits = 2),
+                   labels = as.character(round(c(seq(min(c(test_feat_tscore$estimates, test_feat_path$estimates)), 0, length.out = 4), 
+                                                 seq(0, max(c(test_feat_tscore$estimates, test_feat_path$estimates)), length.out = 4)[-1]), digits = 2)))
+  # and one for the significant p-values
+  lgd_sig = Legend(pch = "*", type = "points", labels = sprintf("FDR pvalue < %s", as.character(pval_thr_est)))
+  
+  
+  column_ha <- HeatmapAnnotation(cluster = anno_block(gp = gpar(fill = mat_colors_gr$cluster),
+                                                      labels = names(mat_colors_gr$cluster),
+                                                      labels_gp = gpar(col = "white", fontsize = 12,  fontface = "bold")))
+  
+  row_ha <- rowAnnotation(chrom = anno_block(gp = gpar(fill = mat_colors_chr$chrom),
+                                             labels = factor(names(mat_colors_chr$chrom), levels = names(mat_colors_chr$chrom)),
+                                             labels_gp = gpar(col = "black", fontsize = 10), 
+                                             labels_rot = 0), 
+                          zstat = info_feat_tscore$Zstat,
+                          col = list(zstat = zstat_col_fun), 
+                          annotation_label = list(zstat = sprintf('z-statistic %s', pheno_name)), 
+                          annotation_name_gp = gpar(col = 'white'))
+  
+  df_pch <- list()
+  df_est <- list()
+  for(i in 1:P){
+    tmp_gr <- test_feat_tscore[test_feat_tscore$comp == sprintf('gr%i_vs_all', i), ]
+    df_est[[i]] <- tmp_gr$estimates[match(keep_gene, tmp_gr$feat)]
+    is_sign <- tmp_gr$pval_corr[match(keep_gene, tmp_gr$feat)] < pval_thr_est
+    df_pch[[i]] <- rep("*", length(is_sign))
+    df_pch[[i]][!is_sign] = NA
+  }
+  df_est <- do.call(cbind, df_est)
+  colnames(df_est) <- paste0('gr', 1:P)
+  df_pch <- do.call(cbind, df_pch)
+  colnames(df_pch) <- paste0('gr', 1:P)
+  df_font <- matrix(rep("bold", P), nrow = 1)
+  df_font <- as.data.frame(df_font)
+  colnames(df_font) <- paste0('gr', 1:P)
+  
+  row_ha_gr <- rowAnnotation(gr = anno_simple(df_est, col = estimate_col_fun, pch = df_pch, border = T, pt_gp = gpar(fontface = df_font)), 
+                              annotation_label = '', annotation_name_side = 'top', annotation_name_rot = 0, simple_anno_size_adjust = T)
+  
+  hm_pl <- Heatmap(tmp_mat, name = "scaled\nT-scores", col = coul, cluster_rows = FALSE, cluster_columns = FALSE,  show_column_names = F, 
+                   top_annotation = column_ha, column_split = cl$gr, column_title = NULL,
+                   row_names_side = "left", row_names_gp = gpar(fontsize = 10),
+                   left_annotation = row_ha,  row_split  = factor(info_feat_tscore$chrom, levels = unique(info_feat_tscore$chrom)), row_title = NULL, row_gap = unit(0, "mm"),
+                   right_annotation = row_ha_gr, 
+                   border = TRUE, use_raster = T, show_heatmap_legend = F)
+  tot_pl <- hm_pl
+ 
+  
+  ############################################
+  ################# pathway ##################
+  ############################################
+  
+  # cap mat if necessary
+  tmp_mat <- as.matrix(mat_path)
+  if(!is.na(cap)){
+    val <- abs(cap)
+  }else{
+    val <- max(abs(tmp_mat))  
+  }
+  mat_breaks <- seq(-val, val, length.out = 100)
+  
+  tmp_mat[tmp_mat>=val] <- val
+  tmp_mat[tmp_mat<=-val] <- -val
+  tmp_mat <- tmp_mat[match(cl$id, rownames(tmp_mat)),]
+  
+  # order gene according location
+  keep_path <- info_feat_path[,1]
+  tmp_mat <- tmp_mat[, match(keep_path, colnames(tmp_mat))]
+  tmp_mat <- t(tmp_mat)
+  test_feat_path <- test_feat_path[test_feat_path$feat %in% keep_path, ]
+  
+  # mat_col <- data.frame(group = paste0('gr', cl$gr))
+  # rownames(mat_col) <- colnames(tmp_mat)
+  
+  mat_colors_gr <- list(cluster = pal_d3(palette = 'category20')(P))
+  names(mat_colors_gr$cluster) <- paste0('gr', 1:P)
+  
+  column_ha <- HeatmapAnnotation(cluster = anno_block(gp = gpar(fill = mat_colors_gr$cluster),
+                                                      labels = names(mat_colors_gr$cluster),
+                                                      labels_gp = gpar(col = "white", fontsize = 12,  fontface = "bold")))
+  
+  ngenes_col_fun = colorRamp2(c(min(info_feat_path$ngenes_tscore),max(info_feat_path$ngenes_tscore)), c("white", "#035F1D"))
+  perc_col_fun = colorRamp2(c(min(info_feat_path$ngenes_tscore/info_feat_path$ngenes_path), max(info_feat_path$ngenes_tscore/info_feat_path$ngenes_path)), c("white", "#316879"))
+  
+  row_ha <- rowAnnotation(n_genes = info_feat_path$ngenes_tscore, perc = info_feat_path$ngenes_tscore/info_feat_path$ngenes_path, 
+                          zstat = info_feat_path$Zstat,
+                          annotation_label = list(n_genes = 'n. genes', perc = '% tot genes', zstat = sprintf('z-statistic %s', pheno_name)), 
+                          col = list(n_genes = ngenes_col_fun, perc = perc_col_fun, zstat = zstat_col_fun))
+  
+  # add pvalue info for each group
+  df_pch <- list()
+  df_est <- list()
+  for(i in 1:P){
+    tmp_gr <- test_feat_path[test_feat_path$comp == sprintf('gr%i_vs_all', i), ]
+    df_est[[i]] <- tmp_gr$estimates[match(keep_path, tmp_gr$feat)]
+    is_sign <- tmp_gr$pval_corr[match(keep_path, tmp_gr$feat)] < pval_thr_est
+    df_pch[[i]] <- rep("*", length(is_sign))
+    df_pch[[i]][!is_sign] = NA
+  }
+  df_est <- do.call(cbind, df_est)
+  colnames(df_est) <- paste0('gr', 1:P)
+  df_pch <- do.call(cbind, df_pch)
+  colnames(df_pch) <- paste0('gr', 1:P)
+  df_font <- matrix(rep("bold", P), nrow = 1)
+  df_font <- as.data.frame(df_font)
+  colnames(df_font) <- paste0('gr', 1:P)
+  
+  row_ha_gr <- rowAnnotation(gr = anno_simple(df_est, col = estimate_col_fun, pch = df_pch, border = T, pt_gp = gpar(fontface = df_font)), 
+                             annotation_label = 'wilcoxon\nestimates', annotation_name_side = 'bottom', annotation_name_rot = 0, simple_anno_size_adjust = T)
+  font_path <- rep('plain', nrow(tmp_mat))
+  font_path[info_feat_path$impr] <- 'bold'
+  
+  hm_pl <- Heatmap(tmp_mat, name = "scaled scores", col = coul, cluster_rows = T, cluster_columns = FALSE,  show_row_dend = F, show_column_names = F, 
+                   bottom_annotation = column_ha, column_split = cl$gr, column_title = NULL, 
+                   row_names_side = "left", row_names_gp = gpar(fontsize = 10, col = 'black', fontface = font_path),
+                   left_annotation = row_ha, right_annotation = row_ha_gr, 
+                   border = TRUE, use_raster = T)
+  tot_pl_p <- hm_pl
+  side_par <- round(max(sapply(rownames(tmp_mat), nchar))*0.9)
+  
+  ########### combine #############
+  ht_list <- tot_pl %v% tot_pl_p
+  
+  png(file=paste0(outFile, '.png'), res = res_pl, units = 'in', width = width_pl, height = height_pl)
+  draw(ht_list , annotation_legend_list = list(lgd_est, lgd_sig), merge_legend = T, auto_adjust = T, padding = unit(c(2, 2 + side_par, 2, 2), "mm"))
+  dev.off()
+  
+  pdf(file=paste0(outFile, '.pdf'), width = width_pl, height = height_pl)
+  draw(ht_list , annotation_legend_list = list(lgd_est, lgd_sig), merge_legend = T, auto_adjust = T, padding = unit(c(2, 2 + side_par, 2, 2), "mm"))
+  dev.off()
+
+}
+
+
+###################################################################################################
+
 
 compute_reg_endopheno <- function(fmla, type_pheno, mat){
   
@@ -368,6 +745,76 @@ compute_reg_endopheno <- function(fmla, type_pheno, mat){
   return(output)
   
 }
+
+compute_reg_endopheno_multi <- function(fmla, type_pheno, mat, cov_int){
+  
+  
+  if(type_pheno == 'CONTINUOUS'){
+    
+    res <- tryCatch(glm(fmla, data = mat, family = 'gaussian'),warning=function(...) NA, error=function(...) NA)
+    if(is.list(res)){
+      output <- coef(summary(res))[match(cov_int, rownames(coef(summary(res)))) ,1:4, drop = F]
+      output <- cbind(output, output[,1],  output[,1] + qnorm(0.025)*output[,2], output[,1] + qnorm(0.975)*output[,2])
+      colnames(output) <- c('beta', 'se_beta', 'z', 'pvalue', 'OR_or_beta', 'CI_low', 'CI_up')
+      output <- as.data.frame(output)
+      rownames(output) <- cov_int
+    }else{
+      output <- NULL
+    }
+    
+  }else{
+    
+    if((type_pheno %in% c('CAT_SINGLE_UNORDERED', 'CAT_SINGLE_BINARY', 'CAT_MUL_BINARY_VAR')) | (type_pheno == 'CAT_ORD' & length(unique(na.omit(mat[, 'pheno']))) == 2)){
+      
+      if(!all(unique(na.omit(mat[, 'pheno']) %in% c(0,1)))){
+        
+        min_id <- which(mat[, 'pheno'] == min(mat[,'pheno'], na.rm = T))
+        mat[min_id,  'pheno'] <- 0
+        max_id <- which(mat[, 'pheno'] == max(mat[,  'pheno'], na.rm = T))
+        mat[max_id,  'pheno'] <- 1
+        
+      }
+      
+      res <- tryCatch(glm(fmla, data = mat, family = 'binomial'),warning=function(...) NA, error=function(...) NA)
+      if(is.list(res)){
+        output <- coef(summary(res))[match(cov_int, rownames(coef(summary(res)))),1:4,drop = F]
+        output <- cbind(output, exp(output[,1]),  exp(output[,1] + qnorm(0.025)*output[,2]),  exp(output[,1] + qnorm(0.975)*output[,2]))
+        colnames(output) <- c('beta', 'se_beta', 'z', 'pvalue', 'OR_or_beta', 'CI_low', 'CI_up')
+        output <- as.data.frame(output)
+        rownames(output) <- cov_int
+      }else{
+        output <- NULL
+      }
+    }else{
+      
+      if(type_pheno == 'CAT_ORD' & length(unique(na.omit(mat[, 'pheno']))) > 2){
+        
+        mat$pheno <- factor(mat$pheno)
+        output <- NULL
+        
+        res <- tryCatch(polr(fmla, data = mat, Hess=TRUE),warning=function(...) NA, error=function(...) NA)
+        if(is.list(res)){
+          if(!any(is.na(res$Hess))){
+            ct <- coeftest(res)  
+            output <- ct[match(cov_int, rownames(ct)), 1:4, drop = F]
+            output <- cbind(output, exp(output[,1]),  exp(output[,1] + qnorm(0.025)*output[,2]),  exp(output[,1] + qnorm(0.975)*output[,2]))
+            colnames(output) <- c('beta', 'se_beta', 'z', 'pvalue', 'OR_or_beta', 'CI_low', 'CI_up')
+            output <- as.data.frame(output)
+            rownames(output) <- cov_int
+          }
+        }
+      
+      }else{
+        output <- NULL
+      }
+    }
+  }
+  
+  return(output)
+  
+}
+
+
 
 # compute_reg_features <- function(fmla, mat){
 #   
