@@ -592,6 +592,16 @@ pheat_pl_tot <- function(pheno_name, mat_tscore, info_feat_tscore, test_feat_tsc
   tot_pl <- hm_pl
  
   
+  # cohort info
+  if('cohort' %in% colnames(cl)){
+    cl$cohort <- factor(cl$cohort)
+    color <- grDevices::colors()[grep('gr(a|e)y', grDevices::colors(), invert = T)]
+    set.seed(24)
+    color_cohort <- sample(color, length(unique(cl$cohort)))
+    names(color_cohort) <- levels(cl$cohort)
+    ha <- HeatmapAnnotation(cohort = factor(cl$cohort), annotation_label = list(cohort = 'Cohort'), col = list(cohort = color_cohort), border = T)  
+  }
+  
   ############################################
   ################# pathway ##################
   ############################################
@@ -665,7 +675,11 @@ pheat_pl_tot <- function(pheno_name, mat_tscore, info_feat_tscore, test_feat_tsc
   side_par <- round(max(sapply(rownames(tmp_mat), nchar))*0.9)
   
   ########### combine #############
-  ht_list <- tot_pl %v% tot_pl_p
+  if('cohort' %in% colnames(cl)){
+    ht_list <- tot_pl %v% ha %v% tot_pl_p
+  }else{
+    ht_list <- tot_pl %v% tot_pl_p
+  }
   
   png(file=paste0(outFile, '.png'), res = res_pl, units = 'in', width = width_pl, height = height_pl)
   draw(ht_list , annotation_legend_list = list(lgd_est, lgd_sig), merge_legend = T, auto_adjust = T, padding = unit(c(2, 2 + side_par, 2, 2), "mm"))
