@@ -58,9 +58,9 @@ outFold <- args$outFold
 #####################################################################################################################
 # functR <- '/home/luciat/priler_project/Software/model_clustering/clustering_functions.R'
 # type_cluster <- 'Cases'
-# pval_feat <- 0.001
+# pval_feat <- 0.05
 # type_cluster_data <- 'tscore'
-# tissue_name <- 'Small_Intestine_Terminal_Ileum'
+# tissue_name <- 'Brain_Hypothalamus'
 # min_genes_path <- 5
 # pheno_name <- 'SCZ'
 # geneInfoFile <- sprintf('/home/luciat/eQTL_PROJECT/OUTPUT_GTEx/train_GTEx/%s/200kb/PGC_GWAS_bin1e-2/resPrior_regEval_allchr.txt', tissue_name)
@@ -157,12 +157,13 @@ tmp <- get(load(pathR_featRelFile))
 pathR_input <- tmp$scaleData
 identical(rownames(pathR_input), cl$id)
 
-if(min(tmp$test_feat$pval_corr) <= pval_feat){
-  keep_path <- unique(tmp$test_feat$feat[tmp$test_feat$pval_corr <= pval_feat])
-  pathInfo <- tmp$res_pval
-  pathInfo_keep <- pathInfo[match(keep_path, pathInfo[,1]),]
-  pathInfo_keep <- pathInfo_keep[pathInfo_keep$ngenes_tscore >= min_genes_path,]
-  pathInfo_keep$Zstat <- pathInfo_keep[,12]
+keep_path <- unique(tmp$test_feat$feat[tmp$test_feat$pval_corr <= pval_feat])
+pathInfo <- tmp$res_pval
+pathInfo_keep <- pathInfo[match(keep_path, pathInfo[,1]),]
+pathInfo_keep <- pathInfo_keep[pathInfo_keep$ngenes_tscore >= min_genes_path,]
+pathInfo_keep$Zstat <- pathInfo_keep[,12]
+  
+if(nrow(pathInfo_keep)>0){
   test_feat_pathR <- tmp$test_feat
   # filter out pathway based on shared percentage
   gs <- readGmt(reactome_file)
@@ -248,15 +249,15 @@ print(identical(tmp$res_pval$path_id, tmp$test_feat$feat))
 colnames(pathGO_input) <- tmp$res_pval$path
 test_feat_pathGO$feat <- tmp$res_pval$path
 
-if(min(tmp$test_feat$pval_corr) <= pval_feat){
+
+keep_path <- unique(tmp$test_feat$feat[tmp$test_feat$pval_corr <= pval_feat])
+pathInfo <- tmp$res_pval
+pathInfo_keep <- pathInfo[match(keep_path, pathInfo[,1]),]
+pathInfo_keep <- pathInfo_keep[pathInfo_keep$ngenes_tscore >= min_genes_path + 5,]
+pathInfo_keep$Zstat <- pathInfo_keep[,14]
+pathInfo_keep[,1] <- pathInfo_keep$path
   
-  keep_path <- unique(tmp$test_feat$feat[tmp$test_feat$pval_corr <= pval_feat])
-  pathInfo <- tmp$res_pval
-  pathInfo_keep <- pathInfo[match(keep_path, pathInfo[,1]),]
-  pathInfo_keep <- pathInfo_keep[pathInfo_keep$ngenes_tscore >= min_genes_path + 5,]
-  pathInfo_keep$Zstat <- pathInfo_keep[,14]
-  pathInfo_keep[,1] <- pathInfo_keep$path
-  
+if(nrow(pathInfo_keep)>0){
   # filter out pathway based on shared percentage
   go <- get(load(GOterms_file))
   go <- go[which(sapply(go, function(x) x$Term %in% pathInfo_keep[,1]))]
