@@ -528,7 +528,7 @@ pheat_pl_tot <- function(pheno_name, mat_tscore, info_feat_tscore, test_feat_tsc
   tmp_mat <- tmp_mat[, match(keep_gene, colnames(tmp_mat)), drop = F]
   tmp_mat <- t(tmp_mat)
   chr_fact <- factor(info_feat_tscore$chrom, levels = unique(info_feat_tscore$chrom))
-  test_feat_tscore <- test_feat_tscore[test_feat_tscore$feat %in% keep_gene, ,drop=F]
+  test_feat_tscore <- test_feat_tscore[test_feat_tscore$feat %in% keep_gene, ,  drop = F]
   
   mat_colors_gr <- list(cluster = pal_d3(palette = 'category20')(P))
   names(mat_colors_gr$cluster) <- paste0('gr', 1:P)
@@ -635,9 +635,14 @@ pheat_pl_tot <- function(pheno_name, mat_tscore, info_feat_tscore, test_feat_tsc
                                                       labels = names(mat_colors_gr$cluster),
                                                       labels_gp = gpar(col = "white", fontsize = 12,  fontface = "bold")))
   
-  ngenes_col_fun = colorRamp2(c(min(info_feat_path$ngenes_tscore),max(info_feat_path$ngenes_tscore)), c("white", "#035F1D"))
-  perc_col_fun = colorRamp2(c(min(info_feat_path$ngenes_tscore/info_feat_path$ngenes_path), max(info_feat_path$ngenes_tscore/info_feat_path$ngenes_path)), c("white", "#316879"))
-  
+  if(length(unique(info_feat_path$ngenes_tscore)) == 1){
+    ngenes_col_fun = colorRamp2(c(0,max(info_feat_path$ngenes_tscore)), c("white", "#035F1D"))
+    perc_col_fun = colorRamp2(c(0, max(info_feat_path$ngenes_tscore/info_feat_path$ngenes_path)), c("white", "#316879"))
+  }else{
+    ngenes_col_fun = colorRamp2(c(min(info_feat_path$ngenes_tscore),max(info_feat_path$ngenes_tscore)), c("white", "#035F1D"))
+    perc_col_fun = colorRamp2(c(min(info_feat_path$ngenes_tscore/info_feat_path$ngenes_path), max(info_feat_path$ngenes_tscore/info_feat_path$ngenes_path)), c("white", "#316879"))
+  }
+ 
   row_ha <- rowAnnotation(n_genes = info_feat_path$ngenes_tscore, perc = info_feat_path$ngenes_tscore/info_feat_path$ngenes_path, 
                           zstat = info_feat_path$Zstat,
                           annotation_label = list(n_genes = 'n. genes', perc = '% tot genes', zstat = sprintf('z-statistic %s', pheno_name)), 
@@ -849,4 +854,5 @@ compute_reg_endopheno_multi <- function(fmla, type_pheno, mat, cov_int){
 #   return(output)
 #   
 # }
+
 
