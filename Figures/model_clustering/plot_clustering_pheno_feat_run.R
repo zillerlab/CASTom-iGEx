@@ -385,9 +385,12 @@ if(file.exists(endophenoFile[1])){
       tmp[[i]]$pval_corr <- p.adjust(tmp[[i]]$pvalue, method = 'BH')
     }
     res_pheno <- do.call(rbind, tmp)
+    # save results
+    write.table(x = res_pheno, 
+                file = sprintf('%s%s_zscaled_cluster%s_PGmethod_HKmetric_phenoAssociation_GLM_combined.txt', outFold, type_cluster_data , type_cluster), 
+                col.names = T, row.names = F, sep = '\t', quote = F)
   }
-  res_pheno$pval_corr_overall <-  p.adjust(res_pheno$pvalue, method = 'BH')
-  
+
   id_keep <- unique(res_pheno$pheno_id[res_pheno$pvalue <= pval_pheno | res_pheno$pval_corr <= 0.05])
   df_red <- res_pheno[res_pheno$pheno_id %in% id_keep, ]
   
@@ -523,9 +526,12 @@ if(file.exists(endophenoPairwiseFile[1])){
       tmp[[i]]$pval_corr <- p.adjust(tmp[[i]]$pvalue, method = 'BH')
     }
     res_pheno <- do.call(rbind, tmp)
+    # save results
+    write.table(x = res_pheno, 
+                file = sprintf('%s%s_zscaled_cluster%s_PGmethod_HKmetric_phenoAssociation_GLMpairwise_combined.txt', outFold, type_cluster_data , type_cluster), 
+                col.names = T, row.names = F, sep = '\t', quote = F)
   }
-  res_pheno$pval_corr_overall <-  p.adjust(res_pheno$pvalue, method = 'BY')
-  
+
   id_keep <- unique(res_pheno$pheno_id[res_pheno$pvalue <= pval_pheno | res_pheno$pval_corr <= 0.05])
   df_red <- res_pheno[res_pheno$pheno_id %in% id_keep, ]
   
