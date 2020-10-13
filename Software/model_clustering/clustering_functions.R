@@ -525,10 +525,10 @@ pheat_pl_tot <- function(pheno_name, mat_tscore, info_feat_tscore, test_feat_tsc
   info_feat_tscore <- info_feat_tscore[order(info_feat_tscore$start_position), ]
   info_feat_tscore <- info_feat_tscore[order(as.numeric(sapply(info_feat_tscore$chrom, function(x) strsplit(x, split = 'chr')[[1]][2]))), ]
   keep_gene <- info_feat_tscore$external_gene_name
-  tmp_mat <- tmp_mat[, match(keep_gene, colnames(tmp_mat))]
+  tmp_mat <- tmp_mat[, match(keep_gene, colnames(tmp_mat)), drop = F]
   tmp_mat <- t(tmp_mat)
   chr_fact <- factor(info_feat_tscore$chrom, levels = unique(info_feat_tscore$chrom))
-  test_feat_tscore <- test_feat_tscore[test_feat_tscore$feat %in% keep_gene, ]
+  test_feat_tscore <- test_feat_tscore[test_feat_tscore$feat %in% keep_gene, ,drop=F]
   
   mat_colors_gr <- list(cluster = pal_d3(palette = 'category20')(P))
   names(mat_colors_gr$cluster) <- paste0('gr', 1:P)
@@ -621,9 +621,9 @@ pheat_pl_tot <- function(pheno_name, mat_tscore, info_feat_tscore, test_feat_tsc
   
   # order gene according location
   keep_path <- info_feat_path[,1]
-  tmp_mat <- tmp_mat[, match(keep_path, colnames(tmp_mat))]
+  tmp_mat <- tmp_mat[, match(keep_path, colnames(tmp_mat)), drop = F]
   tmp_mat <- t(tmp_mat)
-  test_feat_path <- test_feat_path[test_feat_path$feat %in% keep_path, ]
+  test_feat_path <- test_feat_path[test_feat_path$feat %in% keep_path, , drop = F]
   
   # mat_col <- data.frame(group = paste0('gr', cl$gr))
   # rownames(mat_col) <- colnames(tmp_mat)
