@@ -22,7 +22,6 @@ parser <- ArgumentParser(description="clustering using PG method")
 parser$add_argument("--inputFile", type = "character", default = 'NA', nargs = '*', help = "file to be loaded (predicted tscore or pathScore)")
 parser$add_argument("--name_cohorts", type = "character", nargs = '*', help = "name of the single cohorts")
 parser$add_argument("--sampleAnnFile", type = "character", nargs = '*', help = "file with samples to be used")
-parser$add_argument("--sampleOutFile", type = "character", default = 'NA', help = "file with samples to be excluded")
 parser$add_argument("--geneRegionFile", type = "character", default='NA', help = "used if tscore and exclude_MHC")
 parser$add_argument("--tissues_name", type = "character", help = "name tissue")
 parser$add_argument("--color_file", type = "character", help = "file with color based on phenotype")
@@ -44,7 +43,6 @@ parser$add_argument("--outFold", type="character", help = "Output file [basename
 args <- parser$parse_args()
 name_cohorts <- args$name_cohorts
 pvalresFile <- args$pvalresFile
-sampleOutFile <- args$sampleOutFile
 tissues_name <- args$tissues_name
 color_file <- args$color_file
 pval_id <- args$pval_id
@@ -154,7 +152,7 @@ for(c_id in 1:length(name_cohorts)){
   
   sampleAnn[[c_id]]$Temp_ID <- sampleAnn[[c_id]]$Individual_ID
   sampleAnn[[c_id]]$cohort <- rep(name_cohorts[c_id], nrow(sampleAnn[[c_id]]))
-  
+
   ### load score ###
   if(substr(inputFile[c_id], nchar(inputFile[c_id])-3, nchar(inputFile[c_id])) == '.txt'){
     tmp <- read.delim(inputFile[c_id], h=T, stringsAsFactors = F, check.names = F)
@@ -187,15 +185,6 @@ id_s <- rowSums(is.na(scoreMat)) == 0
 if(!all(id_s)){scoreMat <- scoreMat[id_s, ]}
 sampleAnn_list <- sampleAnn
 sampleAnn <- do.call(rbind, sampleAnn_list)
-if(file.exists(sampleOutFile)){
-  rm_samples <- read.table(sampleOutFile, header = T, stringsAsFactors = F, sep = '\t')
-  sampleAnn <- sampleAnn[!sampleAnn$Temp_ID %in% rm_samples$Temp_ID, ]
-  scoreMat <- scoreMat[!rownames(scoreMat) %in%  rm_samples$Temp_ID, ]
-  print(dim(scoreMat))
-  print(dim(sampleAnn))
-}else{
-  rm_samples <- NULL
-}
 
 # match to have the same samples and same order with annotation
 sampleAnn <- sampleAnn[match(rownames(scoreMat), sampleAnn$Temp_ID), ]
@@ -222,6 +211,53 @@ attr(input_data, "scaled:center") <- NULL
 if(type_input == 'zscaled'){
   input_data <- sapply(1:ncol(input_data), function(x) input_data[, x]*res_pval[res_pval[,id_info] == colnames(input_data)[x], id_pval-1])
   colnames(input_data) <- colnames(scoreMat)
+}
+
+### plot: UMAP
+# remove samples that are outliers (from PCA)
+n_comp_umap <- 2
+n_neigh_umap <- 30
+min_dist_umap <- 0.01
+seed_umap <- 67
+
+custom.settings = umap.defaults
+custom.settings$min_dist = min_dist_umap
+custom.settings$n_components = n_comp_umap
+custom.settings$n_neighbors = n_neigh_umap
+custom.settings$random_state <- seed_umap
+
+umap_tot <- umap::umap(input_data, custom.settings)
+id_out <- unlist(apply(umap_tot$layout, 2, function(x) which(abs(x - median(x)) > (6 * sd(x)) )))
+sampleAnn_out <- NULL
+df_umap_tot <- NULL
+
+if(length(id_out)>0){
+  
+  print(sprintf('remove outliers (%s)', length(id_out)))
+  df_umap_tot <- data.frame(component_1=umap_tot$layout[,1], component_2=umap_tot$layout[,2], outlier = rep('no', nrow(umap_tot$layout)))
+  df_umap_tot$outlier[id_out] <- 'yes'
+  df_umap_tot$outlier <- factor(df_umap_tot$outlier, levels = c('yes', 'no'))
+  
+  # plot
+  tot_pl <- ggplot(df_umap_tot, aes(x = component_1, y = component_2, color = outlier))+
+    geom_point(size = 0.05)+
+    theme_bw()+theme(legend.position = 'right')
+  width_pl <- 4
+  ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_umap_ouliers.png', outFold, type_data, type_input, type_cluster, type_sim), width = width_pl, height = 4, plot = tot_pl, device = 'png')
+  ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_umap_outliers.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = width_pl, height = 4, plot = tot_pl, device = 'pdf')
+  
+  # remove outliers
+  input_data <- scale(scoreMat[-id_out,])
+  attr(input_data, "scaled:scale") <- NULL
+  attr(input_data, "scaled:center") <- NULL
+  
+  if(type_input == 'zscaled'){
+    input_data <- sapply(1:ncol(input_data), function(x) input_data[, x]*res_pval[res_pval[,id_info] == colnames(input_data)[x], id_pval-1])
+    colnames(input_data) <- colnames(scoreMat)
+  }
+  sampleAnn <- sampleAnn[-id_out,]
+  sampleAnn_out <- sampleAnn[id_out, ]
+  
 }
 
 
@@ -336,7 +372,7 @@ output$sampleInfo <- sampleAnn
 
 # save also euclidian distance
 output$ed_dist <- ed_dist[,]
-output$sampleOutliers <- list(sample = rm_samples)
+output$sampleOutliers <- list(sample = sampleAnn_out, tot_umap = df_umap_tot)
 
 ### plot: UMAP
 n_comp_umap <- 2
