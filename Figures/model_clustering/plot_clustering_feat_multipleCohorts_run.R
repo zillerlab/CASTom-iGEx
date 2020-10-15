@@ -152,27 +152,52 @@ for(i in 1:length(chr)){
 
 geneInfo_keep <- do.call(rbind, geneInfo_keep_chr)
 
+# save total feat-gene:
+write.table(x = tmp$test_feat, file = sprintf('%stscoreOriginal_%sCluster%s_featAssociation.txt', outFold, type_cluster_data,type_cluster), 
+            col.names = T, row.names = F, sep = '\t', quote = F)
+# save gene info
+geneInfo_save <- geneInfo
+geneInfo_save$Zstat <- tmp$res_pval[match(geneInfo_save$external_gene_name,tmp$res_pval$external_gene_name),7]
+geneInfo_save$relevant_cluster <- F
+geneInfo_save$relevant_cluster[geneInfo_save$external_gene_name %in% unique(tmp$test_feat$feat[tmp$test_feat$pval_corr <= pval_feat])] <- T
+geneInfo_save$relevant_cluster_plot <- F
+geneInfo_save$relevant_cluster_plot[geneInfo_save$external_gene_name %in% geneInfo_keep$external_gene_name] <- T
+write.table(x = geneInfo_save, file = sprintf('%stscoreOriginal_%sCluster%s_infoGenes.txt', outFold, type_cluster_data,type_cluster), 
+            col.names = T, row.names = F, sep = '\t', quote = F)
+
+
 #### pathR ####
 tmp <- get(load(pathR_featRelFile))
 pathR_input <- tmp$scaleData
 identical(rownames(pathR_input), cl$id)
-
+feat_rel <- tmp$test_feat
 keep_path <- unique(tmp$test_feat$feat[tmp$test_feat$pval_corr <= pval_feat])
 pathInfo <- tmp$res_pval
 pathInfo_keep <- pathInfo[match(keep_path, pathInfo[,1]),]
 pathInfo_keep <- pathInfo_keep[pathInfo_keep$ngenes_tscore >= min_genes_path,]
 pathInfo_keep$Zstat <- pathInfo_keep[,12]
-  
+
 if(nrow(pathInfo_keep)>0){
+  
   test_feat_pathR <- tmp$test_feat
   # filter out pathway based on shared percentage
   gs <- readGmt(reactome_file)
-  gs <- gs[which(sapply(gs, function(x) x@reference %in% pathInfo_keep[,1]))]
+  
   # annotate gs with the used genes
   for(i in 1:length(gs)){
     gs[[i]]@data <- gs[[i]]@ids[gs[[i]]@ids %in% tscore_info$external_gene_name]
   }
+  pathInfo_save <- pathInfo[, colnames(pathInfo) %in% c('path',"ngenes_tscore","ngenes_path", 
+                                                        "mean_dev_geno","sd_dev_geno","mean_test_dev_geno",
+                                                        "sd_test_dev_geno","mean_gene_corr","sd_gene_corr")]
+  pathInfo_save$genes_id <- NA
+  for(i in 1:nrow(pathInfo_save)){
+    id_tmp <- which(sapply(gs, function(x) x@reference == pathInfo_save$path[i]))
+    pathInfo_save$genes_id[i] <- paste0(unique(gs[[id_tmp]]@data), collapse = ',')
+  }
+  pathInfo_save$Zstat <- pathInfo[match(pathInfo_save$path,pathInfo$path),12]
   
+  gs <- gs[which(sapply(gs, function(x) x@reference %in% pathInfo_keep[,1]))]
   cor_mat <- cor(pathR_input[, match(pathInfo_keep[,1], colnames(pathR_input)), drop = F])
   # remove higly correlated (same gene or genes in LD) and pathways that share high percentage of genes
   if(any(abs(cor_mat[upper.tri(cor_mat)]) > 0.6)){
@@ -223,6 +248,19 @@ if(nrow(pathInfo_keep)>0){
   pathInfo_keep$impr <- F
   pathInfo_keep$impr[pathInfo_keep[,1] %in% impr_path] <- T
   
+  # save total feat-path:
+  write.table(x = feat_rel, file = sprintf('%spath_ReactomeOriginal_%sCluster%s_featAssociation.txt', outFold, type_cluster_data,type_cluster), 
+              col.names = T, row.names = F, sep = '\t', quote = F)
+  
+  # save path info
+  pathInfo_save$relevant_cluster <- F
+  pathInfo_save$relevant_cluster[pathInfo_save$path %in%  unique(feat_rel$feat[feat_rel$pval_corr <= pval_feat])] <- T
+  pathInfo_save$relevant_cluster_plot <- F
+  pathInfo_save$relevant_cluster_plot[pathInfo_save$path %in% pathInfo_keep$path] <- T
+  write.table(x = pathInfo_save, file = sprintf('%spath_ReactomeOriginal_%sCluster%s_infopath.txt', outFold, type_cluster_data,type_cluster), 
+              col.names = T, row.names = F, sep = '\t', quote = F)
+  
+  
   ### plot ###
   pheat_pl_tot(pheno_name = pheno_name, mat_tscore = tscore_input, mat_path = pathR_input, pval_thr_est = 0.05,
                info_feat_tscore = geneInfo_keep, info_feat_path = pathInfo_keep, cl = cl, 
@@ -256,16 +294,25 @@ pathInfo_keep <- pathInfo[match(keep_path, pathInfo[,1]),]
 pathInfo_keep <- pathInfo_keep[pathInfo_keep$ngenes_tscore >= min_genes_path + 5,]
 pathInfo_keep$Zstat <- pathInfo_keep[,14]
 pathInfo_keep[,1] <- pathInfo_keep$path
-  
+
 if(nrow(pathInfo_keep)>0){
   # filter out pathway based on shared percentage
   go <- get(load(GOterms_file))
-  go <- go[which(sapply(go, function(x) x$Term %in% pathInfo_keep[,1]))]
   # annotate go with the used genes
   for(i in 1:length(go)){
     go[[i]]$new <- go[[i]]$geneIds[go[[i]]$geneIds %in% tscore_info$external_gene_name]
   }
+  pathInfo_save <- pathInfo[, colnames(pathInfo) %in% c('path_id','path',"ngenes_tscore","ngenes_path", 
+                                                        "mean_dev_geno","sd_dev_geno","mean_test_dev_geno",
+                                                        "sd_test_dev_geno","mean_gene_corr","sd_gene_corr")]
+  pathInfo_save$genes_id <- NA
+  for(i in 1:nrow(pathInfo_save)){
+    id_tmp <- which(sapply(go, function(x) x$Term == pathInfo_save$path[i]))
+    pathInfo_save$genes_id[i] <- paste0(unique(go[[id_tmp]]$new), collapse = ',')
+  }
+  pathInfo_save$Zstat <- pathInfo[match(pathInfo_save$path,pathInfo$path),14]
   
+  go <- go[which(sapply(go, function(x) x$Term %in% pathInfo_keep[,1]))]
   cor_mat <- cor(pathGO_input[, match(pathInfo_keep[,1], colnames(pathGO_input)), drop = F])
   # remove higly correlated (same gene or genes in LD) and pathways that share high percentage of genes
   if(any(abs(cor_mat[upper.tri(cor_mat)]) > 0.6)){
@@ -316,6 +363,18 @@ if(nrow(pathInfo_keep)>0){
   }
   pathInfo_keep$impr <- F
   pathInfo_keep$impr[pathInfo_keep[,1] %in% impr_path] <- T
+  
+  # save total feat-path:
+  write.table(x = test_feat_pathGO, file = sprintf('%spath_GOOriginal_%sCluster%s_featAssociation.txt', outFold, type_cluster_data, type_cluster), 
+              col.names = T, row.names = F, sep = '\t', quote = F)
+  
+  # save path info
+  pathInfo_save$relevant_cluster <- F
+  pathInfo_save$relevant_cluster[pathInfo_save$path %in%  unique(test_feat_pathGO$feat[test_feat_pathGO$pval_corr <= pval_feat])] <- T
+  pathInfo_save$relevant_cluster_plot <- F
+  pathInfo_save$relevant_cluster_plot[pathInfo_save$path %in% pathInfo_keep$path] <- T
+  write.table(x = pathInfo_save, file = sprintf('%spath_GOOriginal_%sCluster%s_infopath.txt', outFold, type_cluster_data,type_cluster), 
+              col.names = T, row.names = F, sep = '\t', quote = F)
   
   ### plot ###
   pheat_pl_tot(pheno_name = pheno_name, mat_tscore = tscore_input, mat_path = pathGO_input, pval_thr_est = 0.05,
