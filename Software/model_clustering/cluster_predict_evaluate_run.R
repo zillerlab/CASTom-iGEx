@@ -26,7 +26,6 @@ options(bitmapType = 'cairo', device = 'png')
 parser <- ArgumentParser(description="predict cluster probability for new samples")
 parser$add_argument("--cohort_name", nargs = '*', type = "character", help = "")
 parser$add_argument("--model_name", type = "character", help = "")
-parser$add_argument("--sampleAnn_file", type = "character", help = "")
 parser$add_argument("--phenoNew_file", nargs = '*', type = "character", help = "")
 parser$add_argument("--type_cluster", type = "character",default = 'All', help = "All, Cases, Controls")
 parser$add_argument("--type_data", type = "character", help = "pathway or tscore")
@@ -40,7 +39,6 @@ parser$add_argument("--outFold", type="character", help = "Output file [basename
 args <- parser$parse_args()
 cohort_name <- args$cohort_name
 model_name <- args$model_name
-sampleAnn_file <- args$sampleAnn_file
 clustFile <- args$clustFile
 clustFile_new <- args$clustFile_new
 functR <- args$functR
@@ -62,12 +60,10 @@ outFold <- args$outFold
 # tissues_name <- 'Adipose_Visceral_Omentum'
 # phenoNew_file <-  paste0('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/INPUT_DATA_GTEx/CAD/Covariates/',cohort_name,'/phenotypeMatrix_CADrel_Cases.txt')
 # outFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Adipose_Visceral_Omentum/200kb/CAD_GWAS_bin5e-2/Meta_Analysis_CAD/CAD_HARD_clustering'
-# sampleAnn_file <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/covariateMatrix_CADHARD_All.txt'
 # ##################################################################################################################
 
 source(functR)
 
-sampleAnn <- read.table(sampleAnn_file, h=T, stringsAsFactors = F)
 tmp <- get(load(clustFile)) 
 clust <- tmp$cl_best
 P <- length(unique(clust$gr))
@@ -252,9 +248,11 @@ for(i in 1:length(cohort_name)){
   }  
 }
 
-# save results
-output <- list(bin_reg = tot_bin_reg, cl = clust_new, phenoDat = phenoDat_new, phenoInfo = phenoInfo_new)
-save(output, file = sprintf('%s%s_%s_cluster%s_phenoAssociationGLMpairwise_prediction_model%s.RData', outFold, type_data, type_input, type_cluster, model_name))
+if(any(sapply(phenoNew_file, file.exists))){
+  # save results
+  output <- list(bin_reg = tot_bin_reg, cl = clust_new, phenoDat = phenoDat_new, phenoInfo = phenoInfo_new)
+  save(output, file = sprintf('%s%s_%s_cluster%s_phenoAssociationGLMpairwise_prediction_model%s.RData', outFold, type_data, type_input, type_cluster, model_name))
+}
 
 ################
 ## gri vs all ##
@@ -345,7 +343,8 @@ for(i in 1:length(cohort_name)){
   }
 }
 
-output <- list(bin_reg = tot_bin_reg, cl = clust_new, phenoDat = phenoDat_new, phenoInfo = phenoInfo_new)
-save(output, file = sprintf('%s%s_%s_cluster%s_phenoAssociationGLM_prediction_model%s.RData', outFold, type_data, type_input, type_cluster, model_name))
-
+if(any(sapply(phenoNew_file, file.exists))){
+  output <- list(bin_reg = tot_bin_reg, cl = clust_new, phenoDat = phenoDat_new, phenoInfo = phenoInfo_new)
+  save(output, file = sprintf('%s%s_%s_cluster%s_phenoAssociationGLM_prediction_model%s.RData', outFold, type_data, type_input, type_cluster, model_name))
+}
 
