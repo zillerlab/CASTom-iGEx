@@ -25,6 +25,7 @@ options(bitmapType = 'cairo', device = 'png')
 
 parser <- ArgumentParser(description="predict cluster probability for new samples")
 parser$add_argument("--cohort_name", nargs = '*', type = "character", help = "")
+parser$add_argument("--model_name", type = "character", help = "")
 parser$add_argument("--sampleAnn_file", type = "character", help = "")
 parser$add_argument("--phenoNew_file", nargs = '*', type = "character", help = "")
 parser$add_argument("--type_cluster", type = "character",default = 'All', help = "All, Cases, Controls")
@@ -38,6 +39,7 @@ parser$add_argument("--outFold", type="character", help = "Output file [basename
 
 args <- parser$parse_args()
 cohort_name <- args$cohort_name
+model_name <- args$model_name
 sampleAnn_file <- args$sampleAnn_file
 clustFile <- args$clustFile
 clustFile_new <- args$clustFile_new
@@ -69,7 +71,7 @@ sampleAnn <- read.table(sampleAnn_file, h=T, stringsAsFactors = F)
 tmp <- get(load(clustFile)) 
 clust <- tmp$cl_best
 P <- length(unique(clust$gr))
-df <- data.frame(dataset = rep('UKBB', P), type = rep('model', P), gr = paste0('gr_', sort(unique(clust$gr))))
+df <- data.frame(dataset = rep(model_name, P), type = rep('model', P), gr = paste0('gr_', sort(unique(clust$gr))))
 df$n <- sapply(sort(unique(clust$gr)), function(x) length(which(clust$gr == x)))
 df$percentage <- sapply(sort(unique(clust$gr)), function(x) length(which(clust$gr == x))/nrow(clust))
 data <- tmp$input_data
@@ -118,15 +120,15 @@ df_tot <- rbind(df, do.call(rbind, df_new))
 df_corr_tot <- do.call(rbind, df_corr)
 
 # save and plot
-write.table(df_tot, file = sprintf('%s%s_%s_cluster%s_percentageGropus_prediction_modelUKBB.txt', outFold, type_data, type_input, type_cluster),quote = F, 
+write.table(df_tot, file = sprintf('%s%s_%s_cluster%s_percentageGropus_prediction_model%s.txt', outFold, type_data, type_input, type_cluster, model_name),quote = F, 
             col.names = T, row.names = T, sep = '\t')
 
-write.table(df_corr_tot, file = sprintf('%s%s_%s_cluster%s_correlationMeanGroups_prediction_modelUKBB.txt', outFold, type_data, type_input, type_cluster),quote = F, 
+write.table(df_corr_tot, file = sprintf('%s%s_%s_cluster%s_correlationMeanGroups_prediction_model%s.txt', outFold, type_data, type_input, type_cluster, model_name),quote = F, 
             col.names = T, row.names = T, sep = '\t')
 
 ###
 df_tot$new_id <- paste0(df_tot$dataset, '\n(', df_tot$type, ')')
-df_tot$new_id <- factor(df_tot$new_id, levels = c("UKBB\n(model)",  paste0(cohort_name, '\n(predict)')))
+df_tot$new_id <- factor(df_tot$new_id, levels = c(paste0(model_name, '\n(model)'),  paste0(cohort_name, '\n(predict)')))
 df_tot$gr <- factor(df_tot$gr, levels = paste0('gr_', sort(unique(clust$gr))))
 df$gr <- factor(df$gr, levels = paste0('gr_', sort(unique(clust$gr))))
 
@@ -137,8 +139,8 @@ pl <- ggplot(df_tot, aes(x = new_id, y = percentage, color = gr, group = gr))+
   ylab('Fraction of Cases')+ 
   theme(legend.position = 'right', axis.title.x = element_blank())
 # scale_shape_manual(values=c(1, 19))+
-ggsave(filename = sprintf('%s%s_%s_cluster%s_percentageGropus_prediction_modelUKBB.png', outFold, type_data, type_input, type_cluster), width = 5, height = 3.5, plot = pl, device = 'png')
-ggsave(filename = sprintf('%s%s_%s_cluster%s_percentageGropus_prediction_modelUKBB.pdf', outFold, type_data, type_input, type_cluster), width = 5, height = 3.5, plot = pl, device = 'pdf')
+ggsave(filename = sprintf('%s%s_%s_cluster%s_percentageGropus_prediction_model%s.png', outFold, type_data, type_input, type_cluster, model_name), width = 5, height = 3.5, plot = pl, device = 'png')
+ggsave(filename = sprintf('%s%s_%s_cluster%s_percentageGropus_prediction_model%s.pdf', outFold, type_data, type_input, type_cluster, model_name), width = 5, height = 3.5, plot = pl, device = 'pdf')
 
 ###
 df_corr_tot$dataset <-factor(df_corr_tot$dataset, levels = cohort_name)
@@ -149,11 +151,11 @@ pl <- ggplot(df_corr_tot, aes(x = dataset, y = corr, fill = gr, group = gr))+
   geom_errorbar(aes(ymin=CI_low, ymax=CI_up), width=.2, position=position_dodge(.75))+
   theme_bw()+ 
   coord_cartesian(ylim = c(ifelse(min(df_corr_tot$corr)<0.8, 0, 0.8),1)) +
-  ylab('correlation mean scores\nwith UKBB (model)')+ 
+  ylab(sprintf('correlation mean scores\nwith %s (model)', model_name))+ 
   theme(legend.position = 'right', axis.title.x = element_blank())
 # scale_shape_manual(values=c(1, 19))+
-ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationMeanGroups_prediction_modelUKBB.png', outFold, type_data, type_input, type_cluster), width = 6, height = 3.5, plot = pl, device = 'png')
-ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationMeanGroups_prediction_modelUKBB.pdf', outFold, type_data, type_input, type_cluster), width = 6, height = 3.5, plot = pl, device = 'pdf')
+ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationMeanGroups_prediction_model%s.png', outFold, type_data, type_input, type_cluster, model_name), width = 6, height = 3.5, plot = pl, device = 'png')
+ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationMeanGroups_prediction_model%s.pdf', outFold, type_data, type_input, type_cluster, model_name), width = 6, height = 3.5, plot = pl, device = 'pdf')
 
 
 #### endophenotype association ####
@@ -180,11 +182,11 @@ for(i in 1:length(cohort_name)){
     P <- length(unique(clust_new[[i]]$gr))
     gr_names <- sort(unique(clust_new[[i]]$gr))
     cl <- clust_new[[i]]$gr
-   
+    
     covDat <- sampleAnn_new[[i]][, !colnames(sampleAnn_new[[i]]) %in% c('Individual_ID', 'genoSample_ID', 'Dx')]
     fmla  <- as.formula(paste('pheno~gr_id+', paste0(colnames(covDat), collapse = '+')))
     phenoDat <- phenoDat_new[[i]][, !colnames(phenoDat_new[[i]]) %in%  c('Individual_ID', 'Dx', 'Age', 'Gender')]
-   
+    
     if(any(table(cl)<=10)){
       rm_id <- names(which(table(cl)<=10))
       P <- P-length(rm_id)
@@ -193,7 +195,7 @@ for(i in 1:length(cohort_name)){
       phenoDat <- phenoDat[!cl %in% rm_id,]
       cl <- cl[!cl %in% rm_id]
     }
-     
+    
     phenoInfo_new[[i]] <- data.frame(pheno_id = colnames(phenoDat))
     phenoInfo_new[[i]]$type_pheno <- 'CONTINUOUS'
     phenoInfo_new[[i]]$type_pheno[sapply(1:ncol(phenoDat), function(x) is.integer(phenoDat[,x]) & length(unique(na.omit(phenoDat[,x]))) == 2)] <- 'CAT_SINGLE_BINARY'
@@ -252,7 +254,7 @@ for(i in 1:length(cohort_name)){
 
 # save results
 output <- list(bin_reg = tot_bin_reg, cl = clust_new, phenoDat = phenoDat_new, phenoInfo = phenoInfo_new)
-save(output, file = sprintf('%s%s_%s_cluster%s_phenoAssociationGLMpairwise_prediction_modelUKBB.RData', outFold, type_data, type_input, type_cluster))
+save(output, file = sprintf('%s%s_%s_cluster%s_phenoAssociationGLMpairwise_prediction_model%s.RData', outFold, type_data, type_input, type_cluster, model_name))
 
 ################
 ## gri vs all ##
@@ -330,7 +332,7 @@ for(i in 1:length(cohort_name)){
       
       colnames(res_glm) <- c('beta', 'se_beta', 'z', 'pvalue', 'OR_or_Beta', 'CI_low', 'CI_up')
       res_glm <- as.data.frame(res_glm)
-
+      
       phenoInfo_tmp <- phenoInfo_new[[i]][match(colnames(new), phenoInfo_new[[i]]$pheno_id),]
       bin_reg[[k]] <- cbind(data.frame(pheno_id = phenoInfo_tmp$pheno_id, type_pheno = phenoInfo_tmp$type_pheno), res_glm)
       bin_reg[[k]]$pval_corr <- p.adjust(bin_reg[[k]]$pvalue, method = 'BH')
@@ -344,6 +346,6 @@ for(i in 1:length(cohort_name)){
 }
 
 output <- list(bin_reg = tot_bin_reg, cl = clust_new, phenoDat = phenoDat_new, phenoInfo = phenoInfo_new)
-save(output, file = sprintf('%s%s_%s_cluster%s_phenoAssociationGLM_prediction_modelUKBB.RData', outFold, type_data, type_input, type_cluster))
+save(output, file = sprintf('%s%s_%s_cluster%s_phenoAssociationGLM_prediction_model%s.RData', outFold, type_data, type_input, type_cluster, model_name))
 
 
