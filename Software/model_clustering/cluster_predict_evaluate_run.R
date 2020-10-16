@@ -17,9 +17,9 @@ suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(RColorBrewer))
 suppressPackageStartupMessages(library(pheatmap))
 suppressPackageStartupMessages(library(ggplot2))
-suppressPackageStartupMessages(library(RNOmni))
 suppressPackageStartupMessages(library(MASS))
 suppressPackageStartupMessages(library(lmtest))
+suppressPackageStartupMessages(library(ggsci))
 options(bitmapType = 'cairo', device = 'png')
 
 parser <- ArgumentParser(description="predict cluster probability for new samples")
@@ -127,12 +127,15 @@ df_tot$new_id <- factor(df_tot$new_id, levels = c(paste0(model_name, '\n(model)'
 df_tot$gr <- factor(df_tot$gr, levels = paste0('gr_', sort(unique(clust$gr))))
 df$gr <- factor(df$gr, levels = paste0('gr_', sort(unique(clust$gr))))
 
+gr_color <- pal_d3(palette = 'category20')(P)
+
 pl <- ggplot(df_tot, aes(x = new_id, y = percentage, color = gr, group = gr))+
   geom_point(position = position_dodge(width = 0.3))+
   theme_bw()+ 
   geom_segment(data = df, aes(x = 2, y = percentage, xend = length(cohort_name)+1, yend = percentage, group = gr), linetype = 2, alpha = 0.6)+
   ylab('Fraction of Cases')+ 
-  theme(legend.position = 'right', axis.title.x = element_blank())
+  theme(legend.position = 'right', axis.title.x = element_blank())+
+  scale_color_manual(values = gr_color)
 # scale_shape_manual(values=c(1, 19))+
 ggsave(filename = sprintf('%s%s_%s_cluster%s_percentageGropus_prediction_model%s.png', outFold, type_data, type_input, type_cluster, model_name), width = 5, height = 3.5, plot = pl, device = 'png')
 ggsave(filename = sprintf('%s%s_%s_cluster%s_percentageGropus_prediction_model%s.pdf', outFold, type_data, type_input, type_cluster, model_name), width = 5, height = 3.5, plot = pl, device = 'pdf')
@@ -147,7 +150,8 @@ pl <- ggplot(df_corr_tot, aes(x = dataset, y = corr, fill = gr, group = gr))+
   theme_bw()+ 
   coord_cartesian(ylim = c(ifelse(min(df_corr_tot$corr)<0.8, 0, 0.8),1)) +
   ylab(sprintf('correlation mean scores\nwith %s (model)', model_name))+ 
-  theme(legend.position = 'right', axis.title.x = element_blank())
+  theme(legend.position = 'right', axis.title.x = element_blank())+
+  scale_fill_manual(values = gr_color)
 # scale_shape_manual(values=c(1, 19))+
 ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationMeanGroups_prediction_model%s.png', outFold, type_data, type_input, type_cluster, model_name), width = 6, height = 3.5, plot = pl, device = 'png')
 ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationMeanGroups_prediction_model%s.pdf', outFold, type_data, type_input, type_cluster, model_name), width = 6, height = 3.5, plot = pl, device = 'pdf')
@@ -157,6 +161,10 @@ ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationMeanGroups_prediction_mo
 ################
 ## gri vs grj ##
 ################
+
+if(any(sapply(phenoNew_file, file.exists))){
+  suppressPackageStartupMessages(library(RNOmni))
+}
 
 phenoInfo_new <- list()
 tot_bin_reg <- list()
