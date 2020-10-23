@@ -12,6 +12,7 @@ suppressPackageStartupMessages(library(Matrix))
 suppressPackageStartupMessages(library(SNFtool))
 suppressPackageStartupMessages(library(coin))
 suppressPackageStartupMessages(library(uwot))
+suppressPackageStartupMessages(library(umap))
 suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(ggpubr))
 suppressPackageStartupMessages(library(pheatmap))
@@ -27,8 +28,7 @@ parser$add_argument("--inputFile", type = "character", nargs = '*', help = "file
 parser$add_argument("--sampleAnnFile", type = "character", help = "file with samples to be used")
 parser$add_argument("--type_cluster", type = "character", default = 'All', help = "All, Cases, Controls")
 parser$add_argument("--split_tot", type = "integer", default = 0, help = "if 0 then inpuntFile load alone, otherwise splitted version")
-parser$add_argument("--pvalresFile", type = "character", nargs = '*', help = "file with pvalue results")
-parser$add_argument("--pval_id", type = "integer", default = 0, help = "id to be used on pvalue file")
+parser$add_argument("--featFile", type = "character", help = "files features to be used")
 parser$add_argument("--corr_thr", type = "double", default = -1, help = "correlation among features threshold")
 parser$add_argument("--functR", type = "character", help = "functions to be used")
 parser$add_argument("--type_data", type = "character", help = "tscore, path_Reactome or path_GO")
@@ -36,16 +36,13 @@ parser$add_argument("--type_input", type = "character", default = 'original', he
 parser$add_argument("--type_sim", type = "character", default = 'HK', help = "HK or ED")
 parser$add_argument("--min_genes_path", type = "integer", default = 1, help = "minimum number of genes for a pathway, if > 1 recompute corrected pvalues")
 parser$add_argument("--kNN_par", type = "integer", nargs = '*',  default = 30, help = "nearest neighbour used to compute sim")
-# parser$add_argument("--alphapar_SNF", type = "double", default = 0.5, help = "sd HK scaling parameter")
-# parser$add_argument("--tpar_SNF", type = "integer", default = 20, help = "iteration parameters SNF")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
 args <- parser$parse_args()
 tissues_name <- args$tissues_name
-pvalresFile <- args$pvalresFile
+featFile <- args$featFile
 color_file <- args$color_file
 covDatFile <- args$covDatFile
-pval_id <- args$pval_id
 inputFile <- args$inputFile
 sampleAnnFile <- args$sampleAnnFile
 type_cluster <- args$type_cluster
@@ -57,26 +54,23 @@ min_genes_path <- args$min_genes_path
 type_input <- args$type_input
 type_sim <- args$type_sim
 kNN_par <- args$kNN_par
-# alphapar_SNF <- args$alphapar_SNF
-# tpar_SNF <- args$tpar_SNF
 outFold <- args$outFold
 
 
 ####################################################################################################################
-# tissues_name <- c('Adipose_Subcutaneous', 'Adipose_Visceral_Omentum', 'Liver', 'Artery_Aorta', 'Artery_Coronary', 'Colon_Sigmoid')
+# tissues_name <- c('Adipose_Visceral_Omentum', 'Adrenal_Gland', 'Artery_Aorta', 'Artery_Coronary', 'Colon_Sigmoid', 'Colon_Transverse',
+# 'Heart_Atrial_Appendage', 'Heart_Left_Ventricle', 'Liver')
 # inputFile <- paste0('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/',tissues_name,'/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/predictedTscores_splitGenes')
 # sampleAnnFile <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/covariateMatrix_CADHARD_All.txt'
 # covDatFile <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/covariateMatrix_CADHARD_All.txt'
 # split_tot <- 100
-# pvalresFile <- paste0('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/',tissues_name,'/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/pval_CAD_pheno_covCorr.RData')
-# pval_id <- 1
-# min_genes_path <- 2
+# featFile <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/genes_drugTarget_lipidModifying.txt'
 # type_data <- 'tscore'
 # type_cluster <- 'Cases'
-# outFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/'
+# outFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/targetLipidDurgs_'
 # functR <- '/psycl/g/mpsziller/lucia/priler_project/Software/model_clustering/clustering_functions.R'
-# corr_thr <- 0.1
-# type_input <- 'zscaled'
+# corr_thr <- 0.9
+# type_input <- 'original'
 # color_file <- '/psycl/g/mpsziller/lucia/priler_project/Figures/color_tissues.txt'
 ####################################################################################################################
 
@@ -103,6 +97,7 @@ if(covDatFile != 'NA'){
   sampleAnn$initial_assessment_centre <- covDat$initial_assessment_centre
 }  
 
+tot_feat <- read.table(featFile, h=T, stringsAsFactors = F, sep = '\t')
 res_pval <- list()
 scoreMat <- list()
 for(i in 1:length(tissues_name)){
@@ -110,19 +105,17 @@ for(i in 1:length(tissues_name)){
   print(tissues_name[i])
   
   # load pval res
-  res_pval[[i]] <- get(load(pvalresFile[[i]]))
+  res_pval[[i]] <- tot_feat[tot_feat$tissue == tissues_name[i], ]
+  
   if(type_data == 'tscore'){
-    res_pval[[i]] <- res_pval[[i]]$tscore[[pval_id]]
     id_pval <- 8
     id_info <- 2
   }else{
     if(type_data == 'path_Reactome'){
-      res_pval[[i]] <- res_pval[[i]]$pathScore_reactome[[pval_id]]
       id_pval <- 13
       id_info <- 1
     }else{
       if(type_data == 'path_GO'){
-        res_pval[[i]] <- res_pval[[i]]$pathScore_GO[[pval_id]]
         id_pval <- 15
         id_info <- 1
       }else{
@@ -137,16 +130,16 @@ for(i in 1:length(tissues_name)){
     res_pval[[i]][,id_pval+1] <- qvalue(res_pval[[i]][,id_pval])$qvalues
     res_pval[[i]][,id_pval+2] <- p.adjust(res_pval[[i]][,id_pval], method = 'BH')
   }
-
+  
   # load input matrix 
   if(split_tot == 0){
     
     scoreMat[[i]] <- get(load(inputFile[[i]]))
     # filter out based on samples and ids
-    scoreMat[[i]] <- scoreMat[[i]][match(res_pval[[i]][, id_info],scoreMat[[i]][,1]), ]
+    scoreMat[[i]] <- scoreMat[[i]][match(res_pval[[i]][, id_info],scoreMat[[i]][,1]), , drop = F]
     common_samples <- intersect(sampleAnn$Individual_ID, colnames(scoreMat[[i]]))
     
-    scoreMat[[i]] <- t(scoreMat[[i]][,match(common_samples,colnames(scoreMat[[i]]))])
+    scoreMat[[i]] <- t(scoreMat[[i]][,match(common_samples,colnames(scoreMat[[i]])), drop = F])
     rownames(scoreMat[[i]]) <- common_samples
     colnames(scoreMat[[i]]) <- res_pval[[i]][, id_info]
     
@@ -182,8 +175,8 @@ for(i in 1:length(tissues_name)){
     scoreMat[[i]] <- scoreMat[[i]][, !colnames(scoreMat[[i]]) %in% id_dup]
     
     id_el <- intersect(colnames(scoreMat[[i]]), res_pval[[i]][,id_info])
-    scoreMat[[i]] <- scoreMat[[i]][, match(id_el, colnames(scoreMat[[i]]))]
-    res_pval[[i]] <- res_pval[[i]][match(id_el, res_pval[[i]][,id_info]), ]
+    scoreMat[[i]] <- scoreMat[[i]][, match(id_el, colnames(scoreMat[[i]])), drop = F]
+    res_pval[[i]] <- res_pval[[i]][match(id_el, res_pval[[i]][,id_info]), , drop = F]
     
     rownames(scoreMat[[i]]) <- samplesID[[1]]
     # remove sample that have NAs
@@ -191,59 +184,33 @@ for(i in 1:length(tissues_name)){
     if(!all(id_s)){scoreMat[[i]] <- scoreMat[[i]][id_s, ]}
     
     common_samples <- intersect(sampleAnn$Individual_ID, rownames(scoreMat[[i]]))
-    scoreMat[[i]] <- scoreMat[[i]][match(common_samples,rownames(scoreMat[[i]])),]
+    scoreMat[[i]] <- scoreMat[[i]][match(common_samples,rownames(scoreMat[[i]])),,drop = F]
     
   }
   
   print(identical(colnames(scoreMat[[i]]), res_pval[[i]][, id_info]))
   
   # remove higly correlated features, keep highest association
-  cor_score <- cor(scoreMat[[i]])
-  element_rm <- c()
-  for(j in 1:(nrow(cor_score)-1)){
-    id <-  which(abs(cor_score[j:nrow(cor_score),j])>corr_thr)
-    if(length(id)>1){
-      element_rm <- c(element_rm, names(id)[-which.min(res_pval[[i]][match(names(id), res_pval[[i]][,id_info]),id_pval])])
+  if(ncol(scoreMat[[i]])>1){
+    cor_score <- cor(scoreMat[[i]])
+    element_rm <- c()
+    for(j in 1:(nrow(cor_score)-1)){
+      id <-  which(abs(cor_score[j:nrow(cor_score),j])>corr_thr)
+      if(length(id)>1){
+        element_rm <- c(element_rm, names(id)[-which.min(res_pval[[i]][match(names(id), res_pval[[i]][,id_info]),id_pval])])
+      }
     }
+    element_rm <- unique(element_rm)
+    print(paste(length(element_rm),'features removed due to high correlation'))
+    scoreMat[[i]] <- scoreMat[[i]][,!colnames(scoreMat[[i]]) %in% element_rm, drop = F]
+    res_pval[[i]] <- res_pval[[i]][match(colnames(scoreMat[[i]]), res_pval[[i]][, id_info]),, drop=F]
   }
-  element_rm <- unique(element_rm)
-  print(paste(length(element_rm),'features removed due to high correlation'))
-  scoreMat[[i]] <- scoreMat[[i]][,!colnames(scoreMat[[i]]) %in% element_rm]
-  res_pval[[i]] <- res_pval[[i]][match(colnames(scoreMat[[i]]), res_pval[[i]][, id_info]),]
-  
 }
 
-res_pval_tot <- cbind(do.call(rbind, res_pval), data.frame(tissue = unlist(lapply(1:length(tissues_name), function(x) rep(tissues_name[x], nrow(res_pval[[x]]))))))
+tmp <- do.call(rbind, res_pval)
+tmp <- tmp[, !colnames(tmp) %in% 'tissue']
+res_pval_tot <- cbind(tmp, data.frame(tissue = unlist(lapply(1:length(tissues_name), function(x) rep(tissues_name[x], nrow(res_pval[[x]]))))))
 res_pval_tot$new_id <- paste(res_pval_tot[, id_info], 'tissue', res_pval_tot$tissue, sep = '_')
-  
-# # filter out genes with the same name, if > corr_thr remove
-# id_rep <- res_pval_tot[duplicated(res_pval_tot[, id_info]), id_info]
-# element_rm <- c()
-# for(i in 1:length(id_rep)){
-#   # print(i)
-#   tmp <- lapply(scoreMat, function(x) x[, colnames(x) %in% id_rep[i]])
-#   tmp <- do.call(cbind, tmp)
-#   colnames(tmp) <- res_pval_tot$tissue[res_pval_tot[,id_info] %in% id_rep[i]]
-#   cor_gene <- cor(tmp)
-#   tmp_pval <- res_pval_tot[res_pval_tot[,id_info] %in% id_rep[i],]
-#   if(any(cor_gene[lower.tri(cor_gene)]>corr_thr)){
-#     #if(length(which(cor_gene[lower.tri(cor_gene)] > corr_thr)) >=2){
-#       #print(cor_gene)
-#     #}   
-#     for(j in 1:(nrow(cor_gene)-1)){
-#       id <-  which(abs(cor_gene[j:nrow(cor_gene),j])>corr_thr)
-#       new <- tmp_pval[tmp_pval$tissue %in% names(id), ]
-#       element_rm <- c(element_rm, new$new_id[-which.min(new[,id_pval])])    
-#     }
-#   }
-# }
-# element_rm <- unique(element_rm)
-# res_pval_tot <- res_pval_tot[!res_pval_tot$new_id %in% element_rm, ]
-# for(i in 1:length(tissues_name)){
-#   tmp <- res_pval_tot[res_pval_tot$tissue %in% tissues_name[i], ]
-#   res_pval[[i]] <- tmp
-#   scoreMat[[i]] <- scoreMat[[i]][,match(tmp[,id_info], colnames(scoreMat[[i]]))]
-# }
 
 # remove features highly correlated across tissues ### computationally expensive ####
 element_rm <- c()
@@ -258,9 +225,9 @@ for(i in 1:(length(tissues_name)-1)){
   colnames(tmp) <- paste0(colnames(tmp), '_tissue_', tissues_name[i])
   if(any(tmp > corr_thr)){
     for(j in 1:ncol(tmp)){
-        id <-  which(abs(tmp[,j])>corr_thr)
-        new <- res_pval_tot[res_pval_tot$new_id %in% c(names(id), colnames(tmp)[j]), ]
-        element_rm <- c(element_rm, new$new_id[-which.min(new[,id_pval])])
+      id <-  which(abs(tmp[,j])>corr_thr)
+      new <- res_pval_tot[res_pval_tot$new_id %in% c(names(id), colnames(tmp)[j]), ]
+      element_rm <- c(element_rm, new$new_id[-which.min(new[,id_pval])])
     }
   }
 }
@@ -269,7 +236,7 @@ res_pval_tot <- res_pval_tot[!res_pval_tot$new_id %in% element_rm, ]
 for(i in 1:length(tissues_name)){
   tmp <- res_pval_tot[res_pval_tot$tissue %in% tissues_name[i], ]
   res_pval[[i]] <- tmp
-  scoreMat[[i]] <- scoreMat[[i]][,match(tmp[,id_info], colnames(scoreMat[[i]]))]
+  scoreMat[[i]] <- scoreMat[[i]][,match(tmp[,id_info], colnames(scoreMat[[i]])), drop = F]
 }
 print(paste(length(element_rm),'features removed due to high correlation between tissues'))
 
@@ -280,7 +247,7 @@ for(i in 1:length(tissues_name)){
   input_data[[i]] <- scale(scoreMat[[i]])
   attr(input_data[[i]], "scaled:scale") <- NULL
   attr(input_data[[i]], "scaled:center") <- NULL
-
+  
   if(type_input == 'zscaled'){
     input_data[[i]] <- sapply(1:ncol(input_data[[i]]), function(x) input_data[[i]][, x]*res_pval[[i]][res_pval[[i]][,id_info] == colnames(input_data[[i]])[x], id_pval-1])
     colnames(input_data[[i]]) <- colnames(scoreMat[[i]])
@@ -455,13 +422,13 @@ if(nrow(tmp)>50){
 for(i in 1:length(tissues_name)){
   print(tissues_name[i])
   if(any(keep_feat$tissue == tissues_name[i])){
-  	pheat_pl(mat = input_data[[i]][,keep_feat$id[keep_feat$tissue == tissues_name[i]]], type_mat = type_data, cl = output$cl_best, height_pl = 7, width_pl = 5, 
-        	   outFile = paste0(file_name, '_heatmap', tissues_name[i]))
-  	if(type_input == 'zscaled'){
-    	pheat_pl(mat = scale(input_data[[i]][,keep_feat$id[keep_feat$tissue == tissues_name[i]]]), type_mat = type_data, cl = output$cl_best, height_pl = 7, width_pl = 5, 
-        	     outFile = paste0(file_name, '_heatmap_scaled', tissues_name[i]))
-  	}
-   }
+    pheat_pl(mat = input_data[[i]][,keep_feat$id[keep_feat$tissue == tissues_name[i]]], type_mat = type_data, cl = output$cl_best, height_pl = 7, width_pl = 5, 
+             outFile = paste0(file_name, '_heatmap', tissues_name[i]))
+    if(type_input == 'zscaled'){
+      pheat_pl(mat = scale(input_data[[i]][,keep_feat$id[keep_feat$tissue == tissues_name[i]]]), type_mat = type_data, cl = output$cl_best, height_pl = 7, width_pl = 5, 
+               outFile = paste0(file_name, '_heatmap_scaled', tissues_name[i]))
+    }
+  }
 }
 
 color_tissues <- read.table(color_file, h=T, stringsAsFactors = F)
@@ -491,7 +458,5 @@ mat <- mat[!duplicated(mat$id),]
 
 
 pheat_pl_gr(mat, type_mat = type_data, height_pl = 7, width_pl = width_pl, color_df = color_tissues, outFile = paste0(file_name, '_heatmap_gr'))
-
-
 
 

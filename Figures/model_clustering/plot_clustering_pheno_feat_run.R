@@ -843,7 +843,10 @@ if(file.exists(treatmentResponseFile) & pheno_name == 'Asthma'){
   p1 <- res_treat[res_treat$pheno_Field %in% c('Forced expiratory volume in 1-second (FEV1), predicted', 
                                                'C-reactive protein', 'White blood cell (leukocyte) count','Lymphocyte percentage', 'Basophill percentage', 'Eosinophill percentage', 
                                                'Monocyte percentage', 'Neutrophill percentage') & 
-                    res_treat$treat_meaning %in% c('Antihistamine', 'Antimuscarinic bronchodilators', 'Corticosteroids', 'Selective beta-2-agonists', 'Leukotriene', 'Theophylline'),]
+                    res_treat$treat_meaning %in% c('H1 antihistamine', 'Muscarinic antagonists (SAMA)', 'Muscarinic antagonists (LAMA)', 
+                    'Methylxanthines', 'Corticosteroids', 'Degranulation inhibitors', 'Leukotrienes', 'non-selective beta-2-agonists', 
+                     'Selective beta-2-agonists (SABA)', 'Selective beta-2-agonists (LABA)'),]
+  name_p1 <- unique(p1$treat_meaning)
   
   p2 <- res_treat[res_treat$pheno_Field %in% c('C-reactive protein', 'White blood cell (leukocyte) count','Lymphocyte percentage',
                                                'Platelet count', 'Platelet crit', 'Platelet distribution width') & 
@@ -862,7 +865,7 @@ if(file.exists(treatmentResponseFile) & pheno_name == 'Asthma'){
   df_red$type_res[df_red$pheno_type!= 'CONTINUOUS'] <- 'OR'
   df_red$type_res <- factor(df_red$type_res, levels = c('OR', 'beta'))
   df_red$treat_meaning <- factor(df_red$treat_meaning, levels = c('Ibuprofen (e.g. Nurofen)', 'Paracetamol', 'Aspirin', 
-                                                                  'Antihistamine', 'Antimuscarinic bronchodilators', 'Corticosteroids', 'Selective beta-2-agonists', 'Leukotriene', 'Theophylline'))
+                                                                  name_p1))
   df_red$sign <- 'no'
   df_red$sign[df_red$pvalue_corr_diff <= 0.05] <- 'yes'
   df_red$sign <- factor(df_red$sign, levels = c('no', 'yes'))
@@ -870,7 +873,7 @@ if(file.exists(treatmentResponseFile) & pheno_name == 'Asthma'){
   df_red$gr <- factor(df_red$gr, levels = unique(df_red$gr))
   
   len_w <- 10
-  len_h <- 10 + length(unique(df_red$gr))*0.1
+  len_h <- 12 + length(unique(df_red$gr))*0.1
   
   gr_color <- pal_d3(palette = 'category20')(length(unique(df_red$gr)))
   
@@ -892,7 +895,7 @@ if(file.exists(treatmentResponseFile) & pheno_name == 'Asthma'){
       geom_point(position=position_dodge(0.5))+geom_errorbar(aes(ymin=gr_CI_low, ymax=gr_CI_up), width=.2, position=position_dodge(0.5))+
       theme_bw()+ 
       ylab('Adjusted Beta (95% CI)')+geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey40')+
-      facet_wrap(treat_meaning~., nrow = 2, strip.position="top", scales = 'free_x')+
+      facet_wrap(treat_meaning~., nrow = 3, strip.position="top", scales = 'free_x')+
       theme(legend.position = 'right', legend.title = element_blank(), legend.text = element_text(size = 9), 
             plot.title = element_text(size=9), axis.title.y = element_blank(),  axis.title.x = element_text(size = 9),
             axis.text.x = element_text(size = 9, angle = 0, hjust = 1), axis.text.y = element_text(size = 9), strip.text = element_text(size=9))+
@@ -900,10 +903,10 @@ if(file.exists(treatmentResponseFile) & pheno_name == 'Asthma'){
       scale_color_manual(values=gr_color)+guides(shape=FALSE)+
     coord_flip()
  
-  tot_pl <- ggarrange(plotlist = list(pl_beta_p2, pl_beta_p1), align = 'hv', nrow = 2, common.legend = T, heights=c(1, 0.45))
+  tot_pl <- ggarrange(plotlist = list(pl_beta_p2, pl_beta_p1), align = 'hv', nrow = 2, common.legend = T, heights=c(1, 0.35))
 
-  ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_CADmedAll.png', outFold, type_cluster), width = len_w, height = len_h, plot = tot_pl, device = 'png')
-  ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_CADmedAll.pdf', outFold, type_cluster), width = len_w, height = len_h, plot = tot_pl, device = 'pdf')
+  ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_%smedAll.png', outFold, type_cluster, pheno_name), width = len_w, height = len_h, plot = tot_pl, device = 'png')
+  ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_%smedAll.pdf', outFold, type_cluster, pheno_name), width = len_w, height = len_h, plot = tot_pl, device = 'pdf')
   
 }
 
@@ -972,10 +975,10 @@ if(file.exists(treatmentResponseFile) & pheno_name == 'CAD'){
     scale_color_manual(values=gr_color)+guides(shape=FALSE)+
     coord_flip()
   
-  tot_pl <- ggarrange(plotlist = list(pl_beta_p1, pl_beta_p2), align = 'h', nrow = 2, common.legend = T, heights = c(1, 0.7))
+  tot_pl <- ggarrange(plotlist = list(pl_beta_p1, pl_beta_p2), align = 'hv', nrow = 2, common.legend = T, heights = c(1, 0.7))
   
-  ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_CADmedAll.png', outFold, type_cluster), width = len_w, height = len_h, plot = tot_pl, device = 'png')
-  ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_CADmedAll.pdf', outFold, type_cluster), width = len_w, height = len_h, plot = tot_pl, device = 'pdf')
+  ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_%smedAll.png', outFold, type_cluster, pheno_name), width = len_w, height = len_h, plot = tot_pl, device = 'png')
+  ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_%smedAll.pdf', outFold, type_cluster, pheno_name), width = len_w, height = len_h, plot = tot_pl, device = 'pdf')
   
 }
 
@@ -986,7 +989,10 @@ if(file.exists(treatmentResponsePairwiseFile) & pheno_name == 'Asthma'){
   p1 <- res_treat[res_treat$pheno_Field %in% c('Forced expiratory volume in 1-second (FEV1), predicted', 
                                                'C-reactive protein', 'White blood cell (leukocyte) count','Lymphocyte percentage', 'Basophill percentage', 'Eosinophill percentage', 
                                                'Monocyte percentage', 'Neutrophill percentage') & 
-                    res_treat$treat_meaning %in% c('Antihistamine', 'Antimuscarinic bronchodilators', 'Corticosteroids', 'Selective beta-2-agonists', 'Leukotriene', 'Theophylline'),]
+                    res_treat$treat_meaning %in% c('H1 antihistamine', 'Muscarinic antagonists (SAMA)', 'Muscarinic antagonists (LAMA)', 
+                                                   'Methylxanthines', 'Corticosteroids', 'Degranulation inhibitors', 'Leukotrienes', 'non-selective beta-2-agonists', 
+                                                   'Selective beta-2-agonists (SABA)', 'Selective beta-2-agonists (LABA)'),]
+  name_p1 <- unique(p1$treat_meaning)
   
   p2 <- res_treat[res_treat$pheno_Field %in% c('C-reactive protein', 'White blood cell (leukocyte) count','Lymphocyte percentage',
                                                'Platelet count', 'Platelet crit', 'Platelet distribution width') & 
@@ -1008,7 +1014,7 @@ if(file.exists(treatmentResponsePairwiseFile) & pheno_name == 'Asthma'){
   df_red$type_res[df_red$pheno_type!= 'CONTINUOUS'] <- 'OR'
   df_red$type_res <- factor(df_red$type_res, levels = c('OR', 'beta'))
   df_red$treat_meaning <- factor(df_red$treat_meaning, levels = c('Ibuprofen (e.g. Nurofen)', 'Paracetamol', 'Aspirin', 
-                                                                  'Antihistamine', 'Antimuscarinic bronchodilators', 'Corticosteroids', 'Selective beta-2-agonists', 'Leukotriene', 'Theophylline'))
+                                                                  name_p1))
   df_red$sign <- 'no'
   df_red$sign[df_red$pvalue_corr_diff <= 0.05] <- 'yes'
   df_red$sign <- factor(df_red$sign, levels = c('no', 'yes'))
@@ -1043,7 +1049,7 @@ if(file.exists(treatmentResponsePairwiseFile) & pheno_name == 'Asthma'){
   df_tot_gr$gr <- factor(df_tot_gr$gr, levels = unique(df_tot_gr$gr))
   
   len_w <- 10
-  len_h <- 10 + length(unique(df_red$gr))*0.1
+  len_h <- 12 + length(unique(df_red$gr))*0.1
   
   gr_color <- pal_d3(palette = 'category20')(length(unique(df_tot_gr$gr)))
   
@@ -1065,7 +1071,7 @@ if(file.exists(treatmentResponsePairwiseFile) & pheno_name == 'Asthma'){
     geom_point(position=position_dodge(0.5))+geom_errorbar(aes(ymin=gr_CI_low, ymax=gr_CI_up), width=.2, position=position_dodge(0.5))+
     theme_bw()+ 
     ylab('Adjusted Beta (95% CI)')+geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey40')+
-    facet_wrap(treat_meaning~., nrow = 2, strip.position="top", scales = 'free_x')+
+    facet_wrap(treat_meaning~., nrow = 3, strip.position="top", scales = 'free_x')+
     theme(legend.position = 'right', legend.title = element_blank(), legend.text = element_text(size = 9), 
           plot.title = element_text(size=9), axis.title.y = element_blank(),  axis.title.x = element_text(size = 9),
           axis.text.x = element_text(size = 9, angle = 0, hjust = 1), axis.text.y = element_text(size = 9), strip.text = element_text(size=9))+
@@ -1073,10 +1079,10 @@ if(file.exists(treatmentResponsePairwiseFile) & pheno_name == 'Asthma'){
     scale_color_manual(values=gr_color)+guides(shape=FALSE)+
     coord_flip()
   
-  tot_pl <- ggarrange(plotlist = list(pl_beta_p2, pl_beta_p1), align = 'hv', nrow = 2, common.legend = T, heights=c(1, 0.45))
+  tot_pl <- ggarrange(plotlist = list(pl_beta_p2, pl_beta_p1), align = 'hv', nrow = 2, common.legend = T, heights=c(1, 0.35))
   
-  ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_pairwise_CADmedAll.png', outFold, type_cluster), width = len_w, height = len_h, plot = tot_pl, device = 'png')
-  ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_pairwise_CADmedAll.pdf', outFold, type_cluster), width = len_w, height = len_h, plot = tot_pl, device = 'pdf')
+  ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_pairwise_%smedAll.png', outFold, type_cluster, pheno_name), width = len_w, height = len_h, plot = tot_pl, device = 'png')
+  ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_pairwise_%smedAll.pdf', outFold, type_cluster, pheno_name), width = len_w, height = len_h, plot = tot_pl, device = 'pdf')
   
 }
 
@@ -1178,10 +1184,10 @@ if(file.exists(treatmentResponsePairwiseFile) & pheno_name == 'CAD'){
     scale_color_manual(values=gr_color)+guides(shape=FALSE)+
     coord_flip()
   
-  tot_pl <- ggarrange(plotlist = list(pl_beta_p1, pl_beta_p2), align = 'h', nrow = 2, common.legend = T, heights = c(1, 0.7))
+  tot_pl <- ggarrange(plotlist = list(pl_beta_p1, pl_beta_p2), align = 'hv', nrow = 2, common.legend = T, heights = c(1, 0.7))
   
-  ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_pairwise_CADmedAll.png', outFold, type_cluster), width = len_w, height = len_h, plot = tot_pl, device = 'png')
-  ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_pairwise_CADmedAll.pdf', outFold, type_cluster), width = len_w, height = len_h, plot = tot_pl, device = 'pdf')
+  ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_pairwise_%smedAll.png', outFold, type_cluster, pheno_name), width = len_w, height = len_h, plot = tot_pl, device = 'png')
+  ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_pairwise_%smedAll.pdf', outFold, type_cluster, pheno_name), width = len_w, height = len_h, plot = tot_pl, device = 'pdf')
   
 }
 
