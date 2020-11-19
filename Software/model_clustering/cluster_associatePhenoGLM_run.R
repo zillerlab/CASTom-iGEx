@@ -130,7 +130,7 @@ for(i in 1:(length(gr_names)-1)){
     new <- new[,!p_rm]
     # remove phenotype with few true overall (find binomial)
     id_b <- intersect(colnames(new), paste0('p',phenoInfo$pheno_id[!phenoInfo$transformed_type %in% c('CONTINUOUS', 'CAT_ORD')]))
-    id_rm <- names(which(colSums(new[, id_b], na.rm = T) < 50))
+    id_rm <- names(which(colSums(new[, id_b, drop = F], na.rm = T) < 50))
     if(length(id_rm)>0){
       new <- new[, !colnames(new) %in% id_rm]
     }
@@ -234,7 +234,7 @@ for(i in 1:length(gr_names)){
   new <- new[,!p_rm]
   # remove phenotype with few true overall (find binomial)
   id_b <- intersect(colnames(new), paste0('p',phenoInfo$pheno_id[!phenoInfo$transformed_type %in% c('CONTINUOUS', 'CAT_ORD')]))
-  id_rm <- names(which(colSums(new[, id_b], na.rm = T) < 50))
+  id_rm <- names(which(colSums(new[, id_b, drop = F], na.rm = T) < 50))
   if(length(id_rm)>0){
     new <- new[, !colnames(new) %in% id_rm]
   }

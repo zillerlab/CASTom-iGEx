@@ -1,0 +1,216 @@
+# Mendelian randomization (version 1, cosider only endophenotypes with enrichement)
+
+options(stringsAsFactors=F)
+options(max.print=1000)
+suppressPackageStartupMessages(library(argparse))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(ggsci))
+suppressPackageStartupMessages(library(pheatmap))
+suppressPackageStartupMessages(library(RColorBrewer))
+suppressPackageStartupMessages(library(circlize))
+suppressPackageStartupMessages(library(ggpubr))
+suppressPackageStartupMessages(library(qvalue))
+suppressPackageStartupMessages(library(cowplot))
+suppressPackageStartupMessages(library(ggsignif))
+suppressPackageStartupMessages(library(ggpubr))
+suppressPackageStartupMessages(library(MendelianRandomization))
+options(bitmapType = 'cairo', device = 'png')
+
+parser <- ArgumentParser(description="Mendelian Randomization for enriched related phenotypes")
+parser$add_argument("--phenoFold", type = "character", help = "Folder with results phenotype annotation UKBB")
+parser$add_argument("--inputFold_rel", type = "character", nargs = '*',help = "Folder with results")
+parser$add_argument("--pval_FDR_rel", type = "double", default = 0.05, help = "pval threshold to filter the genes and pathways (after BH correction) in related phenotypes")
+parser$add_argument("--pval_FDR_corr", type = "double", default = 0.05, help = "pval threshold to filter phenotypes based on fisher test enrichment")
+parser$add_argument("--tissue_name", type = "character", nargs = '*', help = "tissue considered")
+parser$add_argument("--pheno_name_comp", type = "character", help = "name phenotype of interest")
+parser$add_argument("--pheno_file", type = "character", nargs = '*', help = "")
+parser$add_argument("--type_data", type = "character", help = "")
+parser$add_argument("--enrich_file", type = "character", help = "")
+parser$add_argument("--cor_file", type = "character", help = "")
+parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
+
+args <- parser$parse_args()
+phenoFold <- args$phenoFold
+tissue_name <- args$tissue_name
+inputFold_rel <- args$inputFold_rel
+pval_FDR_rel <- args$pval_FDR_rel
+pval_FDR_corr <- args$pval_FDR_corr
+pheno_name_comp <- args$pheno_name_comp
+perc_par <- args$perc_par
+pheno_file <- args$pheno_file
+type_data <- args$type_data
+enrich_file <- args$enrich_file
+cor_file <- args$cor_file
+outFold <- args$outFold
+
+########################################################################################################################
+# phenoFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/INPUT_DATA_GTEx/CAD/Covariates/UKBB/'
+# tissue_name <- 'Liver'
+# pheno_name_comp <- 'CAD_HARD'
+# inputFold_rel <- paste0('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/',tissue_name,'/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/')
+# pheno_file <- c('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/tscore_pval_CAD_HARD_covCorr_filt.txt')
+# pheno_file <- c('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/path_Reactome_pval_CAD_HARD_covCorr_filt.txt',
+                # '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/path_GO_pval_CAD_HARD_covCorr_filt.txt') 
+# cor_file <-  paste0('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/',tissue_name,'/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/correlation_estimate_tscore.RData')
+# type_data <- 'tscore'
+# enrich_file <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/enrichment_CADHARD_res/randomChoice_perc0.5_correlation_CAD_HARD_relatedPheno.RData'
+# outFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/enrichment_CADHARD_res/'
+# pval_FDR_rel <- 0.05
+# pval_FDR_corr <- 0.05
+##########################################################################################################################
+
+if(type_data == 'tscore'){
+  id_name <- 2
+  id_keep <- 2
+  pval_id <- 8
+  beta_id <- 5
+  se_beta_id <- 6
+}
+
+if(type_data == 'tot_path'){
+  id_name <- 22
+  pval_id <- 13
+  beta_id <- 10
+  se_beta_id <- 11
+}
+
+feat_res <- lapply(pheno_file, function(x) read.delim(x, h=T, stringsAsFactors = F, sep = '\t'))
+feat_res <- lapply(feat_res, function(x) x[x$tissue %in% tissue_name, ])
+if(type_data == 'tot_path'){
+  feat_res[[1]]$path_id <- feat_res[[1]]$path
+  feat_res[[1]]$type <- 'Reactome'
+  feat_res[[2]]$type <- 'GO'
+  common_h <- intersect(colnames(feat_res[[1]]), colnames(feat_res[[2]]))
+  feat_res <- lapply(feat_res, function(x) x[, match(common_h, colnames(x))])
+  feat_res <- do.call(rbind, feat_res)
+  feat_res$new_id <- paste0(feat_res$path_id, '_type_', feat_res$type)
+}
+if(type_data == 'tscore'){
+  feat_res <- do.call(rbind, feat_res)
+  feat_res$new_id <- feat_res[,1]
+}
+
+# load OR/correlation results
+enrich_res <- get(load(enrich_file))
+pheno_info <- enrich_res$pheno
+if(type_data == 'tscore'){
+  enrich_feat <- enrich_res$tscore
+}
+if(type_data == 'tot_path'){
+  enrich_feat <- enrich_res$pathScore
+  keep_path <- enrich_res$path_ann
+  # use same pathways used to compute correlation (get rid of exactly same pathways)
+  feat_res <- feat_res[paste0(feat_res$path, '_type_', feat_res$type) %in% paste0(keep_path$path, '_type_', keep_path$type), ]
+}
+
+# load correlation data
+cor_feat <- get(load(cor_file))
+cor_feat <- cor_feat$cor
+common_f <- intersect(feat_res[, id_name], colnames(cor_feat))
+feat_res <- feat_res[match(common_f, feat_res[,id_name]), ]
+cor_feat <- cor_feat[match(common_f, rownames(cor_feat)), match(common_f, colnames(cor_feat))]
+
+
+# keep only phenotype that are correlated 
+enrich_feat <- enrich_feat[!is.na(enrich_feat$cor_pval_BHcorr),]
+enrich_feat <- enrich_feat[enrich_feat$cor_pval_BHcorr <= pval_FDR_corr, ]
+# enrich_feat <- enrich_feat[!is.na(enrich_feat$fisher_pval_BHcorr),]
+# enrich_feat <- enrich_feat[enrich_feat$fisher_pval_BHcorr <= pval_FDR_fisher,]
+# enrich_feat <- enrich_feat[enrich_feat$k > 2, ]
+pheno_type <- unique(enrich_feat$pheno_type)
+print(pheno_type)
+
+res_MR <- list()
+
+for(i in 1:length(pheno_type)){
+  
+  print(pheno_type[i])
+  
+  tmp_pheno_red <- enrich_feat[enrich_feat$pheno_type %in% pheno_type[i], ]
+  res_MR[[i]] <- data.frame(nfeat = rep(NA, nrow(tmp_pheno_red)), MREgg_est = rep(NA, nrow(tmp_pheno_red)), MREgg_est_se = rep(NA, nrow(tmp_pheno_red)), 
+                            MREgg_est_CIl = rep(NA, nrow(tmp_pheno_red)), MREgg_est_CIu = rep(NA, nrow(tmp_pheno_red)), 
+                            MREgg_est_pval = rep(NA, nrow(tmp_pheno_red)), MREgg_int = rep(NA, nrow(tmp_pheno_red)), MREgg_int_se = rep(NA, nrow(tmp_pheno_red)), 
+                            MREgg_int_CIl = rep(NA, nrow(tmp_pheno_red)), MREgg_int_CIu = rep(NA, nrow(tmp_pheno_red)), 
+                            MREgg_int_pval = rep(NA, nrow(tmp_pheno_red)), MREgg_heter_stat  = rep(NA, nrow(tmp_pheno_red)),
+                            MREgg_heter_pval = rep(NA, nrow(tmp_pheno_red)))
+    
+  if(pheno_type[i] %in% c('Blood_biochemistry', 'Blood_count')){
+    
+    file_toload <- sprintf('%s/pval_%s_withMed_pheno_covCorr.RData', inputFold_rel, pheno_type[i])
+  }else{
+    file_toload <- sprintf('%s/pval_%s_pheno_covCorr.RData', inputFold_rel, pheno_type[i])
+  }
+  
+  tmp <- get(load(file_toload))
+  rm(final)
+  tmp_pheno <- tmp$pheno
+  if(type_data == 'tot_path'){
+    new <- list()
+    for(l in 1:nrow(tmp_pheno)){
+      new[[l]] <- list(tmp$pathScore_reactome[[l]], tmp$pathScore_GO[[l]])
+      new[[l]][[1]]$path_id <- new[[l]][[1]]$path
+      new[[l]][[1]]$type <- 'Reactome'
+      new[[l]][[2]]$type <- 'GO'
+      common_h <- intersect(colnames(new[[l]][[1]]), colnames(new[[l]][[2]]))
+      new[[l]] <- lapply(new[[l]], function(x) x[, match(common_h, colnames(x))])
+      new[[l]] <- do.call(rbind, new[[l]])
+      new[[l]]$new_id <- paste0(new[[l]]$path_id, '_type_', new[[l]]$type)
+    }
+    tmp <- new
+  }
+  
+  if(type_data == 'tscore'){
+    tmp <- tmp[[id_keep]] 
+    for(j in 1:length(tmp)){
+      # tmp[[j]]$new_id <- paste0(tmp[[j]][,1], '_tissue_', tissue_name)
+      tmp[[j]]$new_id <- tmp[[j]][,1]
+    }
+  }
+  
+  id_keep_rel <- match(tmp_pheno_red$pheno,tmp_pheno$pheno_id)
+  tmp <- tmp[id_keep_rel]
+  
+  tmp <- lapply(tmp, function(x) x[x$new_id %in% feat_res$new_id,])
+  # sign_common_rel <- lapply(tmp, function(x) x[x$new_id %in% feat_res$new_id[feat_res[,pval_id+2] <= pval_FDR_pheno] & x[, pval_id +2] <= pval_FDR_rel,])
+  # sign_common_pheno <- lapply(tmp, function(x) feat_res[feat_res$new_id %in% x$new_id[x[,pval_id+2] <= pval_FDR_rel] & feat_res[, pval_id +2] <= pval_FDR_pheno,])
+  sign_common_rel <- lapply(tmp, function(x) x[x$new_id %in% feat_res$new_id & x[, pval_id +2] <= pval_FDR_rel,])
+  sign_common_pheno <- lapply(tmp, function(x) feat_res[feat_res$new_id %in% x$new_id[x[,pval_id+2] <= pval_FDR_rel],])
+  
+  for(j in 1:length(tmp)){
+    common_f <- intersect(sign_common_rel[[j]]$new_id, sign_common_pheno[[j]]$new_id)
+    if(length(common_f)>2){
+      sign_common_rel[[j]] <- sign_common_rel[[j]][match(common_f, sign_common_rel[[j]]$new_id),]
+      sign_common_pheno[[j]] <- sign_common_pheno[[j]][match(common_f, sign_common_pheno[[j]]$new_id),]
+      tmp_corr <- cor_feat[match(sign_common_pheno[[j]][, id_name], rownames(cor_feat)), 
+                           match(sign_common_pheno[[j]][, id_name], colnames(cor_feat))]
+    
+      MRInputObject <- mr_input(bx = sign_common_rel[[j]][, beta_id], bxse = sign_common_rel[[j]][, se_beta_id],
+                                by = sign_common_pheno[[j]][, beta_id], byse = sign_common_pheno[[j]][, se_beta_id], 
+                                correlation = tmp_corr, snps = colnames(tmp_corr))
+      MREggerObject <- tryCatch(mr_egger(MRInputObject, correl = T), error = function(x) NULL)
+      if(!is.null(MREggerObject)){
+        res_MR[[i]][j, ] <- c(length(common_f), MREggerObject@Estimate, MREggerObject@StdError.Est, MREggerObject@CILower.Est, 
+                              MREggerObject@CIUpper.Est, MREggerObject@Pvalue.Est, MREggerObject@Intercept, 
+                              MREggerObject@StdError.Int, MREggerObject@CILower.Int, MREggerObject@CIUpper.Int,
+                              MREggerObject@Pvalue.Int, MREggerObject@Heter.Stat)
+      }else{
+        print(paste('computational error for', tmp_pheno_red$names_field[j]))
+      }
+    }
+  }
+  
+  res_MR[[i]] <- cbind(res_MR[[i]], tmp_pheno_red[, c('names_field', 'pheno', 'pheno_type')])
+  
+}
+
+res_MR <- do.call(rbind, res_MR)
+res_MR <- res_MR[!is.na(res_MR$nfeat), ]
+res_MR$MREgg_est_pval_FDRcorr <- p.adjust(res_MR$MREgg_est_pval, method = 'BH')
+
+# save results
+write.table(x = res_MR, file = sprintf('%sMendelian_randomization_%s_pvalFDRrel%s.txt', outFold, type_data, 
+                                       as.character(pval_FDR_rel)), col.names = T, row.names = F, quote = F, sep = '\t')
+
+
+
+

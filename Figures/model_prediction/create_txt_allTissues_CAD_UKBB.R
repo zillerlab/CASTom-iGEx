@@ -2,25 +2,46 @@
 library(qvalue)
 
 setwd('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/')
-tissues_name <- c('Adipose_Subcutaneous', 'Adipose_Visceral_Omentum', 'Adrenal_Gland', 'Artery_Aorta', 'Artery_Coronary', 'Colon_Sigmoid', 'Colon_Transverse', 'Heart_Atrial_Appendage','Heart_Left_Ventricle', 'Liver')
+tissues_name <- c('Adipose_Subcutaneous', 'Adipose_Visceral_Omentum', 'Adrenal_Gland', 'Artery_Aorta', 'Artery_Coronary', 'Colon_Sigmoid', 'Colon_Transverse', 'Heart_Atrial_Appendage','Heart_Left_Ventricle', 'Liver', 'Whole_Blood')
 
 df_tscore_HARD <- df_pathR_HARD <- df_pathGO_HARD <- list()
 df_tscore_SOFT <- df_pathR_SOFT <- df_pathGO_SOFT <- list()
-  
+
 for(i in 1:length(tissues_name)){
+  
   t <- tissues_name[i]
+  print(t)
+  
   tmp <- get(load(sprintf('predict_CAD/%s/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/pval_CAD_pheno_covCorr.RData', t)))
   df_tscore_HARD[[i]] <- tmp$tscore[[1]]
   df_tscore_SOFT[[i]] <- tmp$tscore[[2]]
   df_tscore_HARD[[i]]$tissue <-  df_tscore_SOFT[[i]]$tissue <- t
   
+  # add genes in the pathway and if there is an improvment in significance
   df_pathR_HARD[[i]] <- tmp$pathScore_reactome[[1]]
   df_pathR_SOFT[[i]] <- tmp$pathScore_reactome[[2]]
+  df_pathR_HARD[[i]]$genes_path <- df_pathR_SOFT[[i]]$genes_path <- NA
+  df_pathR_HARD[[i]]$improvement_sign <- df_pathR_SOFT[[i]]$improvement_sign <- NA
+  for(j in 1:nrow(df_pathR_HARD[[i]])){
+    df_pathR_HARD[[i]]$genes_path[j] <- paste0(tmp$info_pathScore_reactome[[1]][[j]]$tscore$external_gene_name, collapse = ',')
+    df_pathR_SOFT[[i]]$genes_path[j] <- paste0(tmp$info_pathScore_reactome[[2]][[j]]$tscore$external_gene_name, collapse = ',')
+    df_pathR_HARD[[i]]$improvement_sign[j] <- all(tmp$info_pathScore_reactome[[1]][[j]]$tscore[,8] > df_pathR_HARD[[i]][j,13])
+    df_pathR_SOFT[[i]]$improvement_sign[j] <- all(tmp$info_pathScore_reactome[[2]][[j]]$tscore[,8] > df_pathR_SOFT[[i]][j,13])
+  }
   df_pathR_HARD[[i]]$tissue <-  df_pathR_SOFT[[i]]$tissue <- t
   
   df_pathGO_HARD[[i]] <- tmp$pathScore_GO[[1]]
   df_pathGO_SOFT[[i]] <- tmp$pathScore_GO[[2]]
+  df_pathGO_HARD[[i]]$genes_path <- df_pathGO_SOFT[[i]]$genes_path <- NA
+  df_pathGO_HARD[[i]]$improvement_sign <- df_pathGO_SOFT[[i]]$improvement_sign <- NA
+  for(j in 1:nrow(df_pathGO_HARD[[i]])){
+    df_pathGO_HARD[[i]]$genes_path[j] <- paste0(tmp$info_pathScore_GO[[1]][[j]]$tscore$external_gene_name, collapse = ',')
+    df_pathGO_SOFT[[i]]$genes_path[j] <- paste0(tmp$info_pathScore_GO[[2]][[j]]$tscore$external_gene_name, collapse = ',')
+    df_pathGO_HARD[[i]]$improvement_sign[j] <- all(tmp$info_pathScore_GO[[1]][[j]]$tscore[,8] > df_pathGO_HARD[[i]][j,15])
+    df_pathGO_SOFT[[i]]$improvement_sign[j] <- all(tmp$info_pathScore_GO[[2]][[j]]$tscore[,8] > df_pathGO_SOFT[[i]][j,15])
+  }
   df_pathGO_HARD[[i]]$tissue <-  df_pathGO_SOFT[[i]]$tissue <- t
+  
 }
 
 df_tscore_HARD <- do.call(rbind, df_tscore_HARD)
@@ -47,8 +68,7 @@ recompte_path <- function(tissues_name, res, id_pval){
     tmp[[i]][, id_pval+2] <- p.adjust(tmp[[i]][, id_pval], method = 'BH')
   }
   tmp <- do.call(rbind, tmp)
-  tmp[, id_pval+4] <- p.adjust(tmp[, id_pval], method = 'BH')
-  
+  tmp[, id_pval+6] <- p.adjust(tmp[, id_pval], method = 'BH')
   return(tmp)
 }
 df_pathR_HARD_red <- recompte_path(res = df_pathR_HARD, tissues_name = tissues_name, id_pval = 13)
@@ -69,12 +89,5 @@ write.table(x = df_pathR_HARD_red, file = 'predict_CAD/AllTissues/200kb/CAD_GWAS
 write.table(x = df_pathR_SOFT_red, file = 'predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/path_Reactome_pval_CAD_SOFT_covCorr_filt.txt', col.names=T, row.names=F, sep = '\t', quote = F)
 write.table(x = df_pathGO_HARD_red, file = 'predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/path_GO_pval_CAD_HARD_covCorr_filt.txt', col.names=T, row.names=F, sep = '\t', quote = F)
 write.table(x = df_pathGO_SOFT_red, file = 'predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/path_GO_pval_CAD_SOFT_covCorr_filt.txt', col.names=T, row.names=F, sep = '\t', quote = F)
-
-
-
-
-
-
-
 
 

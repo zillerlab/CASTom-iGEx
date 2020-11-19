@@ -37,7 +37,7 @@ outFold <- args$outFold
 
 # #########################################################################################################################
 # phenoFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/INPUT_DATA_GTEx/CAD/Covariates/UKBB/'
-# tissue_name <- 'Liver'
+# tissue_name <- 'Whole_Blood'
 # inputFold_CADrel <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Adipose_Subcutaneous/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/'
 # inputFile_CADUKBB <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Adipose_Subcutaneous/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/pval_CAD_pheno_covCorr.RData'
 # outFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Adipose_Subcutaneous/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/'
@@ -83,15 +83,20 @@ for(j in 1:length(pheno_name)){
   
   print(pheno_name[j])
   
-  tmp <- get(load(sprintf('%s/pval_%s_pheno_covCorr.RData', inputFold_CADrel, pheno_name[j])))
+  if(pheno_name[j] %in% c('Blood_biochemistry', 'Blood_count')){
+    tmp <- get(load(sprintf('%s/pval_%s_withMed_pheno_covCorr.RData', inputFold_CADrel, pheno_name[j])))
+  }else{
+    tmp <- get(load(sprintf('%s/pval_%s_pheno_covCorr.RData', inputFold_CADrel, pheno_name[j])))
+  }
   rm(final)
   
   id_keep <- 1:nrow(tmp$pheno)
- 
+  
   pheno_info[[j]] <- data.frame(pheno = tmp$pheno$pheno_id[id_keep], pheno_type = pheno_name[j], Field = tmp$pheno$Field[id_keep], meaning = tmp$pheno$Coding_meaning[id_keep])
   test_tscore[[j]] <- test_pathR[[j]] <- test_pathGO[[j]] <- data.frame(N = rep(0, length(id_keep)),
                                                                         K =rep(0, length(id_keep)), n =rep(0, length(id_keep)), k= rep(0, length(id_keep)), 
-                                                                        fisher_pval = rep(NA, length(id_keep)), fisher_OR = rep(NA, length(id_keep)))
+                                                                        fisher_pval = rep(NA, length(id_keep)), fisher_OR = rep(NA, length(id_keep)), 
+                                                                        cor_spearman = rep(NA, length(id_keep)), cor_pval = rep(NA, length(id_keep)))
   
   # remove pathways with only 1 gene
   tmp$pathScore_reactome <- lapply(tmp$pathScore_reactome, function(x) x[x$ngenes_tscore > 1,])
@@ -110,6 +115,18 @@ for(j in 1:length(pheno_name)){
   tmp$tscore <- lapply(tmp$tscore[id_keep], function(x) x[x$ensembl_gene_id %in% tscore_CAD$ensembl_gene_id,])
   tmp$pathScore_reactome <- lapply(tmp$pathScore_reactome[id_keep], function(x) x[x$path %in% pathR_CAD$path,])
   tmp$pathScore_GO <- lapply(tmp$pathScore_GO[id_keep], function(x) x[x$path %in% pathGO_CAD$path,])
+  
+  common_g <- lapply(tmp$tscore, function(x) intersect(x$ensembl_gene_id, tscore_CAD$ensembl_gene_id))
+  test_tscore[[j]]$cor_spearman <- mapply(function(x, y) cor(x[match(y, x$ensembl_gene_id), 7], tscore_CAD[match(y, tscore_CAD$ensembl_gene_id), 7], method = 'spearman', use='pairwise.complete.obs'), x = tmp$tscore, y = common_g)
+  test_tscore[[j]]$cor_pval <-mapply(function(x, y) cor.test(x[match(y, x$ensembl_gene_id), 7], tscore_CAD[match(y, tscore_CAD$ensembl_gene_id), 7], method = 'spearman', use='pairwise.complete.obs')$p.value, x = tmp$tscore, y = common_g)
+  
+  common_pR <- lapply(tmp$pathScore_reactome, function(x) intersect(x$path, pathR_CAD$path))
+  test_pathR[[j]]$cor_spearman <- mapply(function(x, y) cor(x[match(y, x$path), 12], pathR_CAD[match(y, pathR_CAD$path), 12], method = 'spearman', use='pairwise.complete.obs'), x = tmp$pathScore_reactome, y = common_pR)
+  test_pathR[[j]]$cor_pval <-mapply(function(x, y) cor.test(x[match(y, x$path), 12], pathR_CAD[match(y, pathR_CAD$path), 12], method = 'spearman', use='pairwise.complete.obs')$p.value, x = tmp$pathScore_reactome, y = common_pR)
+  
+  common_pG <- lapply(tmp$pathScore_GO, function(x) intersect(x$path_id, pathGO_CAD$path_id))
+  test_pathGO[[j]]$cor_spearman <- mapply(function(x, y) cor(x[match(y, x$path_id), 14], pathGO_CAD[match(y, pathGO_CAD$path_id), 14], method = 'spearman', use='pairwise.complete.obs'), x = tmp$pathScore_GO, y = common_pG)
+  test_pathGO[[j]]$cor_pval <-mapply(function(x, y) cor.test(x[match(y, x$path_id), 14], pathGO_CAD[match(y, pathGO_CAD$path_id), 14], method = 'spearman', use='pairwise.complete.obs')$p.value, x = tmp$pathScore_GO, y = common_pG)
   
   test_tscore[[j]]$N <- sapply(tmp$tscore, nrow)
   test_pathR[[j]]$N <- sapply(tmp$pathScore_reactome, nrow)
@@ -224,7 +241,12 @@ pheno_info$names_field[!is.na(pheno_info$meaning)] <- paste(pheno_info$Field, ':
 test_tscore <- do.call(rbind, test_tscore)
 test_pathR <- do.call(rbind, test_pathR)
 test_pathGO <- do.call(rbind, test_pathGO)
+
 # correct pvalues
+test_tscore$cor_pval_BHcorr[!is.na(test_tscore$cor_pval)] <- p.adjust(test_tscore$cor_pval[!is.na(test_tscore$cor_pval)], method = 'BH')
+test_pathR$cor_pval_BHcorr[!is.na(test_pathR$cor_pval)] <- p.adjust(test_pathR$cor_pval[!is.na(test_pathR$cor_pval)], method = 'BH')
+test_pathGO$cor_pval_BHcorr[!is.na(test_pathGO$cor_pval)] <- p.adjust(test_pathGO$cor_pval[!is.na(test_pathGO$cor_pval)], method = 'BH')
+
 if(any(!is.na(test_tscore$fisher_pval))){
   test_tscore$fisher_qval <- qvalue(test_tscore$fisher_pval)$qvalue
   test_tscore$fisher_pval_BHcorr <- p.adjust(test_tscore$fisher_pval, method = 'BH')
@@ -272,7 +294,7 @@ df_pval_tscore_all <- data.frame(genes_int)
 df_pvalcorr_tscore_all <- data.frame(genes_int)
 
 if(length(genes_int)>0){
-for(j in 1:length(df_zscore_tscore)){
+  for(j in 1:length(df_zscore_tscore)){
     df_zscore_tscore_all <- cbind(df_zscore_tscore_all, df_zscore_tscore[[j]][, -c(1:2)])
     df_pval_tscore_all <- cbind(df_pval_tscore_all, df_pval_tscore[[j]][, -c(1:2)])
     df_pvalcorr_tscore_all <- cbind(df_pvalcorr_tscore_all, df_pvalcorr_tscore[[j]][, -c(1:2)])
@@ -369,7 +391,7 @@ if(tissue_name == 'Adipose_Subcutaneous'){
 }
 
 plot_heatmap_split <- function(type_mat, df_zscore, CAD_res, id_to_rm, id_col, id_col_match, pheno_info, color_cat, 
-                                    cap_val = 9, height_pl = 16, width_pl=16){
+                               cap_val = 9, height_pl = 16, width_pl=16){
   
   # split blood pheno
   id_blood <- colnames(df_zscore) %in% pheno_info$pheno[pheno_info$pheno_type == 'Blood_count'] 

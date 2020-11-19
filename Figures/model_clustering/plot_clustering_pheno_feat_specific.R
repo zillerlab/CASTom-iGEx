@@ -1,0 +1,456 @@
+# plot specific pathway, filter lists
+
+options(stringsAsFactors=F)
+options(max.print=1000)
+suppressPackageStartupMessages(library(argparse))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(ggpubr))
+suppressPackageStartupMessages(library(ggsci))
+suppressPackageStartupMessages(library(RColorBrewer))
+suppressPackageStartupMessages(library(ComplexHeatmap))
+suppressPackageStartupMessages(library(circlize))
+suppressPackageStartupMessages(library(PGSEA))
+suppressPackageStartupMessages(library(data.table))
+suppressPackageStartupMessages(library(cowplot))
+options(bitmapType = 'cairo', device = 'png')
+
+## specific for Liver ##
+tissue_name <- 'Liver'
+clustFile <- sprintf('OUTPUT_GTEx/predict_CAD/%s/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/tscore_zscaled_clusterCases_PGmethod_HKmetric.RData', tissue_name)
+res_cl <- get(load(clustFile))
+color_tissue <- read.table('/psycl/g/mpsziller/lucia/priler_project/Figures/color_tissues.txt', h=T, stringsAsFactors=F)
+
+path_info <- read.delim(sprintf('OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/cl%s_path_ReactomeOriginal_tscoreClusterCases_infoGenes.txt',  tissue_name), h=T, stringsAsFactors = F, sep = '\t')
+path_go_info <- read.delim(sprintf('OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/cl%s_path_GOOriginal_tscoreClusterCases_infoGenes.txt',tissue_name), h=T, stringsAsFactors = F, sep = '\t')
+path_feat <- read.delim(sprintf('OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/cl%s_path_ReactomeOriginal_tscoreClusterCases_featAssociation.txt',  tissue_name), h=T, stringsAsFactors = F, sep = '\t')
+path_go_feat <- read.delim(sprintf('OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/cl%s_path_GOOriginal_tscoreClusterCases_featAssociation.txt', tissue_name), h=T, stringsAsFactors = F, sep = '\t')
+gene_feat <- read.delim(sprintf('OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/cl%s_tscoreOriginal_tscoreClusterCases_featAssociation.txt', tissue_name), h=T, stringsAsFactors = F, sep = '\t')
+gene_info <- read.delim(sprintf('OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/cl%s_tscoreOriginal_tscoreClusterCases_infoGenes.txt', tissue_name), h=T, stringsAsFactors = F, sep = '\t')
+
+tissues_comp <- unique(path_info$tissue)
+tmp <- sapply(tissues_comp, function(x) strsplit(x, split = '_')[[1]])
+tissues_red <- sapply(tmp, function(y) paste0(sapply(y, function(x) substr(x, start = 1, stop = 1)), collapse = ''))
+df_tissue <- data.frame(name = tissues_comp, short = tissues_red)
+color_tissue <- color_tissue[color_tissue$tissue %in% tissues_comp, ]
+
+# keep_path <- c('Golgi Associated Vesicle Biogenesis', 'Vesicle-mediated transport', 'clathrin-coated vesicle',
+#                'Biosynthesis of DHA-derived SPMs', 'Free fatty acid receptors', 'Elastic fibre formation', 'glycine binding',
+#                'G alpha (q) signalling events', 'Ethanol oxidation', 'Metabolism of carbohydrates',
+#                'xenobiotic catabolic process', 'Transcriptional regulation of white adipocyte differentiation', 'antioxidant activity', 'DAP12 interactions', 'Endosomal/Vacuolar pathway', 'Interferon Signaling',
+#                'Cytokine Signaling in Immune system', 'PD-1 signaling', 'Endogenous sterols', 'Steroid hormones',
+#                'Cytochrome P450 - arranged by substrate type', 'Metabolism of lipids', 'ABC-family proteins mediated transport','Regulation of Insulin-like Growth Factor (IGF) transport and uptake by Insulin-like Growth Factor Binding Proteins (IGFBPs)',
+#                'heme binding', 'Synthesis of very long-chain fatty acyl-CoAs', 'Lysosphingolipid and LPA receptors')
+
+keep_path <- c('Vesicle-mediated transport', 'clathrin-coated vesicle',
+               'Free fatty acid receptors', 'Elastic fibre formation', 'glycine binding',
+               'Ethanol oxidation', 'Metabolism of carbohydrates',
+               'xenobiotic catabolic process', 'Transcriptional regulation of white adipocyte differentiation', 'antioxidant activity', 
+               'DAP12 interactions', 'Endosomal/Vacuolar pathway', 'Interferon Signaling',
+               'Cytokine Signaling in Immune system', 'PD-1 signaling', 'Endogenous sterols', 'Steroid hormones',
+               'Cytochrome P450 - arranged by substrate type', 'Metabolism of lipids', 'ABC-family proteins mediated transport',
+               'Regulation of Insulin-like Growth Factor (IGF) transport and uptake by Insulin-like Growth Factor Binding Proteins (IGFBPs)',
+               'heme binding', 'Lysosphingolipid and LPA receptors', 'Death Receptor Signalling', 'Cardiac conduction')
+
+
+path_info_tot <- rbind(path_info, path_go_info[, match(colnames(path_info), colnames(path_go_info))])
+path_feat_tot <- rbind(path_feat, path_go_feat[, match(colnames(path_feat), colnames(path_go_feat))])
+path_info_tot$impr <- F
+tmp <- list()
+comp <- sort(unique(path_feat_tot$comp))
+for(i in 1:length(keep_path)){
+  print(i)
+  tmp[[i]] <- path_info_tot[path_info_tot$path %in% keep_path[i], ]
+  gene_names <- lapply(tmp[[i]]$genes_id, function(x) strsplit(x, split = '[,]')[[1]])
+  for(j in 1:length(gene_names)){
+    gene_new <- gene_feat[gene_feat$feat %in% gene_names[[j]] & gene_feat$tissue == tmp[[i]]$tissue[j], ]
+    tmp[[i]]$impr[j] <- any(sapply(comp, function(x) all(gene_new$pval[gene_new$comp == x] > path_feat_tot$pval[path_feat_tot$tissue == tmp[[i]]$tissue[j] & path_feat_tot$feat == keep_path[i] & path_feat_tot$comp == x])))
+  }
+}
+path_info_tot <- do.call(rbind, tmp)
+
+path_info_tot$database <- 'Reactome'
+path_info_tot$database[path_info_tot$path %in% path_go_info$path] <- 'Gene Ontology'
+path_info_tot$new_id <- paste0(path_info_tot$path, ' (', df_tissue$short[match(path_info_tot$tissue, df_tissue$name)], ')')
+
+path_feat_tot$new_id <- paste0(path_feat_tot$feat, ' (', df_tissue$short[match(path_feat_tot$tissue, df_tissue$name)], ')')
+path_feat_tot$database <- 'Reactome'
+path_feat_tot$database[path_feat_tot$feat %in% path_go_info$path] <- 'Gene Ontology'
+path_feat_tot <- path_feat_tot[path_feat_tot$new_id %in% path_info_tot$new_id, ]
+keep_new <- unique(path_feat_tot$new_id[path_feat_tot$pval <= 0.001 | (path_feat_tot$feat %in% c('Death Receptor Signalling', 'Cardiac conduction') & path_feat_tot$pval <= 0.05)])
+path_feat_tot <- path_feat_tot[path_feat_tot$new_id %in% keep_new, ]
+path_info_tot <- path_info_tot[path_info_tot$new_id %in% keep_new, ]
+
+# load pathway scores:
+pathR_input <- list()
+pathGO_input <- list()
+for(i in 1:length(tissues_comp)){
+  print(i)
+  pathR_featRelFile <- sprintf('OUTPUT_GTEx/predict_CAD/%s/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/path_ReactomeOriginal_tscoreClusterCases_featAssociation.RData', tissues_comp[i])
+  tmp <- get(load(pathR_featRelFile))
+  pathR_input[[i]] <- tmp$scaleData
+  colnames(pathR_input[[i]]) <- paste0(colnames(pathR_input[[i]]), ' (', df_tissue$short[match(tissues_comp[i], df_tissue$name)], ')')
+
+  pathGO_featRelFile <- sprintf('OUTPUT_GTEx/predict_CAD/%s/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/path_GOOriginal_tscoreClusterCases_featAssociation.RData', tissues_comp[i])
+  tmp <- get(load(pathGO_featRelFile))
+  pathGO_input[[i]] <- tmp$scaleData
+  colnames(pathGO_input[[i]]) <- tmp$res_pval$path[match(colnames(pathGO_input[[i]]), tmp$res_pval$path_id)]
+  colnames(pathGO_input[[i]]) <- paste0(colnames(pathGO_input[[i]]), ' (', df_tissue$short[match(tissues_comp[i], df_tissue$name)], ')')
+}
+pathR_input <- do.call(cbind, pathR_input)
+pathGO_input <- do.call(cbind, pathGO_input)
+path_input_tot <- cbind(pathR_input, pathGO_input)
+# old_path_input_tot <- path_input_tot
+# path_input_tot <- old_path_input_tot
+
+# merge_path <- c('DAP12 interactions', 'Endosomal/Vacuolar pathway', 'Cytokine Signaling in Immune system', 'PD-1 signaling')
+merge_path <- keep_path
+path_info_tot$new_id_v2 <- path_info_tot$new_id
+path_feat_tot$new_id_v2 <- path_feat_tot$new_id
+
+for(i in 1:length(merge_path)){
+  
+  print(i)
+  
+  tmp <- path_info_tot[path_info_tot$path %in% merge_path[i],]
+  tmp_feat <- path_feat_tot[path_feat_tot$feat %in% merge_path[i],]
+  tmp_feat_mat <- sapply(unique(tmp_feat$tissue), function(x) tmp_feat$estimates[tmp_feat$tissue == x])
+  tmp_feat_pval <- sapply(unique(tmp_feat$tissue), function(x) tmp_feat$pval[tmp_feat$tissue == x])
+  tmp_feat_mat[tmp_feat_pval > 0.05] <- 0
+  
+  if(ncol(tmp_feat_mat) >1){
+    
+    keep_tissue <- list()
+    collapse_tissue <- list()
+    tmp_dist <- as.matrix(dist(t(sign(tmp_feat_mat)), method = 'manhattan'))
+    tissue_list <- lapply(1:nrow(tmp_dist), function(x) names(which(tmp_dist[x,] == 0)))
+    tissue_list <- sapply(tissue_list, function(x) paste0(x, collapse = ','))
+    tissue_list <- unname(tissue_list[!duplicated(tissue_list)])
+    
+    for(j in 1:length(tissue_list)){
+      tmp_tissue <- strsplit(tissue_list[j], split = '[,]')[[1]]
+      
+      if(length(tmp_tissue) > 1){
+        onlyt <- tmp_feat[tmp_feat$tissue %in% tmp_tissue, ]
+        keep_tissue[[j]] <- onlyt$tissue[which.min(onlyt$pval)]
+        collapse_tissue[[j]] <- setdiff(tmp_tissue, keep_tissue[[j]])
+      }else{
+        keep_tissue[[j]] <- tmp_tissue
+        collapse_tissue[[j]] <- NA
+      }
+      
+    }
+  
+    keep_tissue_tot <- unlist(keep_tissue)
+    path_info_tot <- path_info_tot[!path_info_tot$new_id %in% tmp$new_id[!tmp$tissue %in% keep_tissue_tot],]
+    path_feat_tot <- path_feat_tot[!path_feat_tot$new_id %in% tmp$new_id[!tmp$tissue %in% keep_tissue_tot],]
+  
+    for(j in 1:length(collapse_tissue)){
+      if(!any(is.na(collapse_tissue[[j]]))){
+        path_info_tot$new_id_v2[path_info_tot$new_id %in% tmp$new_id[tmp$tissue %in% keep_tissue[[j]]]] <- paste0(tmp$new_id[tmp$tissue %in% keep_tissue[[j]]], 
+                                                                                                             ' -same in ', paste0(tissues_red[names(tissues_red) %in% collapse_tissue[[j]]], collapse = ' '), '-')
+        
+        path_feat_tot$new_id_v2[path_feat_tot$new_id %in% tmp$new_id[tmp$tissue %in% keep_tissue[[j]]]] <- paste0(tmp$new_id[tmp$tissue %in% keep_tissue[[j]]], 
+                                                                                                           ' -same in ', paste0(tissues_red[names(tissues_red) %in% collapse_tissue[[j]]], collapse = ' '), '-')
+      }
+    }
+ 
+  }
+}
+
+path_input_tot <- path_input_tot[, match(path_info_tot$new_id, colnames(path_input_tot))]
+colnames(path_input_tot) <- path_info_tot$new_id_v2
+path_info_tot$new_id <- path_info_tot$new_id_v2
+path_feat_tot$new_id <- path_feat_tot$new_id_v2
+
+### plot genes ###
+gene_info <- gene_info[!is.na(gene_info$relevant_cluster_pruned), ]
+gene_info <- gene_info[gene_info$relevant_cluster_pruned, ]
+# gene_info <- gene_info[gene_info$relevant_cluster, ]
+gene_info$new_id <- paste0(gene_info$external_gene_name, ' (', df_tissue$short[match(gene_info$tissue, df_tissue$name)], ')')
+gene_feat$new_id <- paste0(gene_feat$feat, ' (', df_tissue$short[match(gene_feat$tissue, df_tissue$name)], ')')
+gene_feat <- gene_feat[gene_feat$new_id %in% gene_info$new_id, ]
+# futher filter based on association
+keep_genes <- unique(gene_feat$new_id[gene_feat$pval <= 10^-6])
+gene_info <- gene_info[gene_info$new_id %in% keep_genes, ]
+gene_feat <- gene_feat[gene_feat$new_id %in% gene_info$new_id, ]
+
+# load tscore:
+tscore_input <- list()
+for(i in 1:length(tissues_comp)){
+  print(i)
+  tscore_featRelFile <- sprintf('OUTPUT_GTEx/predict_CAD/%s/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/tscoreOriginal_tscoreClusterCases_featAssociation.RData', tissues_comp[i])
+  tmp <- get(load(tscore_featRelFile))
+  tscore_input[[i]] <- tmp$scaleData
+  colnames(tscore_input[[i]]) <- paste0(colnames(tscore_input[[i]]), ' (', df_tissue$short[match(tissues_comp[i], df_tissue$name)], ')')
+}
+tscore_input <- do.call(cbind, tscore_input)
+tscore_input <- tscore_input[, match(gene_info$new_id, colnames(tscore_input))]
+
+merge_genes <- unique(gene_info$external_gene_name[duplicated(gene_info$external_gene_name)])
+gene_info$new_id_v2 <- gene_info$new_id
+gene_feat$new_id_v2 <- gene_feat$new_id
+
+for(i in 1:length(merge_genes)){
+  print(i)
+  tmp <- gene_info[gene_info$external_gene_name %in% merge_genes[i],]
+  tmp_feat <- gene_feat[gene_feat$feat %in% merge_genes[i],]
+  tmp_feat_mat <- sapply(unique(tmp_feat$tissue), function(x) tmp_feat$estimates[tmp_feat$tissue == x])
+  
+  if(all(apply(tmp_feat_mat, 1, function(x) length(unique(sign(x)))) == 1)){
+    
+    keep_tissue <- tmp_feat$tissue[which.min(tmp_feat$pval)]
+    excl_tissue <- setdiff(tmp$tissue, keep_tissue)
+    gene_info <- gene_info[!gene_info$new_id %in% tmp$new_id[!tmp$tissue %in% keep_tissue],]
+    gene_info$new_id_v2[gene_info$new_id %in% tmp$new_id[tmp$tissue %in% keep_tissue]] <- paste0(tmp$new_id[tmp$tissue %in% keep_tissue], 
+                                                                                                         ' -same in ', paste0(tissues_red[names(tissues_red) %in% excl_tissue], collapse = ' '), '-')
+    gene_feat <- gene_feat[!gene_feat$new_id %in% tmp$new_id[!tmp$tissue %in% keep_tissue],]
+    gene_feat$new_id_v2[gene_feat$new_id %in% tmp$new_id[tmp$tissue %in% keep_tissue]] <- paste0(tmp$new_id[tmp$tissue %in% keep_tissue], 
+                                                                                                         ' -same in ', paste0(tissues_red[names(tissues_red) %in% excl_tissue], collapse = ' '), '-')
+  }
+}
+
+tscore_input <- tscore_input[, match(gene_info$new_id, colnames(tscore_input))]
+colnames(tscore_input) <- gene_info$new_id_v2
+gene_info$new_id <- gene_info$new_id_v2
+gene_feat$new_id <- gene_feat$new_id_v2
+
+
+#### function ####
+pheat_pl_tot <- function(pheno_name, mat_score, info_feat, test_feat, pval_thr_est = 0.05, 
+                         cl, height_pl = 10, width_pl = 7, outFile, cap = NA, cap_est = 0, res_pl = 200, tissue = NULL, color_tissue){
+  
+  if(!is.null(tissue)){
+    info_feat <- info_feat[info_feat$tissue %in% tissue, ]
+    mat_score <- mat_score[, match(info_feat$new_id, colnames(mat_score))]
+    test_feat <- test_feat[info_feat$new_id %in% test_feat$new_id, ]
+  }
+  
+  coul <- rev(colorRampPalette(brewer.pal(11, "RdBu"))(100))
+  # cap mat if necessary
+  tmp_mat <- as.matrix(mat_score)
+  if(!is.na(cap)){
+    val <- abs(cap)
+  }else{
+    val <- max(abs(tmp_mat))  
+  }
+  mat_breaks <- seq(-val, val, length.out = 100)
+  
+  tmp_mat[tmp_mat>=val] <- val
+  tmp_mat[tmp_mat<=-val] <- -val
+  
+  # sort cl, match mat according cl
+  id <- order(cl$gr)
+  P <- length(unique(cl$gr))
+  cl <- cl[id, ]
+  tmp_mat <- tmp_mat[match(cl$id, rownames(tmp_mat)),]
+  tmp_mat <- t(tmp_mat)
+  
+  mat_colors_gr <- list(cluster = pal_d3(palette = 'category20')(P))
+  names(mat_colors_gr$cluster) <- paste0('gr', 1:P)
+  
+  column_ha <- HeatmapAnnotation(cluster = anno_block(gp = gpar(fill = mat_colors_gr$cluster),
+                                                      labels = names(mat_colors_gr$cluster),
+                                                      labels_gp = gpar(col = "white", fontsize = 12,  fontface = "bold")))
+  zstat_col_fun = colorRamp2(c(min(info_feat$Zstat, na.rm = T), 0, max(info_feat$Zstat, na.rm = T)), 
+                             c("blue","#F0F0F0", "red"))
+  if(length(unique(info_feat$ngenes_tscore)) == 1){
+    ngenes_col_fun = colorRamp2(c(0,max(info_feat$ngenes_tscore)), c("white", "#035F1D"))
+    perc_col_fun = colorRamp2(c(0, max(info_feat$ngenes_tscore/info_feat$ngenes_path)), c("white", "#316879"))
+  }else{
+    ngenes_col_fun = colorRamp2(c(min(info_feat$ngenes_tscore),max(info_feat$ngenes_tscore)), c("white", "#035F1D"))
+    perc_col_fun = colorRamp2(c(min(info_feat$ngenes_tscore/info_feat$ngenes_path), max(info_feat$ngenes_tscore/info_feat$ngenes_path)), c("white", "#316879"))
+  }
+  database_color <- c('#260096', '#49bcd7')
+  names(database_color) <- c('Gene Ontology', 'Reactome')
+  tissue_color <- color_tissue$color
+  names(tissue_color) <- color_tissue$tissues
+  row_ha <- rowAnnotation(n_genes = info_feat$ngenes_tscore, perc = info_feat$ngenes_tscore/info_feat$ngenes_path, zstat = info_feat$Zstat,
+                          database = info_feat$database, tissue = info_feat$tissue, 
+                          annotation_label = list(tissue = 'tissue', database = 'database', n_genes = 'n. genes', perc = '% tot genes', zstat = sprintf('z-statistic %s', pheno_name)), 
+                          col = list(tissue = tissue_color, database = database_color, n_genes = ngenes_col_fun, perc = perc_col_fun, zstat = zstat_col_fun))
+  
+  if(!is.na(cap_est)){
+    test_feat$estimates[test_feat$estimates < -cap_est] <- -cap_est
+    test_feat$estimates[test_feat$estimates > cap_est] <- cap_est
+  }
+  estimate_col_fun = colorRamp2(c(min(test_feat$estimates), 0, max(test_feat$estimates)), c("#00677B", "#F0F0F0", "#BF443B"))
+  lgd_est = Legend(title = "wilcoxon estimates", col = estimate_col_fun, 
+                   at = round(c(seq(min(test_feat$estimates), 0, length.out = 4), 
+                                seq(0, max(test_feat$estimates), length.out = 4)[-1]), digits = 2),
+                   labels = as.character(round(c(seq(min(test_feat$estimates), 0, length.out = 4), 
+                                                 seq(0, max(test_feat$estimates), length.out = 4)[-1]), digits = 2)))
+  # and one for the significant p-values
+  lgd_sig = Legend(pch = "*", type = "points", labels = sprintf("FDR pvalue < %s", as.character(pval_thr_est)))
+  
+  keep_path <- rownames(tmp_mat)
+  # add pvalue info for each group
+  df_pch <- list()
+  df_est <- list()
+  for(i in 1:P){
+    tmp_gr <- test_feat[test_feat$comp == sprintf('gr%i_vs_all', i), ]
+    df_est[[i]] <- tmp_gr$estimates[match(keep_path, tmp_gr$new_id)]
+    is_sign <- tmp_gr$pval_corr[match(keep_path, tmp_gr$new_id)] < pval_thr_est
+    df_pch[[i]] <- rep("*", length(is_sign))
+    df_pch[[i]][!is_sign] = NA
+  }
+  df_est <- do.call(cbind, df_est)
+  colnames(df_est) <- paste0('gr', 1:P)
+  df_pch <- do.call(cbind, df_pch)
+  colnames(df_pch) <- paste0('gr', 1:P)
+  df_font <- matrix(rep("bold", P), nrow = 1)
+  df_font <- as.data.frame(df_font)
+  colnames(df_font) <- paste0('gr', 1:P)
+  
+  row_ha_gr <- rowAnnotation(gr = anno_simple(df_est, col = estimate_col_fun, pch = df_pch, border = T, pt_gp = gpar(fontface = df_font)), 
+                             annotation_label = 'wilcoxon\nestimates', annotation_name_side = 'bottom', annotation_name_rot = 0, simple_anno_size_adjust = T)
+  font_path <- rep('plain', nrow(tmp_mat))
+  font_path[info_feat$impr] <- 'bold'
+  
+  hm_pl <- Heatmap(tmp_mat, name = "scaled scores", col = coul, cluster_rows = F, cluster_columns = FALSE,  show_row_dend = F, show_column_names = F, 
+                   top_annotation = column_ha, column_split = cl$gr, column_title = NULL, 
+                   row_names_side = "left", row_names_gp = gpar(fontsize = 10, col = 'black', fontface = font_path),
+                   left_annotation = row_ha, right_annotation = row_ha_gr, 
+                   border = TRUE, use_raster = T)
+  tot_pl_p <- hm_pl
+  side_par <- round(max(sapply(rownames(tmp_mat), nchar))) + 30
+  ht_list <- tot_pl_p
+  
+  png(file=paste0(outFile, '.png'), res = res_pl, units = 'in', width = width_pl, height = height_pl)
+  draw(ht_list , annotation_legend_list = list(lgd_est, lgd_sig), merge_legend = T, auto_adjust = T, padding = unit(c(2, 2 + side_par, 2, 2), "mm"))
+  dev.off()
+  
+  pdf(file=paste0(outFile, '.pdf'), width = width_pl, height = height_pl)
+  draw(ht_list , annotation_legend_list = list(lgd_est, lgd_sig), merge_legend = T, auto_adjust = T, padding = unit(c(2, 2 + side_par, 2, 2), "mm"))
+  dev.off()
+  
+}
+
+pheat_pl_tscore <- function(pheno_name, mat_tscore, info_feat_tscore, test_feat_tscore, pval_thr_est = 0.05, 
+                         cl, height_pl = 10, width_pl = 7, outFile, cap = NA, res_pl = 200, cap_est = 0, tissue = NULL, color_tissue){
+  
+  if(!is.null(tissue)){
+    info_feat_tscore <- info_feat_tscore[info_feat_tscore$tissue %in% tissue, ]
+    mat_tscore <- mat_tscore[, match(info_feat_tscore$new_id, colnames(mat_tscore))]
+    test_feat_tscore <- test_feat_tscore[info_feat_tscore$new_id %in% test_feat_tscore$new_id, ]
+  }
+  
+  coul <- rev(colorRampPalette(brewer.pal(11, "RdBu"))(100))
+  # cap mat if necessary
+  tmp_mat <- as.matrix(mat_tscore)
+  if(!is.na(cap)){
+    val <- abs(cap)
+  }else{
+    val <- max(abs(tmp_mat))  
+  }
+  mat_breaks <- seq(-val, val, length.out = 100)
+  
+  tmp_mat[tmp_mat>=val] <- val
+  tmp_mat[tmp_mat<=-val] <- -val
+  
+  # sort cl, match mat according cl
+  id <- order(cl$gr)
+  P <- length(unique(cl$gr))
+  cl <- cl[id, ]
+  tmp_mat <- tmp_mat[match(cl$id, rownames(tmp_mat)),]
+  
+  # order gene according location
+  info_feat_tscore <- info_feat_tscore[order(info_feat_tscore$start_position), ]
+  info_feat_tscore <- info_feat_tscore[order(as.numeric(sapply(info_feat_tscore$chrom, function(x) strsplit(x, split = 'chr')[[1]][2]))), ]
+  keep_gene <- info_feat_tscore$new_id
+  tmp_mat <- tmp_mat[, match(keep_gene, colnames(tmp_mat)), drop = F]
+  tmp_mat <- t(tmp_mat)
+  chr_fact <- factor(info_feat_tscore$chrom, levels = unique(info_feat_tscore$chrom))
+  test_feat_tscore <- test_feat_tscore[test_feat_tscore$new_id %in% keep_gene, ,  drop = F]
+  
+  mat_colors_gr <- list(cluster = pal_d3(palette = 'category20')(P))
+  names(mat_colors_gr$cluster) <- paste0('gr', 1:P)
+  
+  mat_colors_chr <- list(chrom = rep(c('#7C7C7C', '#C1C1C1'),length(unique(info_feat_tscore$chrom)))[1:length(unique(info_feat_tscore$chrom))])
+  names(mat_colors_chr$chrom) <- unique(info_feat_tscore$chrom)
+  
+  zstat_col_fun = colorRamp2(c(min(c(info_feat_tscore$Zstat), na.rm = T), 0, max(c(info_feat_tscore$Zstat), na.rm = T)), 
+                             c("blue","#F0F0F0", "red"))
+  # add pvalue info for each group
+  if(!is.na(cap_est)){
+    test_feat_tscore$estimates[test_feat_tscore$estimates < -cap_est] <- -cap_est
+    test_feat_tscore$estimates[test_feat_tscore$estimates > cap_est] <- cap_est
+  }
+  estimate_col_fun = colorRamp2(c(min(test_feat_tscore$estimates), 0, max(test_feat_tscore$estimates)), c("#00677B", "#F0F0F0", "#BF443B"))
+  lgd_est = Legend(title = "wilcoxon estimates", col = estimate_col_fun, 
+                   at = round(c(seq(min(test_feat_tscore$estimates), 0, length.out = 4), 
+                                seq(0, max(test_feat_tscore$estimates), length.out = 4)[-1]), digits = 2),
+                   labels = as.character(round(c(seq(min(test_feat_tscore$estimates), 0, length.out = 4), 
+                                                 seq(0, max(test_feat_tscore$estimates), length.out = 4)[-1]), digits = 2)))
+  # and one for the significant p-values
+  lgd_sig = Legend(pch = "*", type = "points", labels = sprintf("FDR pvalue < %s", as.character(pval_thr_est)))
+  
+  column_ha <- HeatmapAnnotation(cluster = anno_block(gp = gpar(fill = mat_colors_gr$cluster),
+                                                      labels = names(mat_colors_gr$cluster),
+                                                      labels_gp = gpar(col = "white", fontsize = 12,  fontface = "bold")))
+  
+  tissue_color <- color_tissue$color
+  names(tissue_color) <- color_tissue$tissues
+  row_ha <- rowAnnotation(chrom = anno_block(gp = gpar(fill = mat_colors_chr$chrom),
+                                             labels = factor(names(mat_colors_chr$chrom), levels = names(mat_colors_chr$chrom)),
+                                             labels_gp = gpar(col = "black", fontsize = 10), 
+                                             labels_rot = 0), 
+                          zstat = info_feat_tscore$Zstat,
+                          tissue = info_feat_tscore$tissue, 
+                          col = list(zstat = zstat_col_fun, tissue = tissue_color), 
+                          annotation_label = list(tissue = 'tissue', zstat = sprintf('z-statistic %s', pheno_name)), 
+                          annotation_name_gp = gpar(col = 'white'))
+  
+  df_pch <- list()
+  df_est <- list()
+  for(i in 1:P){
+    tmp_gr <- test_feat_tscore[test_feat_tscore$comp == sprintf('gr%i_vs_all', i), ]
+    df_est[[i]] <- tmp_gr$estimates[match(keep_gene, tmp_gr$new_id)]
+    is_sign <- tmp_gr$pval_corr[match(keep_gene, tmp_gr$new_id)] < pval_thr_est
+    df_pch[[i]] <- rep("*", length(is_sign))
+    df_pch[[i]][!is_sign] = NA
+  }
+  df_est <- do.call(cbind, df_est)
+  colnames(df_est) <- paste0('gr', 1:P)
+  df_pch <- do.call(cbind, df_pch)
+  colnames(df_pch) <- paste0('gr', 1:P)
+  df_font <- matrix(rep("bold", P), nrow = 1)
+  df_font <- as.data.frame(df_font)
+  colnames(df_font) <- paste0('gr', 1:P)
+  
+  row_ha_gr <- rowAnnotation(gr = anno_simple(df_est, col = estimate_col_fun, pch = df_pch, border = T, pt_gp = gpar(fontface = df_font)), 
+                             annotation_label = '', annotation_name_side = 'top', annotation_name_rot = 0, simple_anno_size_adjust = T)
+  
+  hm_pl <- Heatmap(tmp_mat, name = "scaled\nT-scores", col = coul, cluster_rows = FALSE, cluster_columns = FALSE,  show_column_names = F, 
+                   top_annotation = column_ha, column_split = cl$gr, column_title = NULL,
+                   row_names_side = "left", row_names_gp = gpar(fontsize = 10),
+                   left_annotation = row_ha,  row_split  = factor(info_feat_tscore$chrom, levels = unique(info_feat_tscore$chrom)), row_title = NULL, row_gap = unit(0, "mm"),
+                   right_annotation = row_ha_gr, 
+                   border = TRUE, use_raster = T, show_heatmap_legend = F)
+  tot_pl <- hm_pl
+  ht_list <- tot_pl
+  
+  png(file=paste0(outFile, '.png'), res = res_pl, units = 'in', width = width_pl, height = height_pl)
+  draw(ht_list , annotation_legend_list = list(lgd_est, lgd_sig), merge_legend = T, auto_adjust = T)
+  dev.off()
+  
+  pdf(file=paste0(outFile, '.pdf'), width = width_pl, height = height_pl)
+  draw(ht_list , annotation_legend_list = list(lgd_est, lgd_sig), merge_legend = T, auto_adjust = T)
+  dev.off()
+ 
+}
+
+##################
+
+pheat_pl_tot(pheno_name = 'CAD', mat_score = path_input_tot, info_feat = path_info_tot, test_feat = path_feat_tot, cl = res_cl$cl_best, pval_thr_est = 0.05, 
+             outFile = sprintf('OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/cl%s_pathOriginal_tscoreClusterCases',  tissue_name), 
+             res_pl = 300, height_pl = 12, width_pl = 19, cap = 3, cap_est = 0.6, color_tissue = color_tissue)
+
+
+pheat_pl_tscore(pheno_name = 'CAD', mat_tscore = tscore_input, info_feat_tscore = gene_info, test_feat_tscore = gene_feat , cl = res_cl$cl_best,  pval_thr_est = 0.05, 
+                outFile = sprintf('OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/cl%s_tscoreOriginal_tscoreClusterCases',  tissue_name), 
+                res_pl = 150, height_pl = 20, width_pl = 13, cap = 3, cap_est = 1 , color_tissue = color_tissue)
+
+
+
+
+

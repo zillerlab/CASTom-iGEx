@@ -29,6 +29,7 @@ parser$add_argument("--tscore_featRelFile", type = "character", help = "")
 parser$add_argument("--pathR_featRelFile", type = "character", default  = 'NA', help = "")
 parser$add_argument("--pathGO_featRelFile", type = "character",  default  = 'NA', help = "")
 parser$add_argument("--endophenoFile", type = "character",  nargs = '*', default  = 'NA', help = "")
+parser$add_argument("--endopheno_nominal_File", type = "character",  nargs = '*', default  = 'NA', help = "")
 parser$add_argument("--endophenoPairwiseFile", type = "character",  nargs = '*', default  = 'NA', help = "")
 parser$add_argument("--treatmentResponseFile", type = "character", default  = 'NA', help = "")
 parser$add_argument("--treatmentResponsePairwiseFile", type = "character", default  = 'NA', help = "")
@@ -59,6 +60,7 @@ args <- parser$parse_args()
 color_file <- args$color_file
 clustFile <- args$clustFile
 tissue_name <- args$tissue_name
+endopheno_nominal_File <- args$endopheno_nominal_File
 tscore_featRelFile <- args$tscore_featRelFile
 pathR_featRelFile <- args$pathR_featRelFile
 pathGO_featRelFile <- args$pathGO_featRelFile
@@ -106,6 +108,8 @@ outFold <- args$outFold
 #                    sprintf('OUTPUT_GTEx/predict_CAD/%s/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/withoutMedication_tscore_zscaled_clusterCases_PGmethod_HKmetric_phenoAssociation_GLMpairwise.RData', tissue_name))
 # treatmentResponseFile <- sprintf('OUTPUT_GTEx/predict_CAD/%s/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/withMedication_tscore_zscaled_clusterCases_TreatResponse.txt', tissue_name)
 # treatmentResponsePairwiseFile <- sprintf('OUTPUT_GTEx/predict_CAD/%s/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/withMedication_tscore_zscaled_clusterCases_TreatResponse_pairwise.txt', tissue_name)
+# endopheno_nominal_File <- c(sprintf('OUTPUT_GTEx/predict_CAD/%s/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/nominalAnalysis_tscore_zscaled_clusterCases_PGmethod_HKmetric_phenoAssociation_GLM.RData', tissue_name),
+#                             sprintf('OUTPUT_GTEx/predict_CAD/%s/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/nominalAnalysisAG_tscore_zscaled_clusterCases_PGmethod_HKmetric_phenoAssociation_GLM.RData', tissue_name))
 # #####################################################################################################################
 
 source(functR)
@@ -652,6 +656,120 @@ if(file.exists(endophenoPairwiseFile[1])){
   ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_phenoAssociation_GLMpairwise_betaOR.pdf', outFold, type_cluster), width = len_w+3, height = len_h*0.2+2, plot = tot_pl, device = 'pdf')
   
 }
+
+########################################
+#### endophenotype plots (nominal) #####
+########################################
+
+if(file.exists(endopheno_nominal_File[1])){
+  
+  res_pheno <- list()
+  for(i in 1:length(endopheno_nominal_File)){
+    tmp <- get(load(endopheno_nominal_File[[i]]))
+    res_pheno[[i]] <- tmp$bin_reg
+  }
+  
+  res_pheno <- do.call(rbind, res_pheno)
+  
+  if(length(endophenoFile)>1){
+    comp <- unique(res_pheno$comp)
+    tmp <- list()
+    for(i in 1:length(comp)){
+      tmp[[i]] <- res_pheno[res_pheno$comp == comp[i],]
+      tmp[[i]]$pval_corr <- p.adjust(tmp[[i]]$pvalue, method = 'BH')
+    }
+    res_pheno <- do.call(rbind, tmp)
+    # save results
+    write.table(x = res_pheno, 
+                file = sprintf('%snominalAnalysis%s_zscaled_cluster%s_PGmethod_HKmetric_phenoAssociation_GLM_combined.txt', outFold, type_cluster_data , type_cluster), 
+                col.names = T, row.names = F, sep = '\t', quote = F)
+  }
+  
+  df_red <- res_pheno
+  df_red$new_id <- df_red$pheno_id
+  df_red$comp <- factor(df_red$comp, levels = unique(df_red$comp))
+  df_red$new_id <- factor(df_red$new_id, levels = unique(df_red$new_id))
+  df_red$sign <- 'no'
+  df_red$sign[df_red$pvalue <= 0.05] <- 'yes'
+  df_red$sign <- factor(df_red$sign, levels = c('no', 'yes'))
+  df_red$type_res <- 'beta'
+  df_red$type_res[df_red$type_pheno!= 'CONTINUOUS'] <- 'OR'
+  df_red$type_res <- factor(df_red$type_res, levels = c('OR', 'beta'))
+ 
+  len_w <- length(unique(df_red$comp))
+  len_h <- length(unique(df_red$pheno_id))
+  # change labels 
+  labs_new <- sapply(as.character(unique(df_red$comp)), function(x) strsplit(x, split = '_vs_all')[[1]][1])
+  names(labs_new) <- as.character(unique(df_red$comp))
+  
+  P <- length(unique(df_red$comp))
+  gr_color <- pal_d3(palette = 'category20')(P)
+  
+  if(any(df_red$type_pheno != 'CONTINUOUS')){
+    
+    pl_OR <-  ggplot(subset(df_red, type_pheno != 'CONTINUOUS'), aes(x = new_id, y = OR_or_Beta, shape = sign))+
+      geom_point()+geom_errorbar(aes(ymin=CI_low, ymax=CI_up), width=.2, position=position_dodge(0.05))+
+      theme_bw()+ 
+      ylab('Adjusted OR (95% CI)')+ geom_hline(yintercept = 1, linetype = 'dashed', color = 'grey40')+
+      facet_wrap(comp~.,  nrow = 1, strip.position="top", labeller = labeller(comp = labs_new))+
+      theme(legend.position = 'none', plot.title = element_text(size=9), axis.title.y = element_blank(), axis.title.x = element_text(size=8),
+            axis.text.x = element_text(size = 7, angle = 45, hjust = 1), axis.text.y = element_text(size = 7),
+            strip.text = element_text(size=8, color = 'white', face = 'bold'))+
+      scale_shape_manual(values=c(1, 19))+
+      scale_y_continuous(trans='log', labels = scales::number_format(accuracy = 0.01))+
+      coord_flip()
+    
+    pl_OR <- ggplot_gtable(ggplot_build(pl_OR))
+    stripr <- which(grepl('strip-t', pl_OR$layout$name))
+    fills <- gr_color
+    k <- 1
+    for (i in stripr) {
+      j <- which(grepl('rect', pl_OR$grobs[[i]]$grobs[[1]]$childrenOrder))
+      pl_OR$grobs[[i]]$grobs[[1]]$children[[j]]$gp$fill <- fills[k]
+      k <- k+1
+    }
+  }
+  
+  if(any(df_red$type_pheno == 'CONTINUOUS')){
+    
+    pl_beta <-  ggplot(subset(df_red, type_pheno == 'CONTINUOUS'), aes(x = new_id, y = OR_or_Beta, shape = sign))+
+      geom_point()+geom_errorbar(aes(ymin=CI_low, ymax=CI_up), width=.2, position=position_dodge(0.05))+
+      theme_bw()+ 
+      ylab('Adjusted Beta (95% CI)')+ geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey40')+
+      facet_wrap(comp~., nrow = 1, strip.position="top",  labeller = labeller(comp = labs_new))+
+      theme(legend.position = 'none', plot.title = element_text(size=9), axis.title.y = element_blank(), axis.title.x = element_text(size=8),
+            axis.text.x = element_text(size = 7, angle = 45, hjust = 1), axis.text.y = element_text(size = 7), 
+            strip.text = element_text(size=8, color = 'white', face = 'bold'))+
+      scale_shape_manual(values=c(1, 19))+
+      coord_flip()
+    ratio_OR_beta <- sum(df_red$type_pheno == 'CONTINUOUS')/sum(df_red$type_pheno != 'CONTINUOUS')
+    
+    pl_beta <- ggplot_gtable(ggplot_build(pl_beta))
+    stripr <- which(grepl('strip-t', pl_beta$layout$name))
+    fills <- gr_color
+    k <- 1
+    for (i in stripr) {
+      j <- which(grepl('rect', pl_beta$grobs[[i]]$grobs[[1]]$childrenOrder))
+      pl_beta$grobs[[i]]$grobs[[1]]$children[[j]]$gp$fill <- fills[k]
+      k <- k+1
+    }
+  }
+  
+  if(any(df_red$type_pheno == 'CONTINUOUS') & any(df_red$type_pheno != 'CONTINUOUS')){
+    tot_pl <- ggarrange(plotlist = list(pl_OR, pl_beta), align = 'v', ncol = 1, heights = c(1, ratio_OR_beta))
+  }else{
+    if(any(df_red$type_pheno == 'CONTINUOUS')){
+      tot_pl <- pl_beta
+    }else{
+      tot_pl <- pl_OR
+    }
+  }
+  
+  ggsave(filename = sprintf('%snominalAnalysis_tscore_zscaled_cluster%s_PGmethod_HKmetric_phenoAssociation_GLM_betaOR.png', outFold, type_cluster), width = len_w+3, height = len_h*0.2+2, plot = tot_pl, device = 'png')
+  ggsave(filename = sprintf('%snominalAnalysis_tscore_zscaled_cluster%s_PGmethod_HKmetric_phenoAssociation_GLM_betaOR.pdf', outFold, type_cluster), width = len_w+3, height = len_h*0.2+2, plot = tot_pl, device = 'pdf')
+  
+}
+
 
 ###################################
 #### treatment response plots #####

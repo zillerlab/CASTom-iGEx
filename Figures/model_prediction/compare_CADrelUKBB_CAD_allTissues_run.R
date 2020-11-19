@@ -20,6 +20,7 @@ parser$add_argument("--inputFold_CAD", type = "character", nargs = '*', help = "
 parser$add_argument("--pval_FDR_CAD", type = "double", default = 0.05, help = "pval threshold to filter the genes and pathways (after BH correction) in CAD pheno")
 parser$add_argument("--pval_FDR_CADrel", type = "double", default = 0.05,  help = "pval threshold to filter the genes and pathways (after BH correction) in UKBB phenotypes")
 parser$add_argument("--pval_FDR_fisher", type = "double", default = 0.05, help = "pval threshold to filter the phenotypes (after BH correction) for enrichment")
+parser$add_argument("--pval_FDR_cor", type = "double", default = 0.05, help = "pval threshold to filter the phenotypes (after BH correction) for correlation")
 parser$add_argument("--tissues_name", type = "character",nargs = '*', help = "tissue considered")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
@@ -28,18 +29,21 @@ phenoFold <- args$phenoFold
 tissues_name <- args$tissues_name
 inputFold_CAD <- args$inputFold_CAD
 pval_FDR_fisher <- args$pval_FDR_fisher
+pval_FDR_cor <- args$pval_FDR_cor
 pval_FDR_CAD <- args$pval_FDR_CAD
 pval_FDR_CADrel <- args$pval_FDR_CADrel
 outFold <- args$outFold
 
 # #########################################################################################################################
 # phenoFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/INPUT_DATA_GTEx/CAD/Covariates/UKBB/'
-# tissues_name <- c('Adipose_Subcutaneous' ,'Adipose_Visceral_Omentum' ,'Adrenal_Gland' ,'Artery_Aorta', 'Artery_Coronary' ,'Colon_Sigmoid' ,'Colon_Transverse' ,'Liver')
+# tissues_name <- c('Adipose_Subcutaneous' ,'Adipose_Visceral_Omentum' ,'Adrenal_Gland' ,'Artery_Aorta', 'Artery_Coronary' ,'Colon_Sigmoid' ,'Colon_Transverse' ,
+# 'Heart_Atrial_Appendage','Heart_Left_Ventricle','Liver', 'Whole_Blood')
 # inputFold_CAD <- paste0('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/',tissues_name,'/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/enrichment_CADHARD_res/')
 # outFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/enrichment_CADHARD_res/'
 # pval_FDR_fisher <- 0.05
 # pval_FDR_CAD <- 0.05
 # pval_FDR_CADrel <- 0.05
+# pval_FDR_cor <- 0.05
 # #########################################################################################################################
 
 df_tscore <- list()
@@ -51,7 +55,7 @@ for(i in 1:length(tissues_name)){
   
   t <- tissues_name[i]
   print(t)
-  print(sprintf('%s%s_enrichment_significant_pvalFDR-CAD%.2f_pvalFDR-CADrel%.2f.RData', inputFold_CAD[i], t, pval_FDR_CAD, pval_FDR_CADrel))
+  # print(sprintf('%s%s_enrichment_significant_pvalFDR-CAD%.2f_pvalFDR-CADrel%.2f.RData', inputFold_CAD[i], t, pval_FDR_CAD, pval_FDR_CADrel))
   tmp <- get(load(sprintf('%s%s_enrichment_significant_pvalFDR-CAD%.2f_pvalFDR-CADrel%.2f.RData', inputFold_CAD[i], t, pval_FDR_CAD, pval_FDR_CADrel)))
   
   df_tscore[[i]] <- cbind(tmp$tscore, data.frame(tissue = t, stringsAsFactors = F))
@@ -81,6 +85,15 @@ rownames(mat_tscore_OR) <- tissues_name
 mat_tscore_OR[id_excl] <- NA
 mat_tscore_OR <- mat_tscore_OR[, colSums(is.na(mat_tscore_OR))<nrow(mat_tscore_OR)]
 mat_tscore_OR <- mat_tscore_OR[rowSums(is.na(mat_tscore_OR))<ncol(mat_tscore_OR),]
+# cor
+mat_tscore_cor <- matrix(nrow = length(tissues_name), ncol = nrow(df_tscore)/length(tissues_name), df_tscore$cor_spearman, byrow = T)
+colnames(mat_tscore_cor) <- df_tscore$pheno[1:ncol(mat_tscore_cor)]
+rownames(mat_tscore_cor) <- tissues_name
+mat_tscore_pvalcorr <- matrix(nrow = length(tissues_name), ncol = nrow(df_tscore)/length(tissues_name), df_tscore$cor_pval_BHcorr, byrow = T)
+id_excl <- mat_tscore_pvalcorr>pval_FDR_cor
+mat_tscore_cor[id_excl] <- NA
+mat_tscore_cor <- mat_tscore_cor[, colSums(is.na(mat_tscore_cor))<nrow(mat_tscore_cor)]
+mat_tscore_cor <- mat_tscore_cor[rowSums(is.na(mat_tscore_cor))<ncol(mat_tscore_cor),]
 
 #pval
 mat_pathR_pval <- matrix(nrow = length(tissues_name), ncol = nrow(df_pathR)/length(tissues_name), -log10(df_pathR$fisher_pval), byrow = T)
@@ -98,6 +111,15 @@ rownames(mat_pathR_OR) <- tissues_name
 mat_pathR_OR[id_excl] <- NA
 mat_pathR_OR <- mat_pathR_OR[, colSums(is.na(mat_pathR_OR))<nrow(mat_pathR_OR)]
 mat_pathR_OR <- mat_pathR_OR[rowSums(is.na(mat_pathR_OR))<ncol(mat_pathR_OR),]
+# cor
+mat_pathR_cor <- matrix(nrow = length(tissues_name), ncol = nrow(df_pathR)/length(tissues_name), df_pathR$cor_spearman, byrow = T)
+colnames(mat_pathR_cor) <- df_pathR$pheno[1:ncol(mat_pathR_cor)]
+rownames(mat_pathR_cor) <- tissues_name
+mat_pathR_pvalcorr <- matrix(nrow = length(tissues_name), ncol = nrow(df_pathR)/length(tissues_name), df_pathR$cor_pval_BHcorr, byrow = T)
+id_excl <- mat_pathR_pvalcorr>pval_FDR_cor
+mat_pathR_cor[id_excl] <- NA
+mat_pathR_cor <- mat_pathR_cor[, colSums(is.na(mat_pathR_cor))<nrow(mat_pathR_cor)]
+mat_pathR_cor <- mat_pathR_cor[rowSums(is.na(mat_pathR_cor))<ncol(mat_pathR_cor),]
 
 # pval
 mat_pathGO_pval <- matrix(nrow = length(tissues_name), ncol = nrow(df_pathGO)/length(tissues_name), -log10(df_pathGO$fisher_pval), byrow = T)
@@ -115,6 +137,15 @@ rownames(mat_pathGO_OR) <- tissues_name
 mat_pathGO_OR[id_excl] <- NA
 mat_pathGO_OR <- mat_pathGO_OR[, colSums(is.na(mat_pathGO_OR))<nrow(mat_pathGO_OR)]
 mat_pathGO_OR <- mat_pathGO_OR[rowSums(is.na(mat_pathGO_OR))<ncol(mat_pathGO_OR),]
+# cor
+mat_pathGO_cor <- matrix(nrow = length(tissues_name), ncol = nrow(df_pathGO)/length(tissues_name), df_pathGO$cor_spearman, byrow = T)
+colnames(mat_pathGO_cor) <- df_pathGO$pheno[1:ncol(mat_pathGO_cor)]
+rownames(mat_pathGO_cor) <- tissues_name
+mat_pathGO_pvalcorr <- matrix(nrow = length(tissues_name), ncol = nrow(df_pathGO)/length(tissues_name), df_pathGO$cor_pval_BHcorr, byrow = T)
+id_excl <- mat_pathGO_pvalcorr>pval_FDR_cor
+mat_pathGO_cor[id_excl] <- NA
+mat_pathGO_cor <- mat_pathGO_cor[, colSums(is.na(mat_pathGO_cor))<nrow(mat_pathGO_cor)]
+mat_pathGO_cor <- mat_pathGO_cor[rowSums(is.na(mat_pathGO_cor))<ncol(mat_pathGO_cor),]
 
 pheno_ann <- read.delim(sprintf('%scolor_pheno_type_UKBB.txt', phenoFold), header = T, stringsAsFactors = F)
 pheno_info <- df_tscore[1:(nrow(df_pathR)/length(tissues_name)), c('names_field', 'pheno','pheno_type')]
@@ -162,9 +193,20 @@ assignInNamespace(
 
 plot_heatmap_split <- function(type_mat, mat_pval, pheno_ann, pheno_info, color_tissues, height_pl = 17, width_pl=11, cap_val = 10, split_pheno = T, type_input = 'pvalue'){
   
-  coul <- colorRampPalette(brewer.pal(8, "BuPu"))(25)
-  coul[1] <- 'white'
-  title_sub <- ifelse(type_input == 'pvalue', '-log10(pval)','OR' )
+  if(type_input == 'pvalue'){
+    title_sub <- '-log10(pval)'
+    coul <- colorRampPalette(brewer.pal(8, "BuPu"))(25)
+    coul[1] <- 'white'
+  }
+  if(type_input == 'OR'){
+    title_sub <- 'OR'
+    coul <- colorRampPalette(brewer.pal(8, "BuPu"))(25)
+    coul[1] <- 'white'
+  }
+  if(type_input == 'cor'){
+    title_sub <- 'Spearman Cor'
+    coul <- rev(colorRampPalette(brewer.pal(11, "RdBu"))(100))
+  }
   
   if(split_pheno){
     
@@ -185,10 +227,20 @@ plot_heatmap_split <- function(type_mat, mat_pval, pheno_ann, pheno_info, color_
     ########################
     
     if(ncol(mat_pval_blood)>0){
+      
       tmp_mat <- as.matrix(t(mat_pval_blood))
       tmp_mat[is.na(tmp_mat)] <- 0
-      val <- min(cap_val,round(max(tmp_mat)))
-      mat_breaks <- seq(0, val, length.out = 25)
+      
+      if(type_input != 'cor'){
+        val <- min(cap_val,round(max(tmp_mat)))
+        mat_breaks <- seq(0, val, length.out = 25)
+      }else{
+        val <- min(cap_val, max(abs(tmp_mat)))
+        mat_breaks <- seq(-val, val, length.out = 100)
+        tmp_mat[tmp_mat>=val] <- val
+        tmp_mat[tmp_mat<=-val] <- -val
+      }
+     
       pheno_tmp <- pheno_info[match(rownames(tmp_mat), pheno_info$pheno),] 
       
       # Data frame with column annotations.
@@ -230,8 +282,17 @@ plot_heatmap_split <- function(type_mat, mat_pval, pheno_ann, pheno_info, color_
     if(ncol(mat_pval_bloodbio)>0){
       tmp_mat <- as.matrix(t(mat_pval_bloodbio))
       tmp_mat[is.na(tmp_mat)] <- 0
-      val <- min(cap_val,round(max(tmp_mat)))
-      mat_breaks <- seq(0, val, length.out = 25)
+      
+      if(type_input != 'cor'){
+        val <- min(cap_val,round(max(tmp_mat)))
+        mat_breaks <- seq(0, val, length.out = 25)
+      }else{
+        val <- min(cap_val, max(abs(tmp_mat)))
+        mat_breaks <- seq(-val, val, length.out = 100)
+        tmp_mat[tmp_mat>=val] <- val
+        tmp_mat[tmp_mat<=-val] <- -val
+      }
+      
       pheno_tmp <- pheno_info[match(rownames(tmp_mat), pheno_info$pheno),] 
       
       # Data frame with column annotations.
@@ -273,8 +334,17 @@ plot_heatmap_split <- function(type_mat, mat_pval, pheno_ann, pheno_info, color_
     if(ncol(mat_pval_icd10)>0){
       tmp_mat <- as.matrix(t(mat_pval_icd10))
       tmp_mat[is.na(tmp_mat)] <- 0
-      val <- min(cap_val,round(max(tmp_mat)))
-      mat_breaks <- seq(0, val, length.out = 25)
+      
+      if(type_input != 'cor'){
+        val <- min(cap_val,round(max(tmp_mat)))
+        mat_breaks <- seq(0, val, length.out = 25)
+      }else{
+        val <- min(cap_val, max(abs(tmp_mat)))
+        mat_breaks <- seq(-val, val, length.out = 100)
+        tmp_mat[tmp_mat>=val] <- val
+        tmp_mat[tmp_mat<=-val] <- -val
+      }
+      
       pheno_tmp <- pheno_info[match(rownames(tmp_mat), pheno_info$pheno),] 
       
       # Data frame with column annotations.
@@ -314,11 +384,19 @@ plot_heatmap_split <- function(type_mat, mat_pval, pheno_ann, pheno_info, color_
   #################
   ##### rest ######
   #################
-  
   tmp_mat <- as.matrix(t(mat_pval_rest))
   tmp_mat[is.na(tmp_mat)] <- 0
-  val <- min(cap_val,round(max(tmp_mat)))
-  mat_breaks <- seq(0, val, length.out = 25)
+  
+  if(type_input != 'cor'){
+    val <- min(cap_val,round(max(tmp_mat)))
+    mat_breaks <- seq(0, val, length.out = 25)
+  }else{
+    val <- min(cap_val, max(abs(tmp_mat)))
+    mat_breaks <- seq(-val, val, length.out = 100)
+    tmp_mat[tmp_mat>=val] <- val
+    tmp_mat[tmp_mat<=-val] <- -val
+  }
+
   pheno_tmp <- pheno_info[match(rownames(tmp_mat), pheno_info$pheno),] 
   
   # Data frame with column annotations.
@@ -358,10 +436,10 @@ plot_heatmap_split(type_mat = 'tscore', mat_pval = mat_tscore_pval, pheno_ann = 
                    color_tissues = color_tissues, height_pl = 15, width_pl = 14)
 
 plot_heatmap_split(type_mat = 'pathScore_Reactome', mat_pval = mat_pathR_pval, pheno_ann = pheno_ann, pheno_info = pheno_info, cap_val=15, 
-                        color_tissues = color_tissues, height_pl = 10, width_pl = 14, split_pheno = F)
+                   color_tissues = color_tissues, height_pl = 10, width_pl = 14, split_pheno = F)
 
 plot_heatmap_split(type_mat = 'pathScore_GO', mat_pval = mat_pathGO_pval, pheno_ann = pheno_ann, pheno_info = pheno_info, cap_val=15, 
-                        color_tissues = color_tissues, height_pl = 12, width_pl = 14)
+                   color_tissues = color_tissues, height_pl = 12, width_pl = 14)
 
 # OR
 plot_heatmap_split(type_mat = 'tscore', mat_pval = mat_tscore_OR, pheno_ann = pheno_ann, pheno_info = pheno_info, cap_val = 10,
@@ -372,4 +450,16 @@ plot_heatmap_split(type_mat = 'pathScore_Reactome', mat_pval = mat_pathR_OR, phe
 
 plot_heatmap_split(type_mat = 'pathScore_GO', mat_pval = mat_pathGO_OR, pheno_ann = pheno_ann, pheno_info = pheno_info, cap_val = 10,
                    color_tissues = color_tissues, height_pl = 12, width_pl = 14,  type_input = 'OR')
+
+
+# cor
+plot_heatmap_split(type_mat = 'tscore', mat_pval = mat_tscore_cor, pheno_ann = pheno_ann, pheno_info = pheno_info, cap_val = 0.5,
+                   color_tissues = color_tissues, height_pl = 15, width_pl = 14, type_input = 'cor')
+
+plot_heatmap_split(type_mat = 'pathScore_Reactome', mat_pval = mat_pathR_cor, pheno_ann = pheno_ann, pheno_info = pheno_info, cap_val = 0.5, 
+                   color_tissues = color_tissues, height_pl = 16, width_pl = 14, split_pheno = T,  type_input = 'cor')
+
+plot_heatmap_split(type_mat = 'pathScore_GO', mat_pval = mat_pathGO_cor, pheno_ann = pheno_ann, pheno_info = pheno_info, cap_val = 0.5,
+                   color_tissues = color_tissues, height_pl = 16, width_pl = 14,  type_input = 'cor')
+
 
