@@ -42,21 +42,23 @@ outFold <- args$outFold
 #                  'Artery_Aorta', 'Colon_Sigmoid', 'Colon_Transverse', 'Heart_Atrial_Appendage',
 #                  'Heart_Left_Ventricle', 'Liver', 'Whole_Blood')
 # corrRes_tissue_file <- paste0('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/', tissue_name,'/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/enrichment_CADHARD_res/perc0.3_correlation_enrich_CAD_HARD_relatedPheno.RData')
-# mrRes_tissue_file <- paste0('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/', tissue_name,'/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/enrichment_CADHARD_res/Mendelian_randomization_tscore_pvalFDRrel0.05.txt')
+# mrRes_tissue_file <- paste0('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/', tissue_name,'/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/enrichment_CADHARD_res/perc0.3_Mendelian_randomization_tot_path_pvalFDRrel0.05.txt')
 # outFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/enrichment_CADHARD_res/perc0.3_'
 # color_pheno_file <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/INPUT_DATA_GTEx/CAD/Covariates/UKBB/color_pheno_type_UKBB.txt'
 # pheno_name <- 'CAD_HARD'
-# type_data <- 'tscore'
+# type_data <- 'tot_path'
 # color_tissues_file <- '/psycl/g/mpsziller/lucia/priler_project/Figures/color_tissues.txt'
 # pheno_list_file <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/INPUT_DATA_GTEx/CAD/Covariates/UKBB/keep_pheno_corr.txt'
-########################################################################################################################
+# pheno_list_MR_file <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/INPUT_DATA_GTEx/CAD/Covariates/UKBB/keep_pheno_MR.txt'
+# ######################################################################################################################
 
 color_pheno <- read.table(color_pheno_file, h=T, stringsAsFactors = F)
 color_tissues <- read.table(color_tissues_file, h=T, stringsAsFactors = F)
 color_tissues <- color_tissues[match(tissue_name,color_tissues$tissue),]
 # color_tissues <- rbind(color_tissues, data.frame(tissues = 'All_tissues', color = 'black', type = 'All_GTEx', nsamples_train = NA))
 
-pheno_keep <- read.table(pheno_list_file, h=F, stringsAsFactors = F, sep = '\t')$V1
+pheno_keep <- read.table(pheno_list_file, h=F, stringsAsFactors = F, sep = '\t', check.names = F, quote = "")$V1
+pheno_plot_MR <- read.table(pheno_list_MR_file, h=F, stringsAsFactors = F, sep = '\t', check.names = F, quote = "")$V1
 
 # create matrix correlation/fisher OR
 feat_corr <- matrix(ncol = length(tissue_name), nrow = length(pheno_keep))
@@ -64,6 +66,8 @@ feat_OR <- matrix(ncol = length(tissue_name), nrow = length(pheno_keep))
 feat_mr_est <- matrix(ncol = length(tissue_name), nrow = length(pheno_keep))
 feat_mr_est_se <- matrix(ncol = length(tissue_name), nrow = length(pheno_keep))
 feat_mr_est_pval <- matrix(ncol = length(tissue_name), nrow = length(pheno_keep))
+feat_mr_est_low <- matrix(ncol = length(tissue_name), nrow = length(pheno_keep))
+feat_mr_est_up <- matrix(ncol = length(tissue_name), nrow = length(pheno_keep))
 
 id_keep <- ifelse(type_data == 'tscore', 1, 2)
 
@@ -76,6 +80,8 @@ for(i in 1:length(tissue_name)){
   feat_mr_est[,i] <- tmp_mr$MREgg_est[id]
   feat_mr_est_se[,i] <- tmp_mr$MREgg_est_se[id]
   feat_mr_est_pval[,i] <- tmp_mr$MREgg_est_pval[id]
+  feat_mr_est_low[,i] <- tmp_mr$MREgg_est_CIl[id]
+  feat_mr_est_up[,i] <- tmp_mr$MREgg_est_CIu[id]
   # feat_mr_est[tmp_mr$MREgg_est_pval[id] > 0.05, i] <- NA 
   # feat_mr_se_est[tmp_mr$MREgg_est_pval[id] > 0.05, i] <- NA 
   
@@ -117,6 +123,8 @@ feat_OR <- feat_OR[id, ]
 feat_mr_est <- feat_mr_est[id, ]
 feat_mr_est_se <- feat_mr_est_se[id, ]
 feat_mr_est_pval <- feat_mr_est_pval[id, ]
+feat_mr_est_low <- feat_mr_est_low[id, ]
+feat_mr_est_up <- feat_mr_est_up[id, ]
 
 # plot
 ############# make plot ################
@@ -291,8 +299,49 @@ plot_heatmap_OR(type_mat = type_data, mat_OR = feat_OR[,tissue_name], pheno_ann 
                   pheno_info = pheno_info,  color_tissues = color_tissues, height_pl = 13, width_pl = 14, pheno_name = pheno_name, show_rownames = T)
 
 # MR-Egger
-plot_heatmap_mr(type_mat = type_data, mat_mr = feat_mr_est[,tissue_name], mat_pval = feat_mr_est_pval[,tissue_name], 
+plot_heatmap_mr(type_mat = type_data, mat_mr = feat_mr_est[,tissue_name], mat_pval = feat_mr_est_pval[,tissue_name],
                 pheno_ann = color_pheno[match(unique(pheno_info$pheno_type),color_pheno$pheno_type),], cap_val = 1, 
                 pheno_info = pheno_info,  color_tissues = color_tissues, height_pl = 13, width_pl = 14, pheno_name = pheno_name, show_rownames = T)
+
+
+#### plot specific MR results with pvalue and SE ###
+id_MR <- which(pheno_info$names_field %in% pheno_plot_MR)
+df_mr <- data.frame(MR_est = as.vector(feat_mr_est[id_MR, ]), MR_est_CIl = as.vector(feat_mr_est_low[id_MR, ]), 
+                    MR_est_CIu = as.vector(feat_mr_est_up[id_MR, ]), MR_est_pval = as.vector(feat_mr_est_pval[id_MR, ]), 
+                    pheno_name = rep(pheno_info$name_plot[id_MR], ncol(feat_mr_est)), tissue = unlist(lapply(colnames(feat_mr_est), function(x) rep(x, length(id_MR)))), stringsAsFactors = F)
+df_mr$sign <- 'no'
+df_mr$sign[df_mr$MR_est_pval <= 0.05] <- 'yes'
+df_mr$sign <- factor(df_mr$sign, levels = c('no', 'yes'))
+df_mr$pheno_name <- factor(df_mr$pheno_name, levels = pheno_info$name_plot[id_MR])
+df_mr$tissue <- factor(df_mr$tissue, levels =color_tissues$tissues)
+
+pl <-  ggplot(subset(df_mr, tissue %in% c('Adipose_Subcutaneous', 'Artery_Aorta', 'Artery_Coronary', 'Heart_Left_Ventricle', 'Liver' ,'Whole_Blood')), 
+              aes(x = pheno_name, y = MR_est, shape = sign))+
+  geom_point(position=position_dodge(0.5))+geom_errorbar(aes(ymin=MR_est_CIl, ymax=MR_est_CIu), width=.2, position=position_dodge(0.5))+
+  theme_bw()+ 
+  facet_wrap(.~tissue, nrow = 1)+
+  ylab('MR-Egger estimate') + geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey40')+
+  theme(legend.position = 'none', legend.title = element_blank(), legend.text = element_text(size = 7), 
+        plot.title = element_text(size=9), axis.title.y = element_blank(),  axis.title.x = element_text(size = 9),
+        axis.text.x = element_text(size = 8, angle = 0, hjust = 1), axis.text.y = element_text(size = 7.5), 
+        strip.text = element_text(size=6.7))+
+  scale_shape_manual(values=c(0, 15))+guides(shape=FALSE)+coord_flip()
+  # scale_color_manual(values=color_tissues$color[color_tissues$tissue %in% c('Adipose_Subcutaneous', 'Artery_Aorta', 'Artery_Coronary', 'Heart_Left_Ventricle', 'Liver' ,'Whole_Blood')])
+
+pl <- ggplot_gtable(ggplot_build(pl))
+stripr <- which(grepl('strip-t', pl$layout$name))
+fills <- color_tissues$color[color_tissues$tissue %in% c('Adipose_Subcutaneous', 'Artery_Aorta', 'Artery_Coronary', 'Heart_Left_Ventricle', 'Liver' ,'Whole_Blood')]
+k <- 1
+for (i in stripr) {
+  j <- which(grepl('rect', pl$grobs[[i]]$grobs[[1]]$childrenOrder))
+  pl$grobs[[i]]$grobs[[1]]$children[[j]]$gp$fill <- fills[k]
+  pl$grobs[[i]]$grobs[[1]]$children[[j]]$gp$alpha <- 0.7
+  k <- k+1
+}
+
+ggsave(filename = sprintf("%s%s_MRestimates_%s_relatedPheno_specPheno.png", outFold, type_data, pheno_name), width = 9, height = 3.5, plot = pl, device = 'png')
+ggsave(filename = sprintf("%s%s_MRestimates_%s_relatedPheno_specPheno.pdf", outFold, type_data, pheno_name), width = 9, height = 3.5, plot = pl, device = 'pdf')
+
+
 
 

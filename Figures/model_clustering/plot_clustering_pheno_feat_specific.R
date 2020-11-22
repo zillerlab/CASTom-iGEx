@@ -451,6 +451,117 @@ pheat_pl_tscore(pheno_name = 'CAD', mat_tscore = tscore_input, info_feat_tscore 
                 res_pl = 150, height_pl = 20, width_pl = 13, cap = 3, cap_est = 1 , color_tissue = color_tissue)
 
 
+##################################################################
+# plot specific treatment response
+tissue_name <- 'Liver'
+treatmentResponsePairwiseFile <- sprintf('OUTPUT_GTEx/predict_CAD/%s/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/withMedication_tscore_zscaled_clusterCases_TreatResponse_pairwise.txt', tissue_name)
+res_treat <- fread(treatmentResponsePairwiseFile, h=T, stringsAsFactors = F, data.table = F)
+# consider only medicine specific for CAD
+p1 <- res_treat[res_treat$pheno_Field %in% c('LDL direct','Lymphocyte count', 'C-reactive protein') & 
+                  res_treat$treat_meaning %in% c('Cholesterol lowering medication'),]
+
+p2 <- res_treat[res_treat$pheno_Field %in% c('Platelet count', 'Platelet crit', 'Platelet distribution width') & 
+                  res_treat$treat_meaning %in% c('Paracetamol', 'Aspirin', 'Vitamin D'),]
+
+p3 <- res_treat[res_treat$pheno_Field %in% c('Haemoglobin concentration', 'Haematocrit percentage') & 
+                  res_treat$treat_meaning %in% c('Iron'),]
+res_treat <- rbind(p1, p2, p3)
+
+res_treat$comb_name <- paste0(res_treat$pheno_id, '_and_', res_treat$treat_id)
+df_red <- res_treat
+
+df_red$new_id <- df_red$pheno_Field
+df_red$new_id[!is.na(df_red$pheno_meaning)] <- paste(df_red$pheno_meaning[!is.na(df_red$pheno_meaning)], df_red$pheno_Field[!is.na(df_red$pheno_meaning)], sep = '\n')
+df_red$new_id <- factor(df_red$new_id, levels = unique(df_red$new_id))
+df_red$pheno_type <- factor(df_red$pheno_type, levels = unique(df_red$pheno_type))
+df_red$type_res <- 'beta'
+df_red$type_res[df_red$pheno_type!= 'CONTINUOUS'] <- 'OR'
+df_red$type_res <- factor(df_red$type_res, levels = c('OR', 'beta'))
+df_red$treat_meaning <- factor(df_red$treat_meaning, levels = c('Paracetamol', 'Aspirin', 'Vitamin D', 'Iron','Cholesterol lowering medication'))
+df_red$sign <- 'no'
+df_red$sign[df_red$pvalue_diff <= 0.05] <- 'yes'
+df_red$sign <- factor(df_red$sign, levels = c('no', 'yes'))
+df_red$gr1 <- sapply(df_red$comp, function(x) strsplit(x, split = '_vs_')[[1]][1])
+df_red$gr2 <- sapply(df_red$comp, function(x) strsplit(x, split = '_vs_')[[1]][2])
+
+tot_gr <- sort(unique(c(as.character(df_red$gr1),  as.character(df_red$gr2))))
+
+df_tot_gr <- list()
+for(i in 1:length(tot_gr)){
+  
+  tmp <- df_red[df_red$gr1 == tot_gr[i] | df_red$gr2 == tot_gr[i], ]
+  feat_name <- unique(tmp$comb_name)
+  df_tot_gr[[i]] <- data.frame(comb_name =c(),gr =c(), sign =c(),pheno_class =c(),new_id =c(),treat_meaning  =c(),
+                               gr_ORorBeta =c(),gr_CI_low =c(), gr_CI_up =c())
+  for(j in 1:length(feat_name)){
+    df_new <- data.frame(comb_name = feat_name[j], gr = tot_gr[i], sign = any(tmp$sign[tmp$comb_name == feat_name[j]] == 'yes'), 
+                         pheno_class = tmp$pheno_class[tmp$comb_name == feat_name[j]][1], 
+                         new_id = tmp$new_id[tmp$comb_name == feat_name[j]][1], 
+                         treat_meaning = tmp$treat_meaning[tmp$comb_name == feat_name[j]][1], 
+                         pheno_type = tmp$pheno_type[tmp$comb_name == feat_name[j]][1])
+    name_gr <- ifelse(any(tot_gr[i] %in% tmp$gr1[tmp$comb_name == feat_name[j]]), 'gr1', 'gr2')
+    df_new$gr_ORorBeta <- tmp[tmp$comb_name == feat_name[j], paste0(name_gr, '_ORorBeta')][1]
+    df_new$gr_CI_low <- tmp[tmp$comb_name == feat_name[j], paste0(name_gr, '_CI_low')][1]
+    df_new$gr_CI_up <- tmp[tmp$comb_name == feat_name[j], paste0(name_gr, '_CI_up')][1]
+    df_tot_gr[[i]] <- rbind(df_tot_gr[[i]], df_new)
+  }
+}
+df_tot_gr <- do.call(rbind, df_tot_gr)
+df_tot_gr$gr <- factor(df_tot_gr$gr, levels = unique(df_tot_gr$gr))
+
+len_w <- 7
+len_h <- 9 + length(unique(df_tot_gr$gr))*0.1
+
+gr_color <- pal_d3(palette = 'category20')(length(unique(df_tot_gr$gr)))
+
+pl_beta_p1 <-  ggplot(subset(df_tot_gr, treat_meaning %in% c('Cholesterol lowering medication')), 
+                      aes(x = new_id, y = gr_ORorBeta, group = gr, color = gr, shape = sign))+
+  geom_point(position=position_dodge(0.5))+geom_errorbar(aes(ymin=gr_CI_low, ymax=gr_CI_up), width=.2, position=position_dodge(0.5))+
+  theme_bw()+ 
+  ylab('Adjusted Beta (95% CI)')+geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey40')+
+  facet_wrap(treat_meaning~., nrow = 1, strip.position="top")+
+  theme(legend.position = 'none', legend.title = element_blank(), legend.text = element_text(size = 9), 
+        plot.title = element_text(size=9), axis.title.y = element_blank(),  axis.title.x = element_text(size = 9),
+        axis.text.x = element_text(size = 9, angle = 0, hjust = 1), axis.text.y = element_text(size = 9), strip.text = element_text(size=9))+
+  scale_shape_manual(values=c(1, 19))+
+  scale_color_manual(values=gr_color)+guides(shape=FALSE)+
+  coord_flip()
+
+pl_beta_p2 <-  ggplot(subset(df_tot_gr, treat_meaning %in% c('Paracetamol', 'Aspirin', 'Vitamin D')), 
+                      aes(x = new_id, y = gr_ORorBeta, group = gr, color = gr, shape = sign))+
+  geom_point(position=position_dodge(0.5))+geom_errorbar(aes(ymin=gr_CI_low, ymax=gr_CI_up), width=.2, position=position_dodge(0.5))+
+  theme_bw()+ 
+  ylab('Adjusted Beta (95% CI)')+geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey40')+
+  facet_wrap(treat_meaning~., nrow = 1, strip.position="top")+
+  theme(legend.position = 'right', legend.title = element_blank(), legend.text = element_text(size = 9), 
+        plot.title = element_text(size=9), axis.title.y = element_blank(),  axis.title.x = element_text(size = 9),
+        axis.text.x = element_text(size = 9, angle = 0, hjust = 1), axis.text.y = element_text(size = 9), strip.text = element_text(size=9))+
+  scale_shape_manual(values=c(1, 19))+
+  scale_color_manual(values=gr_color)+guides(shape=FALSE)+
+  coord_flip()
+
+pl_beta_p3 <-  ggplot(subset(df_tot_gr, treat_meaning %in% c('Iron')), 
+                      aes(x = new_id, y = gr_ORorBeta, group = gr, color = gr, shape = sign))+
+  geom_point(position=position_dodge(0.5))+geom_errorbar(aes(ymin=gr_CI_low, ymax=gr_CI_up), width=.2, position=position_dodge(0.5))+
+  theme_bw()+ 
+  ylab('Adjusted Beta (95% CI)')+geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey40')+
+  facet_wrap(treat_meaning~., nrow = 1, strip.position="top")+
+  theme(legend.position = 'right', legend.title = element_blank(), legend.text = element_text(size = 9), 
+        plot.title = element_text(size=9), axis.title.y = element_blank(),  axis.title.x = element_text(size = 9),
+        axis.text.x = element_text(size = 9, angle = 0, hjust = 1), axis.text.y = element_text(size = 9), strip.text = element_text(size=9))+
+  scale_shape_manual(values=c(1, 19))+
+  scale_color_manual(values=gr_color)+guides(shape=FALSE)+
+  coord_flip()
+
+outFold <- sprintf('OUTPUT_GTEx/predict_CAD/%s/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/',tissue_name)
+
+tot_pl <- ggarrange(plotlist = list(pl_beta_p1, pl_beta_p2), align = 'hv', nrow = 1, common.legend = T, widths = c(1, 2.2))
+ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_pairwise_%smedAll_subset1.png', outFold, 'Cases', 'CAD'), width = 9.5, height = 3.7, plot = tot_pl, device = 'png')
+ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_pairwise_%smedAll_subset1.pdf', outFold, 'Cases', 'CAD'), width = 9.5, height = 3.7, plot = tot_pl, device = 'pdf')
+
+tot_pl <- ggarrange(plotlist = list(pl_beta_p3), align = 'hv', nrow = 1, common.legend = T)
+ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_pairwise_%smedAll_subset2.png', outFold, 'Cases', 'CAD'), width = 4.5, height = 3.7, plot = tot_pl, device = 'png')
+ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_pairwise_%smedAll_subset2.pdf', outFold, 'Cases', 'CAD'), width = 4.5, height = 3.7, plot = tot_pl, device = 'pdf')
 
 
 
