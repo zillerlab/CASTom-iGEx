@@ -1,25 +1,46 @@
 # combine all tissues results (SCZ)
 library(qvalue)
 
-setwd('/psycl/g/mpsziller/lucia/PGC/eQTL_PROJECT/Meta_Analysis_SCZ')
+setwd('/psycl/g/mpsziller/lucia/SCZ_PGC/eQTL_PROJECT/Meta_Analysis_SCZ')
 tissues_name <- read.table('Tissues_PGC', h=F, stringsAsFactors = F)$V1
 
 df_tscore <- df_pathR <- df_pathGO <- df_pathWiki <- list()
 
 for(i in 1:length(tissues_name)){
+  
   t <- tissues_name[i]
   tmp <- get(load(sprintf('%s/pval_Dx_pheno_covCorr.RData', t)))
   df_tscore[[i]] <- tmp$tscore[[1]]
   df_tscore[[i]]$tissue <- t
   
+  # add genes in the pathway and if there is an improvment in significance
   df_pathR[[i]] <- tmp$pathScore_reactome[[1]]
+  df_pathR[[i]]$genes_path <- NA
+  df_pathR[[i]]$improvement_sign  <- NA
+  for(j in 1:nrow(df_pathR[[i]])){
+    df_pathR[[i]]$genes_path[j] <- paste0(tmp$info_pathScore_reactome[[1]][[j]]$tscore$external_gene_name, collapse = ',')
+    df_pathR[[i]]$improvement_sign[j] <- all(tmp$info_pathScore_reactome[[1]][[j]]$tscore[,8] > df_pathR[[i]][j,13])
+  }
   df_pathR[[i]]$tissue <- t
   
   df_pathGO[[i]] <- tmp$pathScore_GO[[1]]
+  df_pathGO[[i]]$genes_path <- NA
+  df_pathGO[[i]]$improvement_sign  <- NA
+  for(j in 1:nrow(df_pathGO[[i]])){
+    df_pathGO[[i]]$genes_path[j] <- paste0(tmp$info_pathScore_GO[[1]][[j]]$tscore$external_gene_name, collapse = ',')
+    df_pathGO[[i]]$improvement_sign[j] <- all(tmp$info_pathScore_GO[[1]][[j]]$tscore[,8] > df_pathGO[[i]][j,15])
+  }
   df_pathGO[[i]]$tissue <- t
+  
   
   tmp <- get(load(sprintf('%s/pval_Dx_pheno_covCorr_customPath_WikiPath2019Human.RData', t)))
   df_pathWiki[[i]] <- tmp$pathScore[[1]]
+  df_pathWiki[[i]]$genes_path <- NA
+  df_pathWiki[[i]]$improvement_sign  <- NA
+  for(j in 1:nrow(df_pathWiki[[i]])){
+    df_pathWiki[[i]]$genes_path[j] <- paste0(tmp$info_pathScore[[1]][[j]]$tscore$external_gene_name, collapse = ',')
+    df_pathWiki[[i]]$improvement_sign[j] <- all(tmp$info_pathScore[[1]][[j]]$tscore[,8] > df_pathWiki[[i]][j,13])
+  }
   df_pathWiki[[i]]$tissue <- t
 }
 
@@ -44,7 +65,7 @@ recompte_path <- function(tissues_name, res, id_pval){
     tmp[[i]][, id_pval+2] <- p.adjust(tmp[[i]][, id_pval], method = 'BH')
   }
   tmp <- do.call(rbind, tmp)
-  tmp[, id_pval+4] <- p.adjust(tmp[, id_pval], method = 'BH')
+  tmp[, id_pval+6] <- p.adjust(tmp[, id_pval], method = 'BH')
   
   return(tmp)
 }
@@ -68,12 +89,16 @@ write.table(x = df_pathWiki_red, file = 'OUTPUT_all/customPath_WikiPath2019Human
 t <- tissues_name[1]
 tmp <- get(load(sprintf('%s/pval_Dx_pheno_covCorr_customPath_CMC_GeneSets.RData', t)))
 df_pathCMC <- tmp$pathScore[[1]]
+df_pathCMC$genes_path <- NA
+df_pathCMC$improvement_sign  <- NA
+for(j in 1:nrow(df_pathCMC)){
+  df_pathCMC$genes_path[j] <- paste0(tmp$info_pathScore[[1]][[j]]$tscore$external_gene_name, collapse = ',')
+  df_pathCMC$improvement_sign[j] <- all(tmp$info_pathScore[[1]][[j]]$tscore[,8] > df_pathCMC[j,13])
+}
 df_pathCMC$tissue <- t
 
 df_pathCMC_red <- recompte_path(res = df_pathCMC, tissues_name = t, id_pval = 13)
 write.table(x = df_pathCMC, file = 'DLPC_CMC/customPath_CMC_GeneSets_pval_SCZ_covCorr.txt', col.names=T, row.names=F, sep = '\t', quote = F)
 write.table(x = df_pathCMC_red, file = 'DLPC_CMC/customPath_CMC_GeneSets_pval_SCZ_covCorr_filt.txt', col.names=T, row.names=F, sep = '\t', quote = F)
-
-
 
 
