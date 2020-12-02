@@ -86,7 +86,7 @@ for(i in 1:length(pheno_plot)){
   tmp_reg$star_ann[ tmp_reg$pvalue <= 0.05 & tmp_reg$pvalue > 0.01] <- '*'
   tmp_reg$star_ann[ tmp_reg$pvalue <= 0.01 & tmp_reg$pvalue > 0.001] <- '**'
   tmp_reg$star_ann[ tmp_reg$pvalue <= 0.001 & tmp_reg$pvalue > 0.0001] <- '***'
-  tmp_reg$star_ann[ tmp_reg$pvalue <= 0.00001] <- '****'
+  tmp_reg$star_ann[ tmp_reg$pvalue <= 0.0001] <- '****'
   
   new <- phenoDat[!is.na(phenoDat[, pheno_plot[i]]), ]
 

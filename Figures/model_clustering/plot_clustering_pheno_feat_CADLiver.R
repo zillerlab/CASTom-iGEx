@@ -12,6 +12,8 @@ suppressPackageStartupMessages(library(circlize))
 suppressPackageStartupMessages(library(PGSEA))
 suppressPackageStartupMessages(library(data.table))
 suppressPackageStartupMessages(library(cowplot))
+suppressPackageStartupMessages(library(ggradar))
+suppressPackageStartupMessages(library(scales))
 options(bitmapType = 'cairo', device = 'png')
 
 ## specific for Liver ##
@@ -463,9 +465,16 @@ p1 <- res_treat[res_treat$pheno_Field %in% c('LDL direct','Lymphocyte count', 'C
 p2 <- res_treat[res_treat$pheno_Field %in% c('Platelet count', 'Platelet crit', 'Platelet distribution width') & 
                   res_treat$treat_meaning %in% c('Paracetamol', 'Aspirin', 'Vitamin D'),]
 
-p3 <- res_treat[res_treat$pheno_Field %in% c('Haemoglobin concentration', 'Haematocrit percentage') & 
+p3 <- res_treat[res_treat$pheno_Field %in% c('Haemoglobin concentration', 'Haematocrit percentage', 'Mean corpuscular haemoglobin concentration') & 
                   res_treat$treat_meaning %in% c('Iron'),]
-res_treat <- rbind(p1, p2, p3)
+
+p4 <- res_treat[res_treat$pheno_Field %in% c('C-reactive protein') & 
+                  res_treat$treat_meaning %in% c('Glucosamine'),]
+
+p5 <- res_treat[res_treat$pheno_Field %in% c('Glycated haemoglobin (HbA1c)') & 
+                  res_treat$treat_meaning %in% c('Folic acid or Folate (Vit B9)'),]
+
+res_treat <- rbind(p1, p2, p3, p4, p5)
 
 res_treat$comb_name <- paste0(res_treat$pheno_id, '_and_', res_treat$treat_id)
 df_red <- res_treat
@@ -477,9 +486,9 @@ df_red$pheno_type <- factor(df_red$pheno_type, levels = unique(df_red$pheno_type
 df_red$type_res <- 'beta'
 df_red$type_res[df_red$pheno_type!= 'CONTINUOUS'] <- 'OR'
 df_red$type_res <- factor(df_red$type_res, levels = c('OR', 'beta'))
-df_red$treat_meaning <- factor(df_red$treat_meaning, levels = c('Paracetamol', 'Aspirin', 'Vitamin D', 'Iron','Cholesterol lowering medication'))
+df_red$treat_meaning <- factor(df_red$treat_meaning, levels = c('Paracetamol', 'Aspirin', 'Vitamin D', 'Iron','Cholesterol lowering medication', 'Glucosamine', 'Folic acid or Folate (Vit B9)'))
 df_red$sign <- 'no'
-df_red$sign[df_red$pvalue_diff <= 0.05] <- 'yes'
+df_red$sign[df_red$pvalue_corr_diff <= 0.05] <- 'yes'
 df_red$sign <- factor(df_red$sign, levels = c('no', 'yes'))
 df_red$gr1 <- sapply(df_red$comp, function(x) strsplit(x, split = '_vs_')[[1]][1])
 df_red$gr2 <- sapply(df_red$comp, function(x) strsplit(x, split = '_vs_')[[1]][2])
@@ -510,7 +519,7 @@ df_tot_gr <- do.call(rbind, df_tot_gr)
 df_tot_gr$gr <- factor(df_tot_gr$gr, levels = unique(df_tot_gr$gr))
 
 len_w <- 7
-len_h <- 9 + length(unique(df_tot_gr$gr))*0.1
+len_h <- 7 + length(unique(df_tot_gr$gr))*0.1
 
 gr_color <- pal_d3(palette = 'category20')(length(unique(df_tot_gr$gr)))
 
@@ -519,7 +528,7 @@ pl_beta_p1 <-  ggplot(subset(df_tot_gr, treat_meaning %in% c('Cholesterol loweri
   geom_point(position=position_dodge(0.5))+geom_errorbar(aes(ymin=gr_CI_low, ymax=gr_CI_up), width=.2, position=position_dodge(0.5))+
   theme_bw()+ 
   ylab('Adjusted Beta (95% CI)')+geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey40')+
-  facet_wrap(treat_meaning~., nrow = 1, strip.position="top")+
+  facet_wrap(treat_meaning~., nrow = 1, strip.position="top", scales = 'free_x')+
   theme(legend.position = 'none', legend.title = element_blank(), legend.text = element_text(size = 9), 
         plot.title = element_text(size=9), axis.title.y = element_blank(),  axis.title.x = element_text(size = 9),
         axis.text.x = element_text(size = 9, angle = 0, hjust = 1), axis.text.y = element_text(size = 9), strip.text = element_text(size=9))+
@@ -532,7 +541,7 @@ pl_beta_p2 <-  ggplot(subset(df_tot_gr, treat_meaning %in% c('Paracetamol', 'Asp
   geom_point(position=position_dodge(0.5))+geom_errorbar(aes(ymin=gr_CI_low, ymax=gr_CI_up), width=.2, position=position_dodge(0.5))+
   theme_bw()+ 
   ylab('Adjusted Beta (95% CI)')+geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey40')+
-  facet_wrap(treat_meaning~., nrow = 1, strip.position="top")+
+  facet_wrap(treat_meaning~., nrow = 1, strip.position="top", scales = 'free_x')+
   theme(legend.position = 'right', legend.title = element_blank(), legend.text = element_text(size = 9), 
         plot.title = element_text(size=9), axis.title.y = element_blank(),  axis.title.x = element_text(size = 9),
         axis.text.x = element_text(size = 9, angle = 0, hjust = 1), axis.text.y = element_text(size = 9), strip.text = element_text(size=9))+
@@ -545,8 +554,34 @@ pl_beta_p3 <-  ggplot(subset(df_tot_gr, treat_meaning %in% c('Iron')),
   geom_point(position=position_dodge(0.5))+geom_errorbar(aes(ymin=gr_CI_low, ymax=gr_CI_up), width=.2, position=position_dodge(0.5))+
   theme_bw()+ 
   ylab('Adjusted Beta (95% CI)')+geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey40')+
-  facet_wrap(treat_meaning~., nrow = 1, strip.position="top")+
+  facet_wrap(treat_meaning~., nrow = 1, strip.position="top", scales = 'free_x')+
   theme(legend.position = 'right', legend.title = element_blank(), legend.text = element_text(size = 9), 
+        plot.title = element_text(size=9), axis.title.y = element_blank(),  axis.title.x = element_text(size = 9),
+        axis.text.x = element_text(size = 9, angle = 0, hjust = 1), axis.text.y = element_text(size = 9), strip.text = element_text(size=9))+
+  scale_shape_manual(values=c(1, 19))+
+  scale_color_manual(values=gr_color)+guides(shape=FALSE)+
+  coord_flip()
+
+pl_beta_p4 <-  ggplot(subset(df_tot_gr, treat_meaning %in% c('Glucosamine')), 
+                      aes(x = new_id, y = gr_ORorBeta, group = gr, color = gr, shape = sign))+
+  geom_point(position=position_dodge(0.5))+geom_errorbar(aes(ymin=gr_CI_low, ymax=gr_CI_up), width=.2, position=position_dodge(0.5))+
+  theme_bw()+ 
+  ylab('Adjusted Beta (95% CI)')+geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey40')+
+  facet_wrap(treat_meaning~., nrow = 1, strip.position="top", scales = 'free_x')+
+  theme(legend.position = 'none', legend.title = element_blank(), legend.text = element_text(size = 9), 
+        plot.title = element_text(size=9), axis.title.y = element_blank(),  axis.title.x = element_text(size = 9),
+        axis.text.x = element_text(size = 9, angle = 0, hjust = 1), axis.text.y = element_text(size = 9), strip.text = element_text(size=9))+
+  scale_shape_manual(values=c(1, 19))+
+  scale_color_manual(values=gr_color)+guides(shape=FALSE)+
+  coord_flip()
+
+pl_beta_p5 <-  ggplot(subset(df_tot_gr, treat_meaning %in% c('Folic acid or Folate (Vit B9)')), 
+                      aes(x = new_id, y = gr_ORorBeta, group = gr, color = gr, shape = sign))+
+  geom_point(position=position_dodge(0.5))+geom_errorbar(aes(ymin=gr_CI_low, ymax=gr_CI_up), width=.2, position=position_dodge(0.5))+
+  theme_bw()+ 
+  ylab('Adjusted Beta (95% CI)')+geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey40')+
+  facet_wrap(treat_meaning~., nrow = 1, strip.position="top", scales = 'free_x')+
+  theme(legend.position = 'none', legend.title = element_blank(), legend.text = element_text(size = 9), 
         plot.title = element_text(size=9), axis.title.y = element_blank(),  axis.title.x = element_text(size = 9),
         axis.text.x = element_text(size = 9, angle = 0, hjust = 1), axis.text.y = element_text(size = 9), strip.text = element_text(size=9))+
   scale_shape_manual(values=c(1, 19))+
@@ -555,13 +590,147 @@ pl_beta_p3 <-  ggplot(subset(df_tot_gr, treat_meaning %in% c('Iron')),
 
 outFold <- sprintf('OUTPUT_GTEx/predict_CAD/%s/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/',tissue_name)
 
-tot_pl <- ggarrange(plotlist = list(pl_beta_p1, pl_beta_p2), align = 'hv', nrow = 1, common.legend = T, widths = c(1, 2.2))
-ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_pairwise_%smedAll_subset1.png', outFold, 'Cases', 'CAD'), width = 9.5, height = 3.7, plot = tot_pl, device = 'png')
-ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_pairwise_%smedAll_subset1.pdf', outFold, 'Cases', 'CAD'), width = 9.5, height = 3.7, plot = tot_pl, device = 'pdf')
+tot_pl <- ggarrange(plotlist = list(pl_beta_p1, pl_beta_p2, pl_beta_p3), align = 'h', nrow = 1, common.legend = T, widths = c(1, 2.2, 1.4))
+ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_pairwise_%smedAll_subset1.png', outFold, 'Cases', 'CAD'), width = 15, height = 3.5, plot = tot_pl, device = 'png')
+ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_pairwise_%smedAll_subset1.pdf', outFold, 'Cases', 'CAD'), width = 15, height = 3.5, plot = tot_pl, device = 'pdf')
 
-tot_pl <- ggarrange(plotlist = list(pl_beta_p3), align = 'hv', nrow = 1, common.legend = T)
-ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_pairwise_%smedAll_subset2.png', outFold, 'Cases', 'CAD'), width = 4.5, height = 3.7, plot = tot_pl, device = 'png')
-ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_pairwise_%smedAll_subset2.pdf', outFold, 'Cases', 'CAD'), width = 4.5, height = 3.7, plot = tot_pl, device = 'pdf')
+tot_pl <- ggarrange(plotlist = list(pl_beta_p4, pl_beta_p5), align = 'v', nrow = 1, widths = c(1, 1.1))
+ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_pairwise_%smedAll_subset2.png', outFold, 'Cases', 'CAD'), width = 7, height = 1.7, plot = tot_pl, device = 'png')
+ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_pairwise_%smedAll_subset2.pdf', outFold, 'Cases', 'CAD'), width = 7, height = 1.7, plot = tot_pl, device = 'pdf')
+
+####################################################
+### spider plot selected pathways and phenotypes ###
+####################################################
+
+## pathways ##
+keep_path_sp <- c('Vesicle-mediated transport (L)', 'Free fatty acid receptors (AS)',
+                  'Ethanol oxidation (HAA) -same in AA HLV-', 
+                  'Interferon Signaling (HAA) -same in AVO AS AA HLV CT WB L AG AC-', 'Endogenous sterols (CS) -same in HAA L-',
+                  'Regulation of Insulin-like Growth Factor (IGF) transport and uptake by Insulin-like Growth Factor Binding Proteins (IGFBPs) (HAA) -same in HLV-', 
+                  'heme binding (AA) -same in WB-')
+
+path_input_red <- path_input_tot[, keep_path_sp]
+gr_id <- sort(unique(res_cl$cl_best$gr))
+df_mean <- t(sapply(gr_id, function(x) colMeans(path_input_red[res_cl$cl_best$gr == x,])))
+df_mean <- cbind(data.frame(group = paste0('gr_',gr_id)), df_mean)
+# df_mean <- data.frame(val = as.vector(df_mean), group = as.vector(sapply(gr_id, function(x) rep(paste0('gr_',x), ncol(path_input_red)))))
+# df_mean$path <- rep(colnames(path_input_red), length(gr_id))
+# df_mean$new_id <- df_mean$path
+colnames(df_mean)[colnames(df_mean) == 'Regulation of Insulin-like Growth Factor (IGF) transport and uptake by Insulin-like Growth Factor Binding Proteins (IGFBPs) (HAA) -same in HLV-'] <- 'Regulation of IGF transport and uptake by IGFBPs (HAA) -same in HLV-'
+new_name <- unname(sapply(colnames(df_mean[, -1]), function(x) paste(strsplit(x, split = ' [(]')[[1]], collapse = '\n(')))
+colnames(df_mean)[-1] <- new_name
+df_mean[, -1] <- apply(df_mean[,-1], 2, rescale)
+
+gr_color <- pal_d3(palette = 'category20')(length(unique(gr_id)))
+pl <- ggradar(df_mean,  
+              #grid.min = min(df_mean[, -1]), grid.max = max(df_mean[, -1]), grid.mid = 0, 
+              #values.radar = round(c(min(df_mean[, -1]), 0, max(df_mean[, -1])), digits = 2),
+              grid.min = 0, grid.max = 1, grid.mid = 0.5, 
+              values.radar = c('0%', '50%', '100%'),
+              group.colours = gr_color, 
+        grid.label.size = 5,
+        axis.label.size = 3.5, 
+        group.point.size = 2,
+        group.line.width = 1,
+        legend.text.size= 10, 
+        legend.position = 'top', 
+        plot.extent.x.sf = 2, 
+        plot.extent.y.sf = 1.2)
+# pl + theme(plot.margin = margin(2, 4, 4, 4, "cm"))
+
+ggsave(plot = pl, filename = sprintf('OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/cl%s_spiderPlotPathway_tscoreClusterCases.png',  tissue_name), device = 'png', width = 10, height = 10, dpi = 320)
+ggsave(plot = pl, filename = sprintf('OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/cl%s_spiderPlotPathway_tscoreClusterCases.pdf',  tissue_name), device = 'pdf', width = 10, height = 10)
 
 
+## phenotypes ## 
+keep_pheno_sp <- c('LDL direct', 'Apolipoprotein A', 'Lymphocyte count', 'Haemoglobin concentration', 'Hyperlipidemia', 'Peripheral_vascular_disease', 'Age_stroke')
+tmp <- get(load(sprintf('OUTPUT_GTEx/predict_CAD/%s/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/withMedication_tscore_zscaled_clusterCases_PGmethod_HKmetric_phenoAssociation_GLM.RData', tissue_name)))
+tmp_nom <- get(load(sprintf('OUTPUT_GTEx/predict_CAD/%s/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/nominalAnalysis_tscore_zscaled_clusterCases_PGmethod_HKmetric_phenoAssociation_GLM.RData', tissue_name)))
+
+phenoDat_tot <- cbind(tmp$phenoDat[, match(tmp$phenoInfo$pheno_id[tmp$phenoInfo$Field %in% keep_pheno_sp],colnames(tmp$phenoDat))], tmp_nom$phenoDat[, colnames(tmp_nom$phenoDat) %in% keep_pheno_sp])
+colnames(phenoDat_tot)[1:sum(tmp$phenoInfo$Field %in% keep_pheno_sp)] <- tmp$phenoInfo$Field[tmp$phenoInfo$Field %in% keep_pheno_sp]
+# phenoDat_tot$Age_stroke <- rescale(phenoDat_tot$Age_stroke)
+# phenoDat_tot[, 'Apolipoprotein A'] <- rescale(phenoDat_tot[, 'Apolipoprotein A'])
+# phenoDat_tot[, 'LDL direct'] <- rescale(phenoDat_tot[, 'LDL direct'])
+# phenoDat_tot[, 'Haemoglobin concentration'] <- rescale(phenoDat_tot[, 'Haemoglobin concentration'])
+# phenoDat_tot[, 'Lymphocyte count'] <- rescale(phenoDat_tot[, 'Lymphocyte count'])
+
+# compute mean across groups
+df_mean <- t(sapply(gr_id, function(x) colMeans(phenoDat_tot[res_cl$cl_best$gr == x,], na.rm = T)))
+df_mean <- cbind(data.frame(group = paste0('gr_',gr_id)), df_mean)
+df_mean[, -1] <- apply(df_mean[,-1], 2, rescale)
+
+pl <- ggradar(df_mean,  grid.min = 0, grid.max = 1, grid.mid = 0.5, 
+              values.radar = c('0%', '50%', '100%'),
+              group.colours = gr_color, 
+              grid.label.size = 5,
+              axis.label.size = 3.5, 
+              group.point.size = 2,
+              group.line.width = 1,
+              legend.text.size= 10, 
+              legend.position = 'top', 
+              plot.extent.x.sf = 2, 
+              plot.extent.y.sf = 1.2)
+# pl + theme(plot.margin = margin(2, 4, 4, 4, "cm"))
+
+ggsave(plot = pl, filename = sprintf('OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/cl%s_spiderPlotPheno_tscoreClusterCases.png',  tissue_name), device = 'png', width = 10, height = 10, dpi = 320)
+ggsave(plot = pl, filename = sprintf('OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/cl%s_spiderPlotPheno_tscoreClusterCases.pdf',  tissue_name), device = 'pdf', width = 10, height = 10)
+
+## treatment response ##
+keep_treat_pheno_sp <- data.frame(pheno = c('LDL direct', 'Platelet crit', 'Platelet crit', 'Haemoglobin concentration', 'Glycated haemoglobin (HbA1c)', 'C-reactive protein'), 
+                                  treat = c('Cholesterol lowering medication' , 'Paracetamol', 'Vitamin D', 'Iron', 'Folic acid or Folate (Vit B9)', 'Glucosamine'))
+  
+covDat <- fread('INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/covariateMatrix_CADHARD_All_phenoAssoc_withMedication.txt', h=T, stringsAsFactors = F, data.table = F)
+covDat <- covDat[match(res_cl$samples_id, covDat$Individual_ID), ]
+treat_pheno <- colnames(covDat)[!colnames(covDat) %in% c('Individual_ID', 'Dx', paste0('PC',1:10), 'Age', 'Gender')]
+
+phenoDat <- fread('INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/phenotypeMatrix_CADHARD_All_phenoAssoc_withMedication.txt', h=T, stringsAsFactors = F, data.table = F)
+phenoDat <- phenoDat[match(res_cl$samples_id, phenoDat$Individual_ID), ]
+phenoInfo <- fread('INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/phenotypeDescription_withMedication.txt', h=T, stringsAsFactors = F, data.table = F)
+# consider only certain class of phenotypes
+phenoInfo <- phenoInfo[phenoInfo$pheno_type %in% c('Arterial_stiffness', 'Blood_biochemistry', 'Blood_count', 'Blood_pressure', 'Body_size_measures', 'Hand_grip_strength', 'Impedance_measures', 
+                                                   'Residential_air_pollution', 'Spirometry'),]
+# exclude Nucleated red blood cell
+phenoInfo <- phenoInfo[!grepl('Nucleated red blood cell',phenoInfo$Field), ]
+phenoInfo <- phenoInfo[!grepl('Traffic intensity on the nearest road',phenoInfo$Field), ]
+phenoInfo_treat <- fread('INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/phenotypeDescription_covariateMatrix_withMedication.txt', h=T, stringsAsFactors = F, data.table = F)
+phenoInfo_treat <- rbind(phenoInfo_treat,
+                         data.frame(pheno_id = c('6153_6177_1', '6153_6177_2', '6153_6177_3'), FieldID = c('6153_6177', '6153_6177', '6153_6177'),
+                                    Field = rep('Medication for cholesterol, blood pressure or diabetes', 3), Path = rep(NA, 3), Strata  = rep(NA, 3),
+                                    Sexed = rep('Unisex', 3), Coding = rep(NA, 3), Coding_meaning = c('Cholesterol lowering medication', 'Blood pressure medication', 'Insulin'),
+                                    original_type = rep('CAT_MULTIPLE', 3), transformed_type = rep('CAT_MUL_BINARY_VAR',3), nsamples = rep(NA,3), nsamples_T= rep(NA,3),
+                                    nsamples_F= rep(NA,3), pheno_type = rep('Medication', 3)))
+
+phenoInfo_treat <- phenoInfo_treat[!phenoInfo_treat$FieldID %in% c('6177', '6153'),]
+
+phenoInfo_treat <- phenoInfo_treat[phenoInfo_treat$Coding_meaning %in% keep_treat_pheno_sp$treat, ]
+phenoInfo <- phenoInfo[phenoInfo$Field %in% keep_treat_pheno_sp$pheno, ]
+
+df_diff <- matrix(nrow = length(gr_id), ncol = nrow(keep_treat_pheno_sp))
+for(i in 1:nrow(keep_treat_pheno_sp)){
+  pv <- phenoDat[, colnames(phenoDat) == phenoInfo$pheno_id[phenoInfo$Field == keep_treat_pheno_sp$pheno[i]]]
+  cv <- covDat[, colnames(covDat) == paste0('p', phenoInfo_treat$pheno_id[phenoInfo_treat$Coding_meaning == keep_treat_pheno_sp$treat[i]])]
+  pv_gr <- lapply(gr_id, function(x) pv[res_cl$cl_best$gr == x])
+  cv_gr <- lapply(gr_id, function(x) cv[res_cl$cl_best$gr == x])
+  df_diff[, i] <- mapply(function(x, y) mean(x[y == 1], na.rm = T) - mean(x[y == 0], na.rm = T), x = pv_gr, y = cv_gr)
+}
+colnames(df_diff) <- paste0(keep_treat_pheno_sp$treat , '\n', keep_treat_pheno_sp$pheno)
+df_diff <- cbind(data.frame(group = paste0('gr_',gr_id)), df_diff)
+df_diff[, -1] <- apply(df_diff[,-1], 2, rescale)
+
+pl <- ggradar(df_diff,  grid.min = 0, grid.max = 1, grid.mid = 0.5, 
+              values.radar = c('0%', '50%', '100%'),
+              group.colours = gr_color, 
+              grid.label.size = 5,
+              axis.label.size = 3.5, 
+              group.point.size = 2,
+              group.line.width = 1,
+              legend.text.size= 10, 
+              legend.position = 'top', 
+              plot.extent.x.sf = 2, 
+              plot.extent.y.sf = 1.2)
+# pl + theme(plot.margin = margin(2, 4, 4, 4, "cm"))
+
+ggsave(plot = pl, filename = sprintf('OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/cl%s_spiderPlotTreat_tscoreClusterCases.png',  tissue_name), device = 'png', width = 10, height = 10, dpi = 320)
+ggsave(plot = pl, filename = sprintf('OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/cl%s_spiderPlotTreat_tscoreClusterCases.pdf',  tissue_name), device = 'pdf', width = 10, height = 10)
 

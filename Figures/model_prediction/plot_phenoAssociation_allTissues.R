@@ -275,7 +275,8 @@ create_df_manhattan_plot <- function(tissues_name, res, pval_FDR, df_color, id_p
     df_chr$start <- apply(sapply(tmp, function(x) sapply(1:22, function(y) min(x$start_position[x$chrom == paste0('chr', y)]))), 1, min)/1000000
     a <- cumsum(df_chr$start)
     b <- cumsum(df_chr$end)
-    df_chr$pos_start <- c(df_chr$start)+c(0, b[-length(b)])
+    df_chr$pos_start <- c(0, b[-length(b)])
+    # df_chr$pos_start <- c(df_chr$start)+c(0, b[-length(b)]), not correct for plot
   }else{
     df_chr <- NULL
   }
@@ -551,8 +552,6 @@ plot_best_path <- function(best_res, tissues, color_tissues, title_plot, type_ma
 }
 
 
-
-
 # plot_best_path <- function(best_res, tissues, color_tissues, title_plot, type_mat, type_dat, width_plot = 5.5, height_plot = 5, outFold, id_name=1){
 #   best_res <- best_res[best_res$tissue %in% tissues, ]
 #   color_tmp <- color_tissues[match(tissues, color_tissues$tissues),]
@@ -656,6 +655,7 @@ venn_plot <- function(gwas_known_file, tscore, pval_FDR, type_dat, type_mat){
 ###################################################################################################################################################
 
 if(length(tissues)>2){
+  
   ### correlation tissues ###
   tscore_cor <- create_cor(tissues_name = tissues, res = tscore, id_z = 7)
   pathR_cor <- create_cor(tissues_name = tissues, res = pathR, id_z = 12)
