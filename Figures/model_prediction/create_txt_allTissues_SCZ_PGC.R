@@ -65,8 +65,8 @@ recompte_path <- function(tissues_name, res, id_pval){
     tmp[[i]][, id_pval+2] <- p.adjust(tmp[[i]][, id_pval], method = 'BH')
   }
   tmp <- do.call(rbind, tmp)
-  tmp[, id_pval+6] <- p.adjust(tmp[, id_pval], method = 'BH')
-  
+  tmp[, id_pval+9] <- p.adjust(tmp[, id_pval], method = 'BH')
+  colnames(tmp)[ncol(tmp)] <- 'Dx_pval_BHcorr_overall'
   return(tmp)
 }
 

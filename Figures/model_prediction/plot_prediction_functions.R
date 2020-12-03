@@ -415,6 +415,12 @@ plot_best_path <- function(best_res, tissues, color_tissues, title_plot, type_ma
   tmp <- sapply(tmp, function(x) paste0(sapply(x, function(y) substr(y, start = 1, stop = 1)), collapse = ''))
   df_tissues$id <- tmp
   
+  if('Brain_Hippocampus' %in% df_tissues$tissue){df_tissues$id[df_tissues$tissue == 'Brain_Hippocampus'] <- 'BHi'}
+  if('Brain_Hypothalamus' %in% df_tissues$tissue){df_tissues$id[df_tissues$tissue == 'Brain_Hypothalamus'] <- 'BHy'}
+  if('Brain_Cerebellum' %in% df_tissues$tissue){df_tissues$id[df_tissues$tissue == 'Brain_Cerebellum'] <- 'BCe'}
+  if('Brain_Cerebellar_Hemisphere' %in% df_tissues$tissue){df_tissues$id[df_tissues$tissue == 'Brain_Cerebellar_Hemisphere'] <- 'BCeH'}
+   
+ 
   best_res <- best_res[best_res$tissue %in% tissues, ]
   color_tmp <- color_tissues[match(tissues, color_tissues$tissues),]
   best_res$tissue <- factor(best_res$tissue, levels = tissues)
