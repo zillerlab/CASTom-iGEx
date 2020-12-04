@@ -186,7 +186,7 @@ for(i in 1:nrow(df_info)){
           axis.text.x=element_text(size = 10, angle = 0, hjust = 1),
           axis.text.y=element_text(size = 10), legend.position = 'none')+
     scale_fill_manual(values = col)+coord_flip()
-  ggsave(filename = sprintf('%snSNPswithPrior_rV_%s.png', outFold,, df_info$tissue[i]), plot = pl_nsnps, width = 6, height = height_pl, dpi = 500)
+  ggsave(filename = sprintf('%snSNPswithPrior_rV_%s.png', outFold, df_info$tissue[i]), plot = pl_nsnps, width = 6, height = height_pl, dpi = 500)
   ggsave(filename = sprintf('%snSNPswithPrior_rV_%s.pdf', outFold, df_info$tissue[i]), plot = pl_nsnps, width = 6, height = height_pl)
   
   pl_perc <- ggplot(df_perc, aes(x = prior, y=perc, fill = type)) + 
@@ -228,6 +228,8 @@ for(i in 1:nrow(df_info)){
   ggsave(filename = sprintf('%smaxContrPrior_iteration_rV_%s.png', outFold, df_info$tissue[i]), plot = pl_it, width = 4, height = 4, dpi=500)
   ggsave(filename = sprintf('%smaxContrPrior_iteration_rV_%s.pdf', outFold, df_info$tissue[i]), plot = pl_it, width = 4, height = 4)
   
+  res <- list(weights = df_res[[i]], nsnps = df_rV_n, it = df_it[[i]], perc_shared = df_perc)
+  save(res, file = sprintf('%stotRes_rV_%s.RData', outFold, df_info$tissue[i]))
   
 }
 
@@ -361,7 +363,6 @@ for(i in 1:nrow(df_info)){
     # shape_it <- c(rep(16, 15), 15,17)
   }
   
-  
   pl_nsnps <- ggplot(df_rE_n, aes(x = prior, y=nsnps, fill = prior)) + 
     geom_bar(stat="identity", color="black") +ggtitle('Random GREs')+
     ylab('n. SNPs with prior')+ xlab('')+ theme_classic()+
@@ -411,6 +412,9 @@ for(i in 1:nrow(df_info)){
     scale_color_manual(values = rev(col))+labs(color = "")
   ggsave(filename = sprintf('%smaxContrPrior_iteration_rE_%s.png', outFold, df_info$tissue[i]), plot = pl_it, width = 4, height = 4, dpi=500)
   ggsave(filename = sprintf('%smaxContrPrior_iteration_rE_%s.pdf', outFold, df_info$tissue[i]), plot = pl_it, width = 4, height = 4)
+  
+  res <- list(weights = df_res[[i]], nsnps = df_rE_n, it = df_it[[i]], perc_shared = df_perc)
+  save(res, file = sprintf('%stotRes_rE_%s.RData', outFold, df_info$tissue[i]))
   
 }
 
@@ -600,6 +604,9 @@ for(i in 1:nrow(df_info)){
     scale_color_manual(values = rev(col))+labs(color = "")
   ggsave(filename = sprintf('%smaxContrPrior_iteration_rG_%s.png', outFold, df_info$tissue[i]), plot = pl_it, width = 4, height = 4, dpi=500)
   ggsave(filename = sprintf('%smaxContrPrior_iteration_rG_%s.pdf', outFold, df_info$tissue[i]), plot = pl_it, width = 4, height = 4)
+  
+  res <- list(weights = df_res[[i]], nsnps = df_rG_n, it = df_it[[i]], perc_shared = df_perc)
+  save(res, file = sprintf('%stotRes_rG_%s.RData', outFold, df_info$tissue[i]))
   
 }
 
