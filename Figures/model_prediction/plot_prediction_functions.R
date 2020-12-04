@@ -310,6 +310,84 @@ pl_manhattan_function <- function(data_input, type_mat, outFold, type_dat){
   
 }
 
+pl_manhattan_forpubl_function <- function(data_input, type_mat, outFold, type_dat){
+  
+  gene <-  type_mat == 'tscore'
+  file_name <- sprintf('%smanhattan_%s_%s_pub', outFold,  type_mat, type_dat)
+  file_name_z <- sprintf('%smanhattan_zstat_%s_%s_pub', outFold,  type_mat, type_dat)
+  
+  df <- data_input$df
+  info_df <- data_input$color
+  
+  df$tissue <- factor(df$tissue, levels = data_input$color$tissues)
+  df$type <- factor(df$type, levels = unique(data_input$color$type))
+  df$color <- factor(df$color, levels = c('#C0C0C0', unique(data_input$color$color)))
+  info_df$tissue <-  factor(info_df$tissue, levels = data_input$color$tissues)
+  info_df$type <- factor(info_df$type, levels = unique(data_input$color$type))
+  info_df$thr_pval_tr = -log10(info_df$thr_pval)
+  
+  pl1 <- ggplot(data = subset(df, sign == 'no'), aes(x = id_pos, y = pval_tr, color = color, label = name))+
+    geom_point(alpha = 0.8, size = 0.1)+
+    ylim(0, max(df$pval_tr))+ 
+    geom_text_repel(segment.color = 'grey50', size = 2, min.segment.length = unit(0, 'lines'),
+                    segment.alpha = 0.6,  force = 8) +
+    ylab('-log10(pvalue)')+ggtitle(type_dat)+
+    theme_bw()+theme(legend.position = 'none', plot.title = element_text(hjust = 0.5))+
+    scale_color_manual(values = c('#C0C0C0', unique(data_input$color$color)))+
+    scale_x_continuous(breaks=data_input$df_chr$pos_start, labels=data_input$df_chr$chr, expand = c(0.01, 0.01),  limits = c(0, max(df$id_pos)))+xlab('chromosome')+
+      theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
+      
+  ggsave(filename = paste0(file_name, '_p1.pdf'), plot = pl1, width = 11, height = 4, dpi = 500)
+  ggsave(filename = paste0(file_name, '_p1.png'), plot = pl1, width = 11, height = 4, dpi = 500)
+  
+  pl2 <- ggplot(data = subset(df, sign == 'yes'), aes(x = id_pos, y = pval_tr, color = color, label = name))+
+    geom_point(alpha = 0.8, size = 0.1)+
+    ylim(0, max(df$pval_tr))+ 
+    geom_text_repel(segment.color = 'grey50', size = 2, min.segment.length = unit(0, 'lines'),
+                    segment.alpha = 0.6,  force = 8) +
+    ylab('-log10(pvalue)')+ggtitle(type_dat)+
+    theme_bw()+theme(legend.position = 'none', plot.title = element_text(hjust = 0.5))+
+    scale_color_manual(values = c(unique(data_input$color$color)))+
+    scale_x_continuous(breaks=data_input$df_chr$pos_start, labels=data_input$df_chr$chr, expand = c(0.01, 0.01), limits = c(0, max(df$id_pos)))+xlab('chromosome')+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
+  
+  ggsave(filename = paste0(file_name, '_p2.pdf'), plot = pl2, width = 11, height = 4, dpi = 500)
+  ggsave(filename = paste0(file_name, '_p2.png'), plot = pl2, width = 11, height = 4, dpi = 500)
+  
+  
+  # plot z-stat
+  pl1_z <- ggplot(data = subset(df, sign == 'no'), aes(x = id_pos, y = zstat, color = color, label = name))+
+    geom_point(alpha = 0.8, size = 0.1)+
+    geom_text_repel(segment.color = 'grey50', size = 2, min.segment.length = unit(0, 'lines'),
+                    segment.alpha = 0.6,  force = 8) +
+    ylab('z statistic')+ggtitle(type_dat)+
+    theme_bw()+theme(legend.position = 'none', plot.title = element_text(hjust = 0.5))+
+    scale_color_manual(values = c('#C0C0C0', unique(data_input$color$color)))+
+    scale_x_continuous(breaks=data_input$df_chr$pos_start, labels=data_input$df_chr$chr, expand = c(0.01, 0.01),  limits = c(0, max(df$id_pos)))+xlab('chromosome')+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5))+
+    geom_hline(yintercept = 0, linetype = 2, size = 0.3) + 
+    ylim(min(df$zstat) - 3, max(df$zstat) + 3)
+  ggsave(filename = paste0(file_name_z, '_p1.pdf'), plot = pl1_z, width = 11, height = 5, dpi = 500)
+  ggsave(filename = paste0(file_name_z, '_p1.png'), plot = pl1_z, width = 11, height = 5, dpi = 500)
+  
+  pl2_z <- ggplot(data = subset(df, sign == 'yes'), aes(x = id_pos, y = zstat, color = color, label = name))+
+    geom_point(alpha = 0.8, size = 0.1)+
+    geom_text_repel(segment.color = 'grey50', size = 2, min.segment.length = unit(0, 'lines'),
+                    segment.alpha = 0.6,  force = 8) +
+    ylab('z statistic')+ggtitle(type_dat)+
+    theme_bw()+theme(legend.position = 'none', plot.title = element_text(hjust = 0.5))+
+    scale_color_manual(values = c(unique(data_input$color$color)))+
+    scale_x_continuous(breaks=data_input$df_chr$pos_start, labels=data_input$df_chr$chr, expand = c(0.01, 0.01),  limits = c(0, max(df$id_pos)))+xlab('chromosome')+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5))+
+    geom_hline(yintercept = 0, linetype = 2, size = 0.3) + 
+    ylim(min(df$zstat) - 3, max(df$zstat) + 3)
+  ggsave(filename = paste0(file_name_z, '_p2.pdf'), plot = pl2_z, width = 11, height = 5, dpi = 500)
+  ggsave(filename = paste0(file_name_z, '_p2.png'), plot = pl2_z, width = 11, height = 5, dpi = 500)
+  
+  
+}
+
+
 #### pathway plot with ngenes info ####
 create_df_manhattan_plot_path <- function(tissues_name, res, pval_thr, pval_FDR, thr_genes = 0, df_color, id_pval, id_name, gene = F){
   
@@ -414,13 +492,11 @@ plot_best_path <- function(best_res, tissues, color_tissues, title_plot, type_ma
   tmp <- lapply(df_tissues$tissue, function(x) strsplit(x, split = '[_]')[[1]])
   tmp <- sapply(tmp, function(x) paste0(sapply(x, function(y) substr(y, start = 1, stop = 1)), collapse = ''))
   df_tissues$id <- tmp
-  
   if('Brain_Hippocampus' %in% df_tissues$tissue){df_tissues$id[df_tissues$tissue == 'Brain_Hippocampus'] <- 'BHi'}
   if('Brain_Hypothalamus' %in% df_tissues$tissue){df_tissues$id[df_tissues$tissue == 'Brain_Hypothalamus'] <- 'BHy'}
   if('Brain_Cerebellum' %in% df_tissues$tissue){df_tissues$id[df_tissues$tissue == 'Brain_Cerebellum'] <- 'BCe'}
   if('Brain_Cerebellar_Hemisphere' %in% df_tissues$tissue){df_tissues$id[df_tissues$tissue == 'Brain_Cerebellar_Hemisphere'] <- 'BCeH'}
-   
- 
+  
   best_res <- best_res[best_res$tissue %in% tissues, ]
   color_tmp <- color_tissues[match(tissues, color_tissues$tissues),]
   best_res$tissue <- factor(best_res$tissue, levels = tissues)
