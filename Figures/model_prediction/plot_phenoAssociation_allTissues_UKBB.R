@@ -59,9 +59,6 @@ color_tissues <- read.table(color_file, h=T, stringsAsFactors = F)
 tscore <- read.delim(sprintf('%stscore_pval_%s_covCorr.txt', fold, pheno), h=T, stringsAsFactors = F, sep = '\t')
 pathR <- read.delim(sprintf('%spath_Reactome_pval_%s_covCorr_filt.txt', fold, pheno), h=T, stringsAsFactors = F, sep = '\t')
 pathGO <- read.delim(sprintf('%spath_GO_pval_%s_covCorr_filt.txt', fold, pheno), h=T, stringsAsFactors = F, sep = '\t')
-if(file.exists(sprintf('%spath_GO_pval_%s_covCorr_filt.txt', fold, pheno))){
-  
-}
 
 train_fold_original <- train_fold
 
@@ -144,6 +141,7 @@ tscore_df <- create_df_manhattan_plot(tissues_name = tissues, res = tscore, id_p
 # pathGO_df <- create_df_manhattan_plot(tissues_name = tissues, res = pathGO, id_pval = 15, pval_FDR = pval_FDR, df_color = color_tissues, id_name = 2, n_sign = 2)
 
 pl_manhattan_function(data_input = tscore_df, type_mat = 'tscore', outFold = fold, type_dat = type_dat)
+pl_manhattan_forpubl_function(data_input = tscore_df, type_mat = 'tscore', outFold = fold, type_dat = type_dat)
 # pl_manhattan_function(data_input = pathR_df, type_mat = 'path_Reactome', outFold = fold, type_dat = type_dat)
 # pl_manhattan_function(data_input = pathGO_df, type_mat = 'path_GO', outFold = fold, type_dat = type_dat)
 
