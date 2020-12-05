@@ -627,6 +627,140 @@ venn_plot <- function(gwas_known_file, tscore, pval_FDR, type_dat, type_mat){
   
 }
 
+# plot showcase
+plot_showcase <- function(gene_res, gene_info, genes_path, tissue, pathway, color_tmp, id_pval_path, pheno, fold, resBeta, train_fold_tissue, fold_geno_input_tmp, train_fold_original_tmp, 
+                          name_gwas_pval){
+  
+  new_path <- paste0(strsplit(pathway, split = '[ ]')[[1]], collapse = '_')
+  
+  id <- sapply(gene_res$external_gene_name, function(x) which(gene_info$external_gene_name == x))
+  if(any(sapply(id, length)>1)){
+    rm_id <- names(which(sapply(id, length)>1))
+    gene_res <- gene_res[! gene_res$external_gene_name %in% rm_id, ]
+    id <- id[-which(sapply(id, length)>1)]
+    id <- unlist(id)
+  }
+  gene_info <- gene_info[id, ] 
+  identical(gene_info$external_gene_name, gene_res$external_gene_name)
+  
+  id <- which(colnames(gene_info) == 'train_dev')-1
+  gene_res <- cbind(gene_res, gene_info[,1:id])
+  
+  gene_tmp <- lapply(paste0('chr', 1:22), function(x) gene_res[gene_res$chrom==x,])
+  start_pos <- sapply(gene_tmp, function(x) min(x$start_position))
+  end_pos <- sapply(gene_tmp, function(x) max(x$end_position))
+  df_add <- data.frame(start = start_pos, end = end_pos)
+  df_add$start_plot <- cumsum(c(0,df_add$end[-nrow(df_add)]))+df_add$start
+  df_add$add_plot <- cumsum(c(0,df_add$end[-nrow(df_add)]))
+  new_pos <- mapply(function(x, y) x + y$start_position, x = df_add$add_plot, y = gene_tmp, SIMPLIFY = T)
+  new_pos <- unlist(new_pos)
+  
+  gene_tmp <- do.call(rbind,gene_tmp)
+  gene_tmp$new_pos <- new_pos
+  
+  new_df <- data.frame(pos = new_pos, val = -log10(gene_tmp[,8]), name = gene_tmp$external_gene_name, path = 0, stringsAsFactors = F, 
+                       chr = sapply(gene_tmp$chrom, function(x) strsplit(x, split = 'chr')[[1]][2]))
+  new_df$chr <- as.numeric(new_df$chr)
+  new_df$path[new_df$name %in% genes_path$tscore$external_gene_name] <- 1 
+  new_df$path[!(new_df$name %in% genes_path$tscore$external_gene_name) & (new_df$chr %% 2 ==0)] <- 2
+  new_df$path <- factor(new_df$path, levels = c(1,0,2))
+  new_df$type <- 0
+  new_df$type[new_df$name%in% genes_path$tscore$external_gene_name] <- 1 
+  new_df$type <- factor(new_df$type, levels = c(1,0))
+  
+  int_val = -log10(genes_path$path[,id_pval_path])
+  new_df <- rbind(new_df[new_df$type != 1, ], new_df[new_df$type == 1, ])
+  
+  pl_manh <- ggplot(new_df, aes(x = pos, y = val, color = path)) + 
+    geom_abline(intercept = int_val, slope = 0, color=color_tmp, linetype="dashed")+
+    geom_point(alpha = 0.7, size = 1) + ggtitle(sprintf('Tscore association with %s', pheno))+
+    scale_color_manual(values = c(color_tmp, "grey90", 'grey70')) +
+    ylim(0, max(c(int_val, min(c(max(new_df$val), 8)))))+
+    geom_text(x=new_df$pos[nrow(new_df)-1000], y=int_val+0.5, label=genes_path$path$path, size = 5, color = color_tmp)+
+    geom_text_repel(
+      data = subset(new_df, path == 1), aes(label = new_df$name[new_df$path==1]), size = 3.9, color = 'black', box.padding = unit(0.35, "lines"), point.padding = unit(0.3, "lines"))+
+    xlab('chromosome') +  ylab('-log10(pvalue)')+ theme_bw() +
+    theme(plot.title = element_text(hjust = 0.5), text = element_text(size = 15),
+          axis.text.x=element_text(size = 11, angle = 45, hjust = 1, vjust = 1),
+          axis.text.y=element_text(size = 11), legend.position = 'none')+
+    # scale_size_discrete(range = c(1.2, 0.3, 0.3))+
+    #scale_alpha_discrete(range = c(1, 0.5))+
+    scale_x_continuous(breaks = df_add$start_plot, labels = c(1:22))
+  
+  ggsave(filename = sprintf('%smanhattanPlot_tscore_genes_%s_%s_%s.png', fold, pheno, tissue, new_path), plot = pl_manh, width = 10, height = 5, dpi=500, device = 'png')
+  ggsave(filename = sprintf('%smanhattanPlot_tscore_genes_%s_%s_%s.pdf', fold, pheno, tissue, new_path), plot = pl_manh, width = 10, height = 5, device = 'pdf')
+  
+  ### plot SNPs gwas info for genes in the pathway ###
+  df_genePath <- gene_tmp[gene_tmp$external_gene_name %in%  new_df$name[new_df$path == 1],]
+  # load only certain chr
+  beta_res <- NULL
+  id_chr <- unique(df_genePath$chrom)
+  for(i in id_chr){
+    
+    print(i)
+    ind_chr <- as.numeric(strsplit(i, split = 'chr')[[1]][2])
+    gene_pos <- read.table(sprintf('%shg19_ENSEMBL_TSS_%s_matched.txt', train_fold_tissue, i), header = T, stringsAsFactors = F)
+    snp_pos <- read.table(sprintf('%s%s.txt', fold_geno_input_tmp, i), header = T, stringsAsFactors = F)
+    id <- which(gene_pos$ensembl_gene_id %in% df_genePath$ensembl_gene_id)
+    tmp <- resBeta[[ind_chr]][,id]
+    if(length(id)==1){
+      beta_res <- rbind(beta_res, cbind(data.frame(stringsAsFactors = F, val = tmp[tmp!=0], id = which(tmp!=0), 
+                                                   gene = gene_pos$external_gene_name[id]), snp_pos[which(tmp!=0), ]))  
+    }else{
+      for(j in id){
+        tmp <- resBeta[[ind_chr]][,j]
+        beta_res <- rbind(beta_res, cbind(data.frame(stringsAsFactors = F,val = tmp[tmp!=0], id = which(tmp!=0), 
+                                                     gene = gene_pos$external_gene_name[j]), snp_pos[which(tmp!=0), ]))    
+      }
+    }
+    
+  }
+  
+  # find double of beta_res and merge
+  dup_snp <- names(which(table(beta_res$ID)>1))
+  if(length(dup_snp)>1){
+    for(i in 1:length(dup_snp)){
+      id <- which(beta_res$ID == dup_snp[i])
+      beta_res <- rbind(beta_res, beta_res[id[1], ])
+      beta_res$val[nrow(beta_res)] <- mean(beta_res$val[id])
+      beta_res$gene[nrow(beta_res)] <- paste(beta_res$gene[id], sep = '', collapse = '_')
+      beta_res <- beta_res[-id, ]
+    }
+  }
+  
+  # plot only gwas results: SNPs that influece have not so much relevance
+  df_start_end <- data.frame(chr = 1:22, start = 0, end = 0)
+  for(i in 1:22){
+    print(i)
+    snp_pos <- read.table(sprintf('%shg19_SNPs_chr%i_matched.txt', train_fold_original_tmp, i), header = T, stringsAsFactors = F)
+    df_start_end[i,2:3] <- c(snp_pos$position[1], snp_pos$position[nrow(snp_pos)]) 
+  }
+  
+  beta_res <- lapply(1:22, function(x) beta_res[beta_res$CHR == x, ])
+  df_start_end$add_plot <- cumsum(c(0,df_start_end$end[-nrow(df_start_end)]))
+  new_pos <- mapply(function(x, y) x + y$POS, x = df_start_end$add_plot, y = beta_res, SIMPLIFY = T)
+  new_pos <- unlist(new_pos)
+  beta_res <- do.call(rbind, beta_res)
+  beta_res$new_pos <- new_pos
+  beta_res$transf_pvalue <- -log10(beta_res[, name_gwas_pval])
+  df_start_end$start_plot <- cumsum(c(0,df_start_end$end[-nrow(df_start_end)]))+df_start_end$start
+  
+  pl_manh_snps <- ggplot(beta_res, aes(x = new_pos, y = transf_pvalue, color = val)) + 
+    geom_point(size = 1) + ggtitle(sprintf('GWAS pvalues for %s', pheno))+
+    xlab('chromosome') +  ylab('-log10(pvalue)')+ theme_bw() +
+    theme(plot.title = element_text(hjust = 0.5), text = element_text(size = 11),
+          axis.text.x=element_text(size = 11, angle = 45, hjust = 1, vjust = 1),
+          axis.text.y=element_text(size = 11), legend.position = 'bottom')+
+    scale_x_continuous(breaks = df_start_end$start_plot, labels = c(1:22), limits = c(df_start_end$start_plot[1], sum(df_start_end$end)))+
+    scale_color_gradient2(midpoint=0, low="blue", mid="grey",
+                          high="red", space ="Lab")+
+    labs(color = "reg. coefficient")
+  
+  ggsave(filename = sprintf('%smanhattanPlot_GWASsnps_genes_%s_%s_%s.png', fold, pheno, tissue, new_path), plot = pl_manh_snps, width = 10, height = 3, dpi=500, device = 'png')
+  ggsave(filename = sprintf('%smanhattanPlot_GWASsnps_genes_%s_%s_%s.pdf', fold, pheno, tissue, new_path), plot = pl_manh_snps, width = 10, height = 3, device = 'pdf')
+  
+}
+
 # # # results from latest GWAS
 # latest_res <- read.xls('/psycl/g/mpsziller/lucia/refData/41588_2017_BFng3913_MOESM2_ESM.xlsx', h=T, sheet = 4, skip=1, stringsAsFactors = F)
 # latest_res <- latest_res[-nrow(latest_res), ]
@@ -645,4 +779,5 @@ venn_plot <- function(gwas_known_file, tscore, pval_FDR, type_dat, type_mat){
 #   new <- latest_res[tmp$chr_new[i] - as.numeric(latest_res$chr) == 0 & abs(tmp$TSS_start[i] - as.numeric(latest_res$pos))<500000 ,]
 #   if(nrow(new) == 0){tmp$new_loci[i] <- T}
 # }
+
 
