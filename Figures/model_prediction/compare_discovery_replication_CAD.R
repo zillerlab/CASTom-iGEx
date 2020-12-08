@@ -34,12 +34,16 @@ pval_thr_FDR <- args$pval_thr_FDR
 outFold <- args$outFold
 
 # ####################################################################
-# tissues_name <- read.table('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/Tissue_CADgwas', h=F, stringsAsFactors = F)$V1
+# #  tissues_name <- read.table('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/Tissue_CADgwas', h=F, stringsAsFactors = F)$V1
+# tissues_name <-c('Adipose_Subcutaneous','Adipose_Visceral_Omentum','Adrenal_Gland','Artery_Aorta','Artery_Coronary','Colon_Sigmoid','Colon_Transverse','Heart_Atrial_Appendage',
+#                  'Heart_Left_Ventricle','Liver','Whole_Blood')
 # discovery_res <- paste0('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/', tissues_name,'/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/pval_CAD_pheno_covCorr.RData')
 # replication_res <- paste0('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/', tissues_name,'/200kb/CAD_GWAS_bin5e-2/Meta_Analysis_CAD/pval_Dx_pheno_covCorr.RData')
 # outFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB_CADSchukert/'
 # pval_thr_FDR <- 0.05
 # pval_thr_corr <- 0.01
+# pheno_name <- 'CAD_HARD'
+# color_file='/psycl/g/mpsziller/lucia/priler_project/Figures/color_tissues.txt'
 # ####################################################################
 
 #################################
@@ -55,10 +59,10 @@ df_tscore_rep <- vector(mode = 'list', length = length(tissues_name))
 df_pathR_rep <- vector(mode = 'list', length = length(tissues_name))
 df_pathGO_rep <- vector(mode = 'list', length = length(tissues_name))
 
-dim_mat <- matrix(ncol = 3, nrow = length(tissues_name))
-dim_tissues <- matrix(ncol = 3, nrow = length(tissues_name)) 
-int_mat <- matrix(ncol = 3, nrow = length(tissues_name))
-pval_mat <- matrix(ncol = 3, nrow = length(tissues_name))
+dim_mat <- matrix(ncol = 4, nrow = length(tissues_name))
+dim_tissues <- matrix(ncol = 4, nrow = length(tissues_name)) 
+int_mat <- matrix(ncol = 4, nrow = length(tissues_name))
+pval_mat <- matrix(ncol = 4, nrow = length(tissues_name))
 
 for(i in 1:length(tissues_name)){
   
@@ -82,6 +86,7 @@ for(i in 1:length(tissues_name)){
   dim_tissues[i,1] <- nrow(tmp$tscore[[id_pheno]])
   dim_tissues[i,2] <- nrow(tmp$pathScore_reactome[[id_pheno]])
   dim_tissues[i,3] <- nrow(tmp$pathScore_GO[[id_pheno]])
+  dim_tissues[i,4] <- nrow(tmp$pathScore_GO[[id_pheno]]) + nrow(tmp$pathScore_reactome[[id_pheno]])
   
   # significance: FDR 0.05
   df_tscore_disc[[i]] <- tmp$tscore[[id_pheno]][tmp$tscore[[id_pheno]][,10] <= pval_thr_FDR, ]
@@ -101,14 +106,17 @@ for(i in 1:length(tissues_name)){
   dim_mat[i,1] <- nrow(df_tscore_disc[[i]])
   dim_mat[i,2] <- nrow(df_pathR_disc[[i]])
   dim_mat[i,3] <- nrow(df_pathGO_disc[[i]])
+  dim_mat[i,4] <-  nrow(df_pathR_disc[[i]]) + nrow(df_pathGO_disc[[i]])
   
   int_mat[i,1] <- length(which(sign(df_tscore_disc[[i]][,7])*sign(df_tscore_rep[[i]][,7]) == 1))
   int_mat[i,2] <- length(which(sign(df_pathR_disc[[i]][,12])*sign(df_pathR_rep[[i]][,12]) == 1))
   int_mat[i,3] <- length(which(sign(df_pathGO_disc[[i]][,14])*sign(df_pathGO_rep[[i]][,14]) == 1))
+  int_mat[i,4] <- int_mat[i,3] + int_mat[i,2]
   
   pval_mat[i,1] <- ifelse(dim_mat[i,1]>0, binom.test(int_mat[i,1], dim_mat[i,1], p = 0.5, alternative = c("greater"))$p.value, NA)
   pval_mat[i,2] <- ifelse(dim_mat[i,2]>0, binom.test(int_mat[i,2], dim_mat[i,2], p = 0.5, alternative = c("greater"))$p.value, NA)
   pval_mat[i,3] <- ifelse(dim_mat[i,3]>0, binom.test(int_mat[i,3], dim_mat[i,3], p = 0.5, alternative = c("greater"))$p.value, NA)
+  pval_mat[i,4] <- ifelse(dim_mat[i,4]>0, binom.test(int_mat[i,4], dim_mat[i,4], p = 0.5, alternative = c("greater"))$p.value, NA)
   
   if(nrow(df_tscore_rep[[i]])>0){
     df_tscore_disc[[i]]$CAD_rep_z <- df_tscore_rep[[i]][,7]
@@ -129,7 +137,7 @@ for(i in 1:length(tissues_name)){
 }
 
 perc_mat <- int_mat/dim_mat
-colnames(perc_mat) = colnames(pval_mat) = colnames(int_mat) = colnames(dim_mat) = colnames(dim_tissues) = c('tscore', 'pathScore_reactome', 'pathScore_GO')
+colnames(perc_mat) = colnames(pval_mat) = colnames(int_mat) = colnames(dim_mat) = colnames(dim_tissues) = c('tscore', 'pathScore_reactome', 'pathScore_GO', 'pathScore_tot')
 dim_tissues <- cbind(data.frame(tissue = tissues_name, stringsAsFactors = F), as.data.frame(dim_tissues))
 int_mat <- cbind(data.frame(tissue = tissues_name, stringsAsFactors = F), as.data.frame(int_mat))
 dim_mat <- cbind(data.frame(tissue = tissues_name, stringsAsFactors = F), as.data.frame(dim_mat))
@@ -137,16 +145,21 @@ perc_mat <- cbind(data.frame(tissue = tissues_name, stringsAsFactors = F), as.da
 pval_mat <- cbind(data.frame(tissue = tissues_name, stringsAsFactors = F), as.data.frame(pval_mat))
 
 # add total 
-dim_tissues <- rbind(dim_tissues, data.frame(tissue = 'All Tissues', tscore = sum(dim_tissues$tscore), pathScore_reactome = sum(dim_tissues$pathScore_reactome), pathScore_GO = sum(dim_tissues$pathScore_GO)))
-int_mat <- rbind(int_mat, data.frame(tissue = 'All Tissues', tscore = sum(int_mat$tscore), pathScore_reactome = sum(int_mat$pathScore_reactome), pathScore_GO = sum(int_mat$pathScore_GO)))
-dim_mat <- rbind(dim_mat, data.frame(tissue = 'All Tissues', tscore = sum(dim_mat$tscore), pathScore_reactome = sum(dim_mat$pathScore_reactome), pathScore_GO = sum(dim_mat$pathScore_GO)))
+dim_tissues <- rbind(dim_tissues, data.frame(tissue = 'All Tissues', tscore = sum(dim_tissues$tscore), pathScore_reactome = sum(dim_tissues$pathScore_reactome), 
+                                             pathScore_GO = sum(dim_tissues$pathScore_GO), pathScore_tot = sum(dim_tissues$pathScore_tot)))
+int_mat <- rbind(int_mat, data.frame(tissue = 'All Tissues', tscore = sum(int_mat$tscore), pathScore_reactome = sum(int_mat$pathScore_reactome), pathScore_GO = sum(int_mat$pathScore_GO), 
+                 pathScore_tot = sum(int_mat$pathScore_tot)))
+dim_mat <- rbind(dim_mat, data.frame(tissue = 'All Tissues', tscore = sum(dim_mat$tscore), pathScore_reactome = sum(dim_mat$pathScore_reactome), pathScore_GO = sum(dim_mat$pathScore_GO), 
+                 pathScore_tot = sum(dim_mat$pathScore_tot)))
 perc_mat <- rbind(perc_mat, data.frame(tissue = 'All Tissues', tscore = int_mat$tscore[int_mat$tissue == 'All Tissues']/dim_mat$tscore[int_mat$tissue == 'All Tissues'], 
                                        pathScore_reactome = int_mat$pathScore_reactome[int_mat$tissue == 'All Tissues']/dim_mat$pathScore_reactome[int_mat$tissue == 'All Tissues'], 
-                                       pathScore_GO = int_mat$pathScore_GO[int_mat$tissue == 'All Tissues']/dim_mat$pathScore_GO[int_mat$tissue == 'All Tissues']))
+                                       pathScore_GO = int_mat$pathScore_GO[int_mat$tissue == 'All Tissues']/dim_mat$pathScore_GO[int_mat$tissue == 'All Tissues'], 
+                                       pathScore_tot = int_mat$pathScore_tot[int_mat$tissue == 'All Tissues']/dim_mat$pathScore_tot[int_mat$tissue == 'All Tissues']))
 pval_mat <- rbind(pval_mat, data.frame(tissue = 'All Tissues', tscore = binom.test(int_mat$tscore[int_mat$tissue == 'All Tissues'], dim_mat$tscore[dim_mat$tissue == 'All Tissues'], p = 0.5, alternative = c("greater"))$p.value, 
                                        pathScore_reactome = binom.test(int_mat$pathScore_reactome[int_mat$tissue == 'All Tissues'], dim_mat$pathScore_reactome[dim_mat$tissue == 'All Tissues'], p = 0.5, alternative = c("greater"))$p.value, 
-                                       pathScore_GO = binom.test(int_mat$pathScore_GO[int_mat$tissue == 'All Tissues'], dim_mat$pathScore_GO[dim_mat$tissue == 'All Tissues'], p = 0.5, alternative = c("greater"))$p.value))
-                                        
+                                       pathScore_GO = binom.test(int_mat$pathScore_GO[int_mat$tissue == 'All Tissues'], dim_mat$pathScore_GO[dim_mat$tissue == 'All Tissues'], p = 0.5, alternative = c("greater"))$p.value, 
+                                       pathScore_tot = binom.test(int_mat$pathScore_tot[int_mat$tissue == 'All Tissues'], dim_mat$pathScore_tot[dim_mat$tissue == 'All Tissues'], p = 0.5, alternative = c("greater"))$p.value))
+
 res_tab <- list(dim_tissues = dim_tissues, dim_disc_sign = dim_mat, int_disc_rep = int_mat, perc_disc_rep = perc_mat, pval_disc_rep = pval_mat)
 
 # save
@@ -200,7 +213,6 @@ pl_bar <- ggplot(data = df, mapping = aes(x = tissue, y = perc, fill = tissue))+
 ggsave(plot = pl_bar, filename = sprintf('%s/signConcordance_discovery%s_replication_signFDR%.2f.png', outFold, pheno_name, pval_thr_FDR), width = 9, height = 3.7, dpi = 500)
 ggsave(plot = pl_bar, filename = sprintf('%s/signConcordance_discovery%s_replication_signFDR%.2f.pdf', outFold, pheno_name, pval_thr_FDR), width = 9, height = 3.7,  dpi = 500, compress = F)
 
-
 # dot plot
 df$nsign <- c(res_tab$dim_disc_sign$tscore, res_tab$dim_disc_sign$pathScore_reactome, res_tab$dim_disc_sign$pathScore_GO)
 pl_dot <- ggplot(data = df, mapping = aes(x = tissue, y = perc, color = tissue, size = nsign))+
@@ -220,6 +232,52 @@ ggsave(plot = pl_dot, filename = sprintf('%s/signConcordance_discovery%s_replica
 ggsave(plot = pl_dot, filename = sprintf('%s/signConcordance_discovery%s_replication_signFDR%.2f_dotplot.pdf', outFold, pheno_name, pval_thr_FDR), width = 9, height = 3.7,  dpi = 500, compress = F)
 
 
+# pathScore together
+
+df <- data.frame(tissue = rep(res_tab$perc_disc_rep$tissue, 2),
+                 type = c(rep('T-score', nrow(res_tab$perc_disc_rep)),rep('Path-score (tot)', nrow(res_tab$perc_disc_rep))), 
+                 perc = c(res_tab$perc_disc_rep$tscore, res_tab$perc_disc_rep$pathScore_tot))
+
+df$pval <- c(res_tab$pval_disc_rep$tscore, res_tab$pval_disc_rep$pathScore_tot)
+df$sign_symbol <- ''
+df$sign_symbol[df$pval<=0.05 & df$pval>0.01] <- '*'
+df$sign_symbol[df$pval<=0.01 & df$pval>0.001] <- '**'
+df$sign_symbol[df$pval<=0.001 & df$pval>0.0001] <- '***'
+df$sign_symbol[df$pval<=0.0001] <- '****'
+df$pos <- df$perc+0.05
+df$tissue <- factor(df$tissue, levels = res_tab$perc_disc_rep$tissue)
+df$type <- factor(df$type, levels = c('T-score', 'Path-score (tot)'))
+
+pl_bar <- ggplot(data = df, mapping = aes(x = tissue, y = perc, fill = tissue))+
+  geom_bar(stat = 'identity',color = 'black', alpha = 0.7, width = 0.7)+
+  geom_hline(yintercept = 0.5, linetype = 'dashed', size = 0.7)+
+  geom_text(data = df, aes(x = tissue, y = pos, label = sign_symbol), size = 4, angle = 90)+
+  facet_wrap(.~type, nrow = 1)+
+  theme_bw()+theme(legend.position = 'none', axis.text.y = element_text(colour = color_tissues, size = 8), axis.title.y = element_blank())+
+  ylab('fraction concordance z')+
+  scale_fill_manual(values = color_tissues)+
+  coord_flip()
+
+ggsave(plot = pl_bar, filename = sprintf('%s/signConcordance_discovery%s_replication_signFDR%.2f_pathtot.png', outFold, pheno_name, pval_thr_FDR), width = 6, height = 3.5, dpi = 500)
+ggsave(plot = pl_bar, filename = sprintf('%s/signConcordance_discovery%s_replication_signFDR%.2f_pathtot.pdf', outFold, pheno_name, pval_thr_FDR), width = 6, height = 3.5,  dpi = 500, compress = F)
+
+# dot plot
+df$nsign <- c(res_tab$dim_disc_sign$tscore, res_tab$dim_disc_sign$pathScore_tot)
+pl_dot <- ggplot(data = df, mapping = aes(x = tissue, y = perc, color = tissue, size = nsign))+
+  geom_point(alpha = 0.7)+
+  geom_hline(yintercept = 0.5, linetype = 'dashed', size = 0.5)+
+  geom_text(data = df, aes(x =tissue, y = pos, label = sign_symbol), size = 4, angle = 90)+
+  facet_wrap(.~type, nrow = 1)+
+  theme_bw()+theme(legend.position = 'bottom', axis.text.y = element_text(colour = color_tissues, size = 8), axis.title.y = element_blank())+
+  ylab('fraction concordance z')+
+  scale_color_manual(values = color_tissues)+
+  scale_size_continuous(breaks = round(seq(min(df$nsign), max(df$nsign), length.out = 6)))+
+  labs(size = sprintf('n. of genes/pathway significant\n (FDR %.2f)', pval_thr_FDR))+
+  guides(color = FALSE, size=guide_legend(nrow=1,byrow=TRUE)) + coord_flip()
+
+
+ggsave(plot = pl_dot, filename = sprintf('%s/signConcordance_discovery%s_replication_signFDR%.2f_dotplot_pathtot.png', outFold, pheno_name, pval_thr_FDR), width = 6, height = 3.5, dpi = 500)
+ggsave(plot = pl_dot, filename = sprintf('%s/signConcordance_discovery%s_replication_signFDR%.2f_dotplot_pathtot.pdf', outFold, pheno_name, pval_thr_FDR), width = 6, height = 3.5,  dpi = 500, compress = F)
 
 #################################################
 ##### version 2: spearman correlation union #####
@@ -329,6 +387,5 @@ res_tab <- list(dim_tissues = dim_tissues, dim_union_sign = dim_union, corS_unio
                 corP_union = corP_mat, pval_corP_union = pval_corP_mat, jac_sim = jac_mat)
 # save
 save(res_tab,file = sprintf('%s/corr_discovery%sSign_replicationSign_pval%.2f.RData', outFold, pheno_name, pval_thr_corr))
-
 
 

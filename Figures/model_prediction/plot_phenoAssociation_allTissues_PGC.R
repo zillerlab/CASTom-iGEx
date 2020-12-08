@@ -13,11 +13,11 @@ options(bitmapType = 'cairo', device = 'png')
 parser <- ArgumentParser(description="plot pheno association")
 parser$add_argument("--fold", type = "character", help = "fold output")
 parser$add_argument("--functR", type = "character", help = "script with functions")
-parser$add_argument("--fold_tissue", type = "character",default = 'NA', help = "fold input case example enrichment")
-parser$add_argument("--fold_geno_input", type = "character", default = 'NA',help = "fold genotype input info (for case pathway)")
+parser$add_argument("--fold_tissue", type = "character",default = 'NA', nargs = '*', help = "fold input case example enrichment")
+parser$add_argument("--fold_geno_input", type = "character", default = 'NA', nargs = '*',help = "fold genotype input info (for case pathway)")
 parser$add_argument("--keep_path_file", type = "character", default = 'NA', help = "pathways to keep")
 parser$add_argument("--train_fold", type = "character", help = "train model fold")
-parser$add_argument("--train_fold_original", type = "character", default = 'NA', help = "train model fold")
+parser$add_argument("--train_fold_original", type = "character", nargs = '*', default = 'NA', help = "train model fold")
 parser$add_argument("--color_file", type = "character", help = "file with tissues color code")
 parser$add_argument("--gwas_known_file", type = "character", default = 'NA', help = "previusly associated genes")
 parser$add_argument("--pheno", type = "character", help = "name phenotype")
@@ -34,7 +34,7 @@ pheno <- args$pheno
 type_dat <- args$type_dat
 pval_FDR <- args$pval_FDR
 fold_geno_input <- args$fold_geno_input
-genes_known_file <- args$genes_known_file
+gwas_known_file <- args$gwas_known_file
 keep_path_file <- args$keep_path_file
 train_fold_original <- args$train_fold_original
 functR <- args$functR
@@ -297,7 +297,6 @@ plot_showcase(gene_res = gene_res, gene_info = gene_info, genes_path = genes_pat
               tissue = tissue, pathway = pathway, color_tmp = color_tmp, id_pval_path = 13, 
               pheno = pheno, fold = fold, resBeta = resBeta, train_fold_tissue = train_fold_tissue, fold_geno_input_tmp = fold_geno_input[2], 
               train_fold_original_tmp = train_fold_original[2], name_gwas_pval = 'PGC_PVAL')
-
 
 
 

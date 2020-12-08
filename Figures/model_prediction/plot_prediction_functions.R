@@ -681,11 +681,11 @@ plot_showcase <- function(gene_res, gene_info, genes_path, tissue, pathway, colo
       data = subset(new_df, path == 1), aes(label = new_df$name[new_df$path==1]), size = 3.9, color = 'black', box.padding = unit(0.35, "lines"), point.padding = unit(0.3, "lines"))+
     xlab('chromosome') +  ylab('-log10(pvalue)')+ theme_bw() +
     theme(plot.title = element_text(hjust = 0.5), text = element_text(size = 15),
-          axis.text.x=element_text(size = 11, angle = 45, hjust = 1, vjust = 1),
+          axis.text.x=element_text(size = 10, angle = 45, hjust = 1, vjust = 1),
           axis.text.y=element_text(size = 11), legend.position = 'none')+
     # scale_size_discrete(range = c(1.2, 0.3, 0.3))+
     #scale_alpha_discrete(range = c(1, 0.5))+
-    scale_x_continuous(breaks = df_add$start_plot, labels = c(1:22))
+    scale_x_continuous(breaks = df_add$start_plot, labels = paste0('chr', c(1:22)))
   
   ggsave(filename = sprintf('%smanhattanPlot_tscore_genes_%s_%s_%s.png', fold, pheno, tissue, new_path), plot = pl_manh, width = 10, height = 5, dpi=500, device = 'png')
   ggsave(filename = sprintf('%smanhattanPlot_tscore_genes_%s_%s_%s.pdf', fold, pheno, tissue, new_path), plot = pl_manh, width = 10, height = 5, device = 'pdf')
@@ -749,9 +749,9 @@ plot_showcase <- function(gene_res, gene_info, genes_path, tissue, pathway, colo
     geom_point(size = 1) + ggtitle(sprintf('GWAS pvalues for %s', pheno))+
     xlab('chromosome') +  ylab('-log10(pvalue)')+ theme_bw() +
     theme(plot.title = element_text(hjust = 0.5), text = element_text(size = 11),
-          axis.text.x=element_text(size = 11, angle = 45, hjust = 1, vjust = 1),
+          axis.text.x=element_text(size = 10, angle = 45, hjust = 1, vjust = 1),
           axis.text.y=element_text(size = 11), legend.position = 'bottom')+
-    scale_x_continuous(breaks = df_start_end$start_plot, labels = c(1:22), limits = c(df_start_end$start_plot[1], sum(df_start_end$end)))+
+    scale_x_continuous(breaks = df_start_end$start_plot, labels = paste0('chr', c(1:22)), limits = c(df_start_end$start_plot[1], sum(df_start_end$end)))+
     scale_color_gradient2(midpoint=0, low="blue", mid="grey",
                           high="red", space ="Lab")+
     labs(color = "reg. coefficient")
