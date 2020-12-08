@@ -627,6 +627,54 @@ venn_plot <- function(gwas_known_file, tscore, pval_FDR, type_dat, type_mat){
   
 }
 
+# Venn diagram
+venn_plot_genes <- function(genes_known_file, tscore, pval_FDR, type_dat, type_mat){
+  
+  genes_new <- unique(tscore$external_gene_name[tscore[, 10] <= pval_FDR])
+  genes_new_ensembl <- unique(tscore$ensembl_gene_id[tscore[, 10] <= pval_FDR])
+  
+  genes_old <- get(load(genes_known_file))
+  for(i in 1:length(genes_old)){
+    
+    genes_tot <- genes_old[[i]]
+    genes_priler <- genes_new
+    if(length(intersect(genes_tot, genes_new)) == 0){
+      genes_priler <- genes_new_ensembl
+    }
+    x <- list(genes_tot, genes_priler)
+    names(x) <- c(paste('Previous' ,names(genes_old)[i], 'Genes'), 'PriLer Genes')
+    
+    file_name <-  sprintf('%sVennDiag_list_genes%s_%s_%s', fold, names(genes_old)[i], type_mat, type_dat)
+    
+    png(sprintf('%s.png',file_name), units = 'in',width = 4, height = 4, res = 500)
+    v0 <- venn.diagram( x, filename=NULL,fill = c("grey60", "cornflowerblue"),
+                        alpha = c(0.5, 0.5), cat.cex = 1.1, cex=1.3, cat.pos = 0, margin = 0.12)
+    overlaps <- calculate.overlap(x)
+    # extract indexes of overlaps from list names
+    indx <- as.numeric(substr(names(overlaps),2,2))
+    # v0[[7]]$label  <- paste(overlaps[[3]], collapse="\n")  
+    grid.newpage()
+    grid.draw(v0)
+    dev.off()
+    
+    pdf(sprintf('%s.pdf',file_name),width = 4, height = 4)
+    v0 <- venn.diagram( x, filename=NULL,fill = c("grey60", "cornflowerblue"),
+                        alpha = c(0.5, 0.5), cat.cex = 1.1, cex=1.3, cat.pos = 0, margin = 0.12)
+    overlaps <- calculate.overlap(x)
+    # extract indexes of overlaps from list names
+    indx <- as.numeric(substr(names(overlaps),2,2))
+    # v0[[7]]$label  <- paste(overlaps[[3]], collapse="\n")  
+    grid.newpage()
+    grid.draw(v0)
+    dev.off()
+    
+  }
+  
+  
+  
+}
+
+
 # plot showcase
 plot_showcase <- function(gene_res, gene_info, genes_path, tissue, pathway, color_tmp, id_pval_path, pheno, fold, resBeta, train_fold_tissue, fold_geno_input_tmp, train_fold_original_tmp, 
                           name_gwas_pval){
@@ -779,5 +827,6 @@ plot_showcase <- function(gene_res, gene_info, genes_path, tissue, pathway, colo
 #   new <- latest_res[tmp$chr_new[i] - as.numeric(latest_res$chr) == 0 & abs(tmp$TSS_start[i] - as.numeric(latest_res$pos))<500000 ,]
 #   if(nrow(new) == 0){tmp$new_loci[i] <- T}
 # }
+
 
 

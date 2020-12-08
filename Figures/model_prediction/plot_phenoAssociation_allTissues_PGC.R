@@ -19,7 +19,7 @@ parser$add_argument("--keep_path_file", type = "character", default = 'NA', help
 parser$add_argument("--train_fold", type = "character", help = "train model fold")
 parser$add_argument("--train_fold_original", type = "character", nargs = '*', default = 'NA', help = "train model fold")
 parser$add_argument("--color_file", type = "character", help = "file with tissues color code")
-parser$add_argument("--gwas_known_file", type = "character", default = 'NA', help = "previusly associated genes")
+parser$add_argument("--genes_known_file", type = "character", default = 'NA', help = "previusly associated genes")
 parser$add_argument("--pheno", type = "character", help = "name phenotype")
 parser$add_argument("--type_dat", type = "character", help = "name to append to plot file")
 parser$add_argument("--pval_FDR", type = "double", default = 0.05, help = "pvalue threshold")
@@ -34,7 +34,7 @@ pheno <- args$pheno
 type_dat <- args$type_dat
 pval_FDR <- args$pval_FDR
 fold_geno_input <- args$fold_geno_input
-gwas_known_file <- args$gwas_known_file
+genes_known_file <- args$genes_known_file
 keep_path_file <- args$keep_path_file
 train_fold_original <- args$train_fold_original
 functR <- args$functR
@@ -53,8 +53,7 @@ functR <- args$functR
 # fold_geno_input <- c('/psycl/g/mpsziller/lucia/SCZ_PGC/eQTL_PROJECT/Meta_Analysis_SCZ/DLPC_CMC/Genotype_VariantsInfo_maf001_info06_CMC-PGCgwas-SCZ-PGCall_',
 #                      '/psycl/g/mpsziller/lucia/SCZ_PGC/eQTL_PROJECT/Meta_Analysis_SCZ/INPUT_DATA_GTEx/Genotype_VariantsInfo_maf001_info06_GTEx-PGCgwas-SCZ-PGCall_')
 # train_fold_original <- c('/psycl/g/mpsziller/lucia/SCZ_PGC/eQTL_PROJECT/Meta_Analysis_SCZ/DLPC_CMC/','/psycl/g/mpsziller/lucia/SCZ_PGC/eQTL_PROJECT/OUTPUT_GTEx/train_GTEx/')
-# #gwas_known_file = '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB_CADSchukert/GWAS_CAD_HARD_loci_annotatedGenes.txt'
-# #priler_loci_file = '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB_CADSchukert/newloci_Priler_tscore_CAD_HARD.txt'
+# genes_known_file <- '/psycl/g/mpsziller/lucia/SCZ_PGC/eQTL_PROJECT/previousGenes_TWAS_prediXcan.RData'
 
 source(functR)
 
@@ -159,29 +158,29 @@ pl_manhattan_function(data_input = tscore_red_df, type_mat = 'tscore', outFold =
 pl_manhattan_forpubl_function(data_input = tscore_red_df, type_mat = 'tscore', outFold = fold, type_dat = paste(type_dat, '(no MHC region)'))
 
 # Venn diagram for significnat genes #
-if(gwas_known_file != 'NA'){
+if(genes_known_file != 'NA'){
   
-  venn_plot(gwas_known_file = gwas_known_file, tscore = tscore, pval_FDR = pval_FDR, type_dat = type_dat, type_mat = 'tscore')  
+  venn_plot_genes(genes_known_file = genes_known_file, tscore = tscore_red, pval_FDR = pval_FDR, type_dat = type_dat, type_mat = 'tscore')  
 
-  # manhattan plot for new associaiton
-  new_loci <- read.table(priler_loci_file, h=T, stringsAsFactors = F, sep = '\t')
-  new_loci_ann <- read.table(priler_loci_ann_file, h=T, stringsAsFactors = F, sep = '\t')
-  new_loci_ann = new_loci_ann[!new_loci_ann$best_GWAS_sign,]
-  tscore_df <- create_df_manhattan_plot(tissues_name = tissues, res = tscore, id_pval = 8, pval_FDR = pval_FDR, df_color = color_tissues, id_name = 2, gene = T)
-  tscore_df$df$external_gene_name <- sapply(tscore_df$df$name, 
-                                            function(x) strsplit(x, split = '\n')[[1]][1])
-  # modify annotation to plot only interested genes, only 1 gene per locus
-  new_loci$id <- paste0(new_loci$external_gene_name, '\n', new_loci$tissue)
-  tscore_df$df$sign_name[!tscore_df$df$name %in% new_loci$id] <- 'no'
-  for(i in 1:nrow(new_loci_ann)){
-    tmp <- new_loci_ann$external_gene_name[i]
-    tmp <- strsplit(tmp, split = '[,]')[[1]]
-    id_keep <- which.max(abs(tscore_df$df$zstat[tscore_df$df$external_gene_name %in% tmp]))
-    names_excl <- tscore_df$df$name[tscore_df$df$external_gene_name %in% tmp][-id_keep]
-    tscore_df$df$sign_name[tscore_df$df$name %in% names_excl] <- 'no'
-  }
-  tscore_df$df$name[tscore_df$df$sign_name == 'no'] <- '' 
-  pl_manhattan_function(data_input = tscore_df, type_mat = 'tscore', outFold = paste0(fold, 'newloci_'), type_dat = type_dat)
+  # # manhattan plot for new associaiton
+  # new_loci <- read.table(priler_loci_file, h=T, stringsAsFactors = F, sep = '\t')
+  # new_loci_ann <- read.table(priler_loci_ann_file, h=T, stringsAsFactors = F, sep = '\t')
+  # new_loci_ann = new_loci_ann[!new_loci_ann$best_GWAS_sign,]
+  # tscore_df <- create_df_manhattan_plot(tissues_name = tissues, res = tscore, id_pval = 8, pval_FDR = pval_FDR, df_color = color_tissues, id_name = 2, gene = T)
+  # tscore_df$df$external_gene_name <- sapply(tscore_df$df$name, 
+  #                                           function(x) strsplit(x, split = '\n')[[1]][1])
+  # # modify annotation to plot only interested genes, only 1 gene per locus
+  # new_loci$id <- paste0(new_loci$external_gene_name, '\n', new_loci$tissue)
+  # tscore_df$df$sign_name[!tscore_df$df$name %in% new_loci$id] <- 'no'
+  # for(i in 1:nrow(new_loci_ann)){
+  #   tmp <- new_loci_ann$external_gene_name[i]
+  #   tmp <- strsplit(tmp, split = '[,]')[[1]]
+  #   id_keep <- which.max(abs(tscore_df$df$zstat[tscore_df$df$external_gene_name %in% tmp]))
+  #   names_excl <- tscore_df$df$name[tscore_df$df$external_gene_name %in% tmp][-id_keep]
+  #   tscore_df$df$sign_name[tscore_df$df$name %in% names_excl] <- 'no'
+  # }
+  # tscore_df$df$name[tscore_df$df$sign_name == 'no'] <- '' 
+  # pl_manhattan_function(data_input = tscore_df, type_mat = 'tscore', outFold = paste0(fold, 'newloci_'), type_dat = type_dat)
   
 }
 
@@ -297,6 +296,7 @@ plot_showcase(gene_res = gene_res, gene_info = gene_info, genes_path = genes_pat
               tissue = tissue, pathway = pathway, color_tmp = color_tmp, id_pval_path = 13, 
               pheno = pheno, fold = fold, resBeta = resBeta, train_fold_tissue = train_fold_tissue, fold_geno_input_tmp = fold_geno_input[2], 
               train_fold_original_tmp = train_fold_original[2], name_gwas_pval = 'PGC_PVAL')
+
 
 
 

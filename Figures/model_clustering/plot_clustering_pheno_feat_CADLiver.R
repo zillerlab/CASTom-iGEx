@@ -117,7 +117,10 @@ for(i in 1:length(merge_path)){
   tmp_feat <- path_feat_tot[path_feat_tot$feat %in% merge_path[i],]
   tmp_feat_mat <- sapply(unique(tmp_feat$tissue), function(x) tmp_feat$estimates[tmp_feat$tissue == x])
   tmp_feat_pval <- sapply(unique(tmp_feat$tissue), function(x) tmp_feat$pval[tmp_feat$tissue == x])
-  tmp_feat_mat[tmp_feat_pval > 0.05] <- 0
+  tmp_feat_pvalc <- sapply(unique(tmp_feat$tissue), function(x) tmp_feat$pval_corr[tmp_feat$tissue == x])
+  if(merge_path[i] != 'xenobiotic catabolic process'){
+    tmp_feat_mat[tmp_feat_pval > 0.0001 & tmp_feat_pvalc > 0.05] <- 0
+  }
   
   if(ncol(tmp_feat_mat) >1){
     
@@ -129,8 +132,8 @@ for(i in 1:length(merge_path)){
     tissue_list <- unname(tissue_list[!duplicated(tissue_list)])
     
     for(j in 1:length(tissue_list)){
-      tmp_tissue <- strsplit(tissue_list[j], split = '[,]')[[1]]
       
+      tmp_tissue <- strsplit(tissue_list[j], split = '[,]')[[1]]
       if(length(tmp_tissue) > 1){
         onlyt <- tmp_feat[tmp_feat$tissue %in% tmp_tissue, ]
         keep_tissue[[j]] <- onlyt$tissue[which.min(onlyt$pval)]
@@ -219,7 +222,7 @@ gene_feat$new_id <- gene_feat$new_id_v2
 
 #### function ####
 pheat_pl_tot <- function(pheno_name, mat_score, info_feat, test_feat, pval_thr_est = 0.05, 
-                         cl, height_pl = 10, width_pl = 7, outFile, cap = NA, cap_est = 0, res_pl = 200, tissue = NULL, color_tissue){
+                         cl, height_pl = 10, width_pl = 7, outFile, cap = NA, cap_est = 0, res_pl = 200, tissue = NULL, color_tissue, def_mar = 2){
   
   if(!is.null(tissue)){
     info_feat <- info_feat[info_feat$tissue %in% tissue, ]
@@ -318,11 +321,11 @@ pheat_pl_tot <- function(pheno_name, mat_score, info_feat, test_feat, pval_thr_e
   ht_list <- tot_pl_p
   
   png(file=paste0(outFile, '.png'), res = res_pl, units = 'in', width = width_pl, height = height_pl)
-  draw(ht_list , annotation_legend_list = list(lgd_est, lgd_sig), merge_legend = T, auto_adjust = T, padding = unit(c(2, 2 + side_par, 2, 2), "mm"))
+  draw(ht_list , annotation_legend_list = list(lgd_est, lgd_sig), merge_legend = T, auto_adjust = T, padding = unit(c(2, def_mar + side_par, 2, 2), "mm"))
   dev.off()
   
   pdf(file=paste0(outFile, '.pdf'), width = width_pl, height = height_pl)
-  draw(ht_list , annotation_legend_list = list(lgd_est, lgd_sig), merge_legend = T, auto_adjust = T, padding = unit(c(2, 2 + side_par, 2, 2), "mm"))
+  draw(ht_list , annotation_legend_list = list(lgd_est, lgd_sig), merge_legend = T, auto_adjust = T, padding = unit(c(2, def_mar + side_par, 2, 2), "mm"))
   dev.off()
   
 }
@@ -444,12 +447,12 @@ pheat_pl_tscore <- function(pheno_name, mat_tscore, info_feat_tscore, test_feat_
 ##################
 
 pheat_pl_tot(pheno_name = 'CAD', mat_score = path_input_tot, info_feat = path_info_tot, test_feat = path_feat_tot, cl = res_cl$cl_best, pval_thr_est = 0.05, 
-             outFile = sprintf('OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/cl%s_pathOriginal_tscoreClusterCases',  tissue_name), 
-             res_pl = 300, height_pl = 12, width_pl = 19, cap = 3, cap_est = 0.6, color_tissue = color_tissue)
+             outFile = sprintf('OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/cl%s_pathOriginal_tscoreClusterCases_v2',  tissue_name), 
+             res_pl = 300, height_pl = 10, width_pl = 21, cap = 3, cap_est = 0.6, color_tissue = color_tissue, def_mar = 30)
 
 
 pheat_pl_tscore(pheno_name = 'CAD', mat_tscore = tscore_input, info_feat_tscore = gene_info, test_feat_tscore = gene_feat , cl = res_cl$cl_best,  pval_thr_est = 0.05, 
-                outFile = sprintf('OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/cl%s_tscoreOriginal_tscoreClusterCases',  tissue_name), 
+                outFile = sprintf('OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/cl%s_tscoreOriginal_tscoreClusterCases_v2',  tissue_name), 
                 res_pl = 150, height_pl = 20, width_pl = 13, cap = 3, cap_est = 1 , color_tissue = color_tissue)
 
 
@@ -733,4 +736,5 @@ pl <- ggradar(df_diff,  grid.min = 0, grid.max = 1, grid.mid = 0.5,
 
 ggsave(plot = pl, filename = sprintf('OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/cl%s_spiderPlotTreat_tscoreClusterCases.png',  tissue_name), device = 'png', width = 10, height = 10, dpi = 320)
 ggsave(plot = pl, filename = sprintf('OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/cl%s_spiderPlotTreat_tscoreClusterCases.pdf',  tissue_name), device = 'pdf', width = 10, height = 10)
+
 
