@@ -2,7 +2,7 @@
 library(qvalue)
 
 setwd('/psycl/g/mpsziller/lucia/SCZ_PGC/eQTL_PROJECT/Meta_Analysis_SCZ')
-tissues_name <- read.table('Tissues_PGC', h=F, stringsAsFactors = F)$V1
+tissues_name <- read.table('Tissues_PGC_red2', h=F, stringsAsFactors = F)$V1
 
 df_tscore <- df_pathR <- df_pathGO <- df_pathWiki <- list()
 

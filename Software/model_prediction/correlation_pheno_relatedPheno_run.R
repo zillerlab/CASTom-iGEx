@@ -46,17 +46,17 @@ tscore_pheno_file <- args$tscore_pheno_file
 outFold <- args$outFold
 
 ########################################################################################################################
-# phenoFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/INPUT_DATA_GTEx/CAD/Covariates/UKBB/'
-# tissue_name <- c('Liver')
-# pheno_name_comp <- 'CAD_HARD'
-# inputFold_rel <- paste0('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/',tissue_name,'/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/')
-# tscore_pheno_file <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/tscore_pval_CAD_HARD_covCorr.txt'
-# pathR_pheno_file <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/path_Reactome_pval_CAD_HARD_covCorr_filt.txt'
-# pathGO_pheno_file <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/path_GO_pval_CAD_HARD_covCorr_filt.txt'
-# outFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/enrichment_CADHARD_res/'
+# phenoFold <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/INPUT_DATA/Covariates/'
+# tissue_name <- c('Brain_Frontal_Cortex_BA9')
+# pheno_name_comp <- 'SCZ'
+# inputFold_rel <- paste0('/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_UKBB/', tissue_name, '/200kb/noGWAS/devgeno0.01_testdevgeno0/')
+# tscore_pheno_file <- 'Meta_Analysis_SCZ/OUTPUT_all/tscore_pval_SCZ_covCorr.txt'
+# pathR_pheno_file <- 'Meta_Analysis_SCZ/OUTPUT_all/path_Reactome_pval_SCZ_covCorr_filt.txt'
+# pathGO_pheno_file <- 'Meta_Analysis_SCZ/OUTPUT_all/path_GO_pval_SCZ_covCorr_filt.txt'
+# outFold <- 'Meta_Analysis_SCZ/Brain_Frontal_Cortex_BA9/enrichment_SCZ-UKBB_res/'
 # pval_FDR_pheno <- 0.05
 # pval_FDR_rel <- 0.05
-# perc_par <- 0.99
+# perc_par <- 0.3
 ##########################################################################################################################
 
 ## create function to load data across all tissues ##
@@ -129,7 +129,6 @@ permutation_test_corr <-  function(zstat_pheno, zstat_rel, cor_value, nperm = 10
   
 }
 
-  
 ###################################################
 ## load pheno results
 tscore <- read.table(tscore_pheno_file, h=T, stringsAsFactors = F, sep = '\t')
@@ -143,7 +142,7 @@ tscore$new_id <- paste0(tscore$ensembl_gene_id, '_tissue_', tscore$tissue)
 tot_path <- rbind(cbind(pathR, data.frame(type = rep('Reactome', nrow(pathR)))), 
                   cbind(pathGO[, !colnames(pathGO) %in% c('path_id', 'path_ont')], data.frame(type = rep('GO', nrow(pathGO)))))
 tot_path$new_id <- paste0(tot_path$path, '_tissue_', tot_path$tissue, '_type_', tot_path$type)
-  
+
 # create list with pathway and gene annotation
 tot_path_ann <- vector(mode = 'list', length = nrow(tot_path))
 for(i in 1:nrow(tot_path)){
@@ -195,10 +194,24 @@ filt_path <- do.call(rbind, filt_path)
 
 #######################################################
 ### load related phenotype and intersect with pheno ###
+if(grepl('CAD',pheno_name_comp)){
+  pheno_name <- c(read.table(sprintf('%smatch_cov_pheno_CADrel_filter.txt', phenoFold), h=F, stringsAsFactors = F)$V1, 'ICD10_Anaemia', 'ICD10_Circulatory_system', 'ICD10_Endocrine', 'ICD10_Respiratory_system')
+  pheno_name <- pheno_name[!pheno_name %in% c('Medication', 'Medical_conditions')]
+  pheno_input <- read.delim(sprintf('%sphenotypeDescription_PHESANTproc_CADrelatedpheno_annotated.txt', phenoFold), h=T, stringsAsFactors = F, sep = '\t')
+}
 
-pheno_name <- c(read.table(sprintf('%smatch_cov_pheno_CADrel_filter.txt', phenoFold), h=F, stringsAsFactors = F)$V1, 'ICD10_Anaemia', 'ICD10_Circulatory_system', 'ICD10_Endocrine', 'ICD10_Respiratory_system')
-pheno_name <- pheno_name[!pheno_name %in% c('Medication', 'Medical_conditions')]
-pheno_input <- read.delim(sprintf('%sphenotypeDescription_PHESANTproc_CADrelatedpheno_annotated.txt', phenoFold), h=T, stringsAsFactors = F, sep = '\t')
+if(grepl('SCZ', pheno_name_comp)){
+  
+  pheno_name <- c(read.table(sprintf('%smatch_cov_pheno.txt', phenoFold), h=F, stringsAsFactors = F)$V1, 'mixedpheno_Psychiatric', 'ICD10_Psychiatric', 'ICD9_Psychiatric', 
+                  read.table(sprintf('%smatch_cov_pheno_SchunkertApp.txt', phenoFold), h=F, stringsAsFactors = F)$V1, 'Blood_biochemistry')
+  pheno_input <- read.delim(sprintf('%sphenotypeDescription_PHESANTproc.txt', phenoFold), h=T, stringsAsFactors = F, sep = '\t')
+  tmp <- read.delim(sprintf('%sphenotypeDescription_PHESANTproc_CADrelatedpheno.txt', phenoFold), h=T, stringsAsFactors = F, sep = '\t')
+  pheno_input <- rbind(pheno_input, tmp)
+  pheno_input <- pheno_input[!duplicated(pheno_input$pheno_id),]
+  pheno_name <- pheno_name[!pheno_name %in% c('Numeric_memory','Diffusion_brain_MRI', 'Medical_conditions', 'ICD10_Psychiatric', 'ICD9_Psychiatric', 'Resting_functional_brain_MRI',
+                                              'dMRI_skeleton', 'T2-weighted_brain_MRI', 'Estimated_nutrients_yesterday')]
+  
+}
 
 pheno_info <- list()
 test_tscore <- test_path <- list()
@@ -207,8 +220,7 @@ for(j in 1:length(pheno_name)){
   
   print(pheno_name[j])
   
-  if(pheno_name[j] %in% c('Blood_biochemistry', 'Blood_count')){
-    
+  if(pheno_name[j] %in% c('Blood_biochemistry', 'Blood_count') & grepl('CAD', pheno_name_comp)){
     file_toload <- sprintf('%s/pval_%s_withMed_pheno_covCorr.RData', inputFold_rel, pheno_name[j])
   }else{
     file_toload <- sprintf('%s/pval_%s_pheno_covCorr.RData', inputFold_rel, pheno_name[j])
@@ -218,6 +230,49 @@ for(j in 1:length(pheno_name)){
   rm(final)
   
   id_keep <- 1:nrow(tmp$pheno)
+  if(grepl('SCZ', pheno_name_comp) & pheno_name[j] == 'Alcohol_use'){
+    id_keep <-  which(tmp$pheno$Field %in% c('Amount of alcohol drunk on a typical drinking day', 'Frequency of drinking alcohol', 'Frequency of consuming six or more units of alcohol'))
+  }
+  if(grepl('SCZ', pheno_name_comp) & pheno_name[j] == 'Cannabis_use'){
+    id_keep <-  which(tmp$pheno$Field %in% c('Ever taken cannabis', 'Maximum frequency of taking cannabis'))
+  }
+  if(grepl('SCZ', pheno_name_comp) & pheno_name[j] == 'Anxiety'){
+    id_keep <-  which(!(grepl('Recent', tmp$pheno$Field) | grepl('undertaken', tmp$pheno$Field)))
+  }
+  if(grepl('SCZ', pheno_name_comp) & pheno_name[j] == 'Depression'){
+    id_keep <-  which(!(grepl('Recent', tmp$pheno$Field) | grepl('undertaken', tmp$pheno$Field)))
+  }
+  if(grepl('SCZ', pheno_name_comp) & pheno_name[j] == 'dMRI_weighted_means'){
+    id_keep <-  which(grepl('Weighted-mean MD in', tmp$pheno$Field) | grepl('Weighted-mean ICVF in', tmp$pheno$Field))
+  }
+  if(grepl('SCZ', pheno_name_comp) & pheno_name[j] == 'Fluid_intelligence'){
+    id_keep <-  which(grepl('UK Biobank Assessment Centre',tmp$pheno$Path) & !tmp$pheno$Field %in% c('Attempted fluid intelligence (FI) test.', 'Fluid intelligence completion status'))
+  }
+  if(grepl('SCZ', pheno_name_comp) & pheno_name[j] == 'Pairs_matching'){
+    id_keep <- which(grepl('UK Biobank Assessment Centre',tmp$pheno$Path) & !tmp$pheno$Field %in% c('Number of incorrect matches in round'))
+  }
+  if(grepl('SCZ', pheno_name_comp) & pheno_name[j] == 'Prospective_memory'){
+    id_keep <-  which(tmp$pheno$Field %in% c('Time to answer', 'Prospective memory result'))
+  }
+  if(grepl('SCZ', pheno_name_comp) & pheno_name[j] == 'Sleep'){
+    id_keep <-  which(tmp$pheno$Field %in% c('Sleep duration', 'Sleepness / insomnia', 'Daytime dozing / sleeping (narcolepsy)'))
+  }
+  if(grepl('SCZ', pheno_name_comp) & pheno_name[j] == 'Smoking'){
+    id_keep <-  which(tmp$pheno$Field %in% c('Current tobacco smoking', 'Past tobacco smoking', 'Light smokers, at least 100 smokes in lifetime', 'Number of cigarettes currently smoked daily (current cigarette smokers)', 'Ever smoked'))
+  }
+  if(grepl('SCZ', pheno_name_comp) & pheno_name[j] == 'Susceptibility_weighted_brain_MRI'){
+    id_keep <-  which(!tmp$pheno$Field %in% c('Discrepancy between SWI brain image and T1 brain image'))
+  }
+  if(grepl('SCZ', pheno_name_comp) & pheno_name[j] == 'Symbol_digit_substitution'){
+    id_keep <-  which(!tmp$pheno$Field %in% c('Symbol digit completion status'))
+  }
+  if(grepl('SCZ', pheno_name_comp) & pheno_name[j] =='T1_structural_brain_MRI'){
+    id_keep <- which(grepl('Volume',tmp$pheno$Field))
+  }
+  if(grepl('SCZ', pheno_name_comp) & pheno_name[j] == 'Trail_making'){
+    id_keep <-  which(!tmp$pheno$Field %in% c('Trail making completion status'))
+  }
+ 
   pheno_info[[j]] <- data.frame(pheno = tmp$pheno$pheno_id[id_keep], pheno_type = pheno_name[j], Field = tmp$pheno$Field[id_keep], meaning = tmp$pheno$Coding_meaning[id_keep])
   test_tscore[[j]] <- test_path[[j]] <- data.frame(N = rep(0, length(id_keep)),
                                                    K =rep(0, length(id_keep)), n =rep(0, length(id_keep)), k= rep(0, length(id_keep)), 
@@ -228,24 +283,22 @@ for(j in 1:length(pheno_name)){
   tscore_pheno <- new_pheno$tscore
   pathR_pheno <- new_pheno$pathR
   pathGO_pheno <- new_pheno$pathGO
-  tot_path_pheno <- lapply(id_keep, function(x) rbind(cbind(pathR_pheno[[x]], data.frame(type = rep('Reactome', nrow(pathR_pheno[[x]])))), 
-                    cbind(pathGO_pheno[[x]][, !colnames(pathGO_pheno[[x]]) %in% c('path_id', 'path_ont')], data.frame(type = rep('GO', nrow(pathGO_pheno[[x]]))))))
+  tot_path_pheno <- lapply(1:length(id_keep), function(x) rbind(cbind(pathR_pheno[[x]], data.frame(type = rep('Reactome', nrow(pathR_pheno[[x]])))), 
+                                                      cbind(pathGO_pheno[[x]][, !colnames(pathGO_pheno[[x]]) %in% c('path_id', 'path_ont')], data.frame(type = rep('GO', nrow(pathGO_pheno[[x]]))))))
   
   for(i in 1:length(tot_path_pheno)){
     tot_path_pheno[[i]]$new_id <- paste0(tot_path_pheno[[i]]$new_id, '_type_', tot_path_pheno[[i]]$type)
   }
   
-  # intersect with CAD
-  ### tscore ###
-  tscore_pheno <- lapply(tscore_pheno, function(x) x[x$new_id %in% tscore$new_id,])
-  tot_path_pheno <- lapply(tot_path_pheno, function(x) x[x$new_id %in% filt_path$new_id,])
-
+  # tscore_pheno <- lapply(tscore_pheno, function(x) x[x$new_id %in% tscore$new_id,])
+  # tot_path_pheno <- lapply(tot_path_pheno, function(x) x[x$new_id %in% filt_path$new_id,])
+  
   common_g <- lapply(tscore_pheno, function(x) intersect(x$new_id, tscore$new_id))
   
   test_tscore[[j]]$N <- sapply(common_g, length)
   test_tscore[[j]]$K <- sapply(common_g, function(x) nrow(tscore[tscore$new_id %in% x & tscore[,10] <= pval_FDR_pheno,]))
-  test_tscore[[j]]$n <- sapply(tscore_pheno, function(x) length(which(x[,10]<=pval_FDR_rel)))
-  test_tscore[[j]]$k <- sapply(tscore_pheno, function(x) nrow(x[x$new_id %in% tscore$new_id[tscore[,10] <= pval_FDR_pheno] & x[, 10] <= pval_FDR_rel,]))
+  test_tscore[[j]]$n <- mapply(function(x, y) sum(x[,10]<=pval_FDR_rel & x$new_id %in% y), x = tscore_pheno, y = common_g)
+  test_tscore[[j]]$k <- mapply(function(x, y) nrow(x[x$new_id %in% tscore$new_id[tscore[,10] <= pval_FDR_pheno] & x[, 10] <= pval_FDR_rel & x$new_id %in% y,]), x = tscore_pheno, y=common_g)
   vect_pheno <- rep(0,length(common_g[[1]]))
   vect_pheno[tscore[match(common_g[[1]], tscore$new_id), 10]<= pval_FDR_pheno] <- 1
   vect_rel <- lapply(common_g, function(x) rep(0,length(x)))
@@ -263,14 +316,14 @@ for(j in 1:length(pheno_name)){
   
   test_tscore[[j]]$cor_spearman <- mapply(function(x, y) cor(x[match(y, x$new_id), 7], tscore[match(y, tscore$new_id), 7], method = 'spearman', use='pairwise.complete.obs'), x =tscore_pheno, y = common_g)
   test_tscore[[j]]$cor_pval <- mapply(function(x, y, z) permutation_test_corr(zstat_pheno = tscore[match(y, tscore$new_id), 7], zstat_rel =  x[match(y, x$new_id), 7], cor_value = z, nperm = 10000),
-                                     x = tscore_pheno, y = common_g, z = test_tscore[[j]]$cor_spearman)
+                                      x = tscore_pheno, y = common_g, z = test_tscore[[j]]$cor_spearman)
   
   ### path ###
   common_p <- lapply(tot_path_pheno, function(x) intersect(x$new_id, filt_path$new_id))
   test_path[[j]]$N <- sapply(common_p, length)
   test_path[[j]]$K <- sapply(common_p, function(x) nrow(filt_path[filt_path$new_id %in% x & filt_path[,15] <= pval_FDR_pheno,]))
-  test_path[[j]]$n <- sapply(tot_path_pheno, function(x) length(which(x[,15]<=pval_FDR_rel)))
-  test_path[[j]]$k <- sapply(tot_path_pheno, function(x) nrow(x[x$new_id %in% filt_path$new_id[filt_path[,15] <= pval_FDR_pheno] & x[, 15] <= pval_FDR_rel,]))
+  test_path[[j]]$n <- mapply(function(x, y) sum(x[,15]<=pval_FDR_rel & x$new_id %in% y), x = tot_path_pheno, y = common_p)
+  test_path[[j]]$k <- mapply(function(x, y) nrow(x[x$new_id %in% filt_path$new_id[filt_path[,15] <= pval_FDR_pheno] & x[, 15] <= pval_FDR_rel & x$new_id %in% y,]), x = tot_path_pheno, y=common_p)
   vect_pheno <- rep(0,length(common_p[[1]]))
   vect_pheno[filt_path[match(common_p[[1]], filt_path$new_id), 15]<= pval_FDR_pheno] <- 1
   vect_rel <- lapply(common_p, function(x) rep(0,length(x)))
@@ -287,7 +340,7 @@ for(j in 1:length(pheno_name)){
   }
   test_path[[j]]$cor_spearman <- mapply(function(x, y) cor(x[match(y, x$new_id), 12], filt_path[match(y, filt_path$new_id), 12], method = 'spearman', use='pairwise.complete.obs'), x = tot_path_pheno, y = common_p)
   test_path[[j]]$cor_pval <- mapply(function(x, y, z) permutation_test_corr(zstat_pheno = filt_path[match(y, filt_path$new_id), 12], zstat_rel =  x[match(y, x$new_id), 12], cor_value = z, nperm = 10000),
-                                      x = tot_path_pheno, y = common_p, z = test_path[[j]]$cor_spearman)
+                                    x = tot_path_pheno, y = common_p, z = test_path[[j]]$cor_spearman)
   
   # test_path[[j]]$cor_pval <-mapply(function(x, y) cor.test(x[match(y, x$new_id), 12], filt_path[match(y, filt_path$new_id), 12], method = 'spearman', use='pairwise.complete.obs')$p.value, x = tot_path_pheno, y = common_p)
   
@@ -319,8 +372,6 @@ test_path$pheno_type <- pheno_info$pheno_type
 # save test results (to be used together for all the tissues)
 res_test_enrichment <- list(tscore = test_tscore, pathScore = test_path, pheno = pheno_info, path_ann = filt_path)
 save(res_test_enrichment, file = sprintf('%scorrelation_enrich_%s_relatedPheno.RData', outFold, pheno_name_comp))
-
-
 
 
 

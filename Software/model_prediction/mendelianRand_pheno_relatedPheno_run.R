@@ -44,17 +44,17 @@ cor_file <- args$cor_file
 outFold <- args$outFold
 
 ########################################################################################################################
-# phenoFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/INPUT_DATA_GTEx/CAD/Covariates/UKBB/'
-# tissue_name <- 'Liver'
-# pheno_name_comp <- 'CAD_HARD'
-# inputFold_rel <- paste0('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/',tissue_name,'/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/')
-# pheno_file <- c('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/tscore_pval_CAD_HARD_covCorr_filt.txt')
-# pheno_file <- c('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/path_Reactome_pval_CAD_HARD_covCorr_filt.txt',
-                # '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/path_GO_pval_CAD_HARD_covCorr_filt.txt') 
-# cor_file <-  paste0('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/',tissue_name,'/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/correlation_estimate_tscore.RData')
+# phenoFold <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/INPUT_DATA/Covariates/'
+# tissue_name <- 'Brain_Cortex'
+# pheno_name_comp <- 'SCZ'
+# inputFold_rel <- paste0('/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_UKBB/',tissue_name, '/200kb/noGWAS/devgeno0.01_testdevgeno0/')
+# pheno_file <- c('Meta_Analysis_SCZ/OUTPUT_all/tscore_pval_SCZ_covCorr.txt')
+# # pheno_file <- c('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/path_Reactome_pval_CAD_HARD_covCorr_filt.txt',
+#                 # '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/path_GO_pval_CAD_HARD_covCorr_filt.txt') 
+# cor_file <-  paste0('/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_UKBB/',tissue_name,'/200kb/noGWAS/devgeno0.01_testdevgeno0/correlation_estimate_tscore.RData')
 # type_data <- 'tscore'
-# enrich_file <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/enrichment_CADHARD_res/randomChoice_perc0.5_correlation_CAD_HARD_relatedPheno.RData'
-# outFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/enrichment_CADHARD_res/'
+# enrich_file <- 'Meta_Analysis_SCZ/Brain_Cortex/enrichment_SCZ-UKBB_res/perc0.3_correlation_enrich_SCZ_relatedPheno.RData'
+# outFold <- 'Meta_Analysis_SCZ/Brain_Cortex/enrichment_SCZ-UKBB_res/'
 # pval_FDR_rel <- 0.05
 # pval_FDR_corr <- 0.05
 ##########################################################################################################################
@@ -110,7 +110,6 @@ common_f <- intersect(feat_res[, id_name], colnames(cor_feat))
 feat_res <- feat_res[match(common_f, feat_res[,id_name]), ]
 cor_feat <- cor_feat[match(common_f, rownames(cor_feat)), match(common_f, colnames(cor_feat))]
 
-
 # keep only phenotype that are correlated 
 enrich_feat <- enrich_feat[!is.na(enrich_feat$cor_pval_BHcorr),]
 enrich_feat <- enrich_feat[enrich_feat$cor_pval_BHcorr <= pval_FDR_corr, ]
@@ -134,7 +133,7 @@ for(i in 1:length(pheno_type)){
                             MREgg_int_pval = rep(NA, nrow(tmp_pheno_red)), MREgg_heter_stat  = rep(NA, nrow(tmp_pheno_red)),
                             MREgg_heter_pval = rep(NA, nrow(tmp_pheno_red)))
     
-  if(pheno_type[i] %in% c('Blood_biochemistry', 'Blood_count')){
+  if(grepl('CAD', pheno_name_comp) & pheno_type[i] %in% c('Blood_biochemistry', 'Blood_count')){
     
     file_toload <- sprintf('%s/pval_%s_withMed_pheno_covCorr.RData', inputFold_rel, pheno_type[i])
   }else{
@@ -144,6 +143,7 @@ for(i in 1:length(pheno_type)){
   tmp <- get(load(file_toload))
   rm(final)
   tmp_pheno <- tmp$pheno
+  
   if(type_data == 'tot_path'){
     new <- list()
     for(l in 1:nrow(tmp_pheno)){
@@ -170,7 +170,10 @@ for(i in 1:length(pheno_type)){
   id_keep_rel <- match(tmp_pheno_red$pheno,tmp_pheno$pheno_id)
   tmp <- tmp[id_keep_rel]
   
-  tmp <- lapply(tmp, function(x) x[x$new_id %in% feat_res$new_id,])
+  tmp <- lapply(tmp, function(x) x[x$new_id %in% feat_res$new_id,]) # works fine because feat_res was matched with corr that is based on related 
+  if(any(sapply(tmp, function(x) !identical(x$new_id, feat_res$new_id)))){
+    print('ERROR: features not matched correctly')
+  }
   # sign_common_rel <- lapply(tmp, function(x) x[x$new_id %in% feat_res$new_id[feat_res[,pval_id+2] <= pval_FDR_pheno] & x[, pval_id +2] <= pval_FDR_rel,])
   # sign_common_pheno <- lapply(tmp, function(x) feat_res[feat_res$new_id %in% x$new_id[x[,pval_id+2] <= pval_FDR_rel] & feat_res[, pval_id +2] <= pval_FDR_pheno,])
   sign_common_rel <- lapply(tmp, function(x) x[x$new_id %in% feat_res$new_id & x[, pval_id +2] <= pval_FDR_rel,])
