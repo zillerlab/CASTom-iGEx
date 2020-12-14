@@ -16,10 +16,10 @@ suppressPackageStartupMessages(library(ggpubr))
 suppressPackageStartupMessages(library(MendelianRandomization))
 options(bitmapType = 'cairo', device = 'png')
 
-parser <- ArgumentParser(description="Mendelian Randomization for enriched related phenotypes")
+parser <- ArgumentParser(description="Mendelian Randomization for enriched related phenotypes, reverse: phenotype of interest exposure")
 parser$add_argument("--phenoFold", type = "character", help = "Folder with results phenotype annotation UKBB")
 parser$add_argument("--inputFold_rel", type = "character", nargs = '*',help = "Folder with results")
-parser$add_argument("--pval_FDR_rel", type = "double", default = 0.05, help = "pval threshold to filter the genes and pathways (after BH correction) in related phenotypes")
+parser$add_argument("--pval_FDR_pheno", type = "double", default = 0.05, help = "pval threshold to filter the genes and pathways (after BH correction) in main phenotype")
 parser$add_argument("--pval_FDR_corr", type = "double", default = 0.05, help = "pval threshold to filter phenotypes based on fisher test enrichment")
 parser$add_argument("--tissue_name", type = "character", nargs = '*', help = "tissue considered")
 parser$add_argument("--pheno_name_comp", type = "character", help = "name phenotype of interest")
@@ -33,7 +33,7 @@ args <- parser$parse_args()
 phenoFold <- args$phenoFold
 tissue_name <- args$tissue_name
 inputFold_rel <- args$inputFold_rel
-pval_FDR_rel <- args$pval_FDR_rel
+pval_FDR_pheno <- args$pval_FDR_pheno
 pval_FDR_corr <- args$pval_FDR_corr
 pheno_name_comp <- args$pheno_name_comp
 perc_par <- args$perc_par
@@ -55,7 +55,7 @@ outFold <- args$outFold
 # type_data <- 'tot_path'
 # enrich_file <- 'Meta_Analysis_SCZ/Brain_Frontal_Cortex_BA9/enrichment_SCZ-UKBB_res/perc0.3_correlation_enrich_SCZ_relatedPheno.RData'
 # outFold <- 'Meta_Analysis_SCZ/Brain_Frontal_Cortex_BA9/enrichment_SCZ-UKBB_res/'
-# pval_FDR_rel <- 0.05
+# pval_FDR_pheno <- 0.05
 # pval_FDR_corr <- 0.05
 ##########################################################################################################################
 
@@ -113,7 +113,6 @@ load_data <- function(data_file, pval_FDR, tissue_name, pval_id){
               pathGO = pheno_pathGO, pathGO_red = pathGO_red))
   
 }
-
 
 if(type_data == 'tscore'){
   id_name <- 2
@@ -240,9 +239,9 @@ for(i in 1:length(pheno_type)){
  
   # sign_common_rel <- lapply(tmp, function(x) x[x$new_id %in% feat_res$new_id[feat_res[,pval_id+2] <= pval_FDR_pheno] & x[, pval_id +2] <= pval_FDR_rel,])
   # sign_common_pheno <- lapply(tmp, function(x) feat_res[feat_res$new_id %in% x$new_id[x[,pval_id+2] <= pval_FDR_rel] & feat_res[, pval_id +2] <= pval_FDR_pheno,])
-  sign_common_rel <- lapply(tmp, function(x) x[x[, pval_id +2] <= pval_FDR_rel,])
-  sign_common_pheno <- lapply(sign_common_rel, function(x) feat_res[feat_res$new_id %in% x$new_id,])
-  
+  sign_common_pheno <- lapply(tmp, function(x) feat_res[feat_res[, pval_id + 2] <= pval_FDR_pheno & feat_res$new_id %in% x$new_id,])
+  sign_common_rel <- mapply(function(x, y) x[match(y$new_id,x$new_id),], x = tmp, y = sign_common_pheno, SIMPLIFY = F)
+
   for(j in 1:length(tmp)){
     
     common_f <- intersect(sign_common_rel[[j]]$new_id, sign_common_pheno[[j]]$new_id)
@@ -253,8 +252,8 @@ for(i in 1:length(pheno_type)){
       tmp_corr <- cor_feat[match(sign_common_pheno[[j]][, id_name], rownames(cor_feat)), 
                            match(sign_common_pheno[[j]][, id_name], colnames(cor_feat))]
     
-      MRInputObject <- mr_input(bx = sign_common_rel[[j]][, beta_id], bxse = sign_common_rel[[j]][, se_beta_id],
-                                by = sign_common_pheno[[j]][, beta_id], byse = sign_common_pheno[[j]][, se_beta_id], 
+      MRInputObject <- mr_input(by = sign_common_rel[[j]][, beta_id], byse = sign_common_rel[[j]][, se_beta_id],
+                                bx = sign_common_pheno[[j]][, beta_id], bxse = sign_common_pheno[[j]][, se_beta_id], 
                                 correlation = tmp_corr, snps = colnames(tmp_corr))
       MREggerObject <- tryCatch(mr_egger(MRInputObject, correl = T), error = function(x) NULL)
       if(!is.null(MREggerObject)){
@@ -278,8 +277,8 @@ res_MR <- res_MR[!is.na(res_MR$nfeat), ]
 res_MR$MREgg_est_pval_FDRcorr <- p.adjust(res_MR$MREgg_est_pval, method = 'BH')
 
 # save results
-write.table(x = res_MR, file = sprintf('%sMendelian_randomization_%s_pvalFDRrel%s.txt', outFold, type_data, 
-                                       as.character(pval_FDR_rel)), col.names = T, row.names = F, quote = F, sep = '\t')
+write.table(x = res_MR, file = sprintf('%sMendelian_randomization_reverse_%s_pvalFDRpheno%s.txt', outFold, type_data, 
+                                       as.character(pval_FDR_pheno)), col.names = T, row.names = F, quote = F, sep = '\t')
 
 
 
