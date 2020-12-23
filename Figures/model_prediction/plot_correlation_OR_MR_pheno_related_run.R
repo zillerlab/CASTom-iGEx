@@ -26,6 +26,7 @@ parser$add_argument("--mrResPath_rev_tissue_file", type = "character", nargs = '
 parser$add_argument("--tissue_name", type = "character",nargs = '*', help = "tissues")
 parser$add_argument("--pheno_name", type = "character", help = "")
 parser$add_argument("--pheno_list_file", type = "character", help = "")
+parser$add_argument("--pheno_list_MR_file", type = "character", help = "")
 parser$add_argument("--color_pheno_file", type = "character", help = "")
 parser$add_argument("--color_tissues_file", type = "character", help = "")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
@@ -41,6 +42,7 @@ mrResPath_rev_tissue_file <- args$mrResPath_rev_tissue_file
 pheno_list_file <- args$pheno_list_file
 color_pheno_file <- args$color_pheno_file
 color_tissues_file <- args$color_tissues_file
+pheno_list_MR_file <- args$pheno_list_MR_file
 outFold <- args$outFold
 
 #########################################################################################################################
@@ -91,11 +93,13 @@ feat_OR <-lapply(1:2, function(x) matrix(ncol = length(tissue_name), nrow = leng
 feat_mr_est <- lapply(1:2, function(x) matrix(ncol = length(tissue_name), nrow = length(pheno_keep)))
 feat_mr_est_se <-lapply(1:2, function(x) matrix(ncol = length(tissue_name), nrow = length(pheno_keep)))
 feat_mr_est_pval <-lapply(1:2, function(x) matrix(ncol = length(tissue_name), nrow = length(pheno_keep)))
+feat_mr_est_pval_FDR <- lapply(1:2, function(x) matrix(ncol = length(tissue_name), nrow = length(pheno_keep)))
 feat_mr_est_low <-lapply(1:2, function(x) matrix(ncol = length(tissue_name), nrow = length(pheno_keep)))
 feat_mr_est_up <-lapply(1:2, function(x) matrix(ncol = length(tissue_name), nrow = length(pheno_keep)))
 feat_mrR_est <- lapply(1:2, function(x) matrix(ncol = length(tissue_name), nrow = length(pheno_keep)))
 feat_mrR_est_se <-lapply(1:2, function(x) matrix(ncol = length(tissue_name), nrow = length(pheno_keep)))
 feat_mrR_est_pval <-lapply(1:2, function(x) matrix(ncol = length(tissue_name), nrow = length(pheno_keep)))
+feat_mrR_est_pval_FDR <- lapply(1:2, function(x) matrix(ncol = length(tissue_name), nrow = length(pheno_keep)))
 feat_corr_tot <- list(NULL, NULL)
 feat_corr_pval_tot <- list(NULL, NULL)
 feat_mr_est_pval_tot <- list(NULL, NULL)
@@ -131,6 +135,7 @@ for(i in 1:length(tissue_name)){
   feat_mr_est_pval_tot[[1]] <- cbind(feat_mr_est_pval_tot[[1]], tmp_mr$MREgg_est_pval[match(tmp$pheno$names_field,tmp_mr$names_field)])
   feat_mr_est_se[[1]][,i] <- tmp_mr$MREgg_est_se[id]
   feat_mr_est_pval[[1]][,i] <- tmp_mr$MREgg_est_pval[id]
+  feat_mr_est_pval_FDR[[1]][,i] <- tmp_mr$MREgg_est_pval_FDRcorr[id]
   feat_mr_est_low[[1]][,i] <- tmp_mr$MREgg_est_CIl[id]
   feat_mr_est_up[[1]][,i] <- tmp_mr$MREgg_est_CIu[id]
   
@@ -141,6 +146,7 @@ for(i in 1:length(tissue_name)){
   feat_mr_est[[2]][,i] <- tmp_mr$MREgg_est[id]
   feat_mr_est_se[[2]][,i] <- tmp_mr$MREgg_est_se[id]
   feat_mr_est_pval[[2]][,i] <- tmp_mr$MREgg_est_pval[id]
+  feat_mr_est_pval_FDR[[2]][,i] <- tmp_mr$MREgg_est_pval_FDRcorr[id]
   feat_mr_est_low[[2]][,i] <- tmp_mr$MREgg_est_CIl[id]
   feat_mr_est_up[[2]][,i] <- tmp_mr$MREgg_est_CIu[id]
   
@@ -151,6 +157,7 @@ for(i in 1:length(tissue_name)){
   feat_mrR_est[[1]][,i] <- tmp_mrR$MREgg_est[id]
   feat_mrR_est_se[[1]][,i] <- tmp_mrR$MREgg_est_se[id]
   feat_mrR_est_pval[[1]][,i] <- tmp_mrR$MREgg_est_pval[id]
+  feat_mrR_est_pval_FDR[[1]][,i] <- tmp_mrR$MREgg_est_pval_FDRcorr[id]
   
   
   tmp_mrR <- read.delim(mrResPath_rev_tissue_file[i], h=T, stringsAsFactors = F, sep = '\t')
@@ -160,6 +167,7 @@ for(i in 1:length(tissue_name)){
   feat_mrR_est[[2]][,i] <- tmp_mrR$MREgg_est[id]
   feat_mrR_est_se[[2]][,i] <- tmp_mrR$MREgg_est_se[id]
   feat_mrR_est_pval[[2]][,i] <- tmp_mrR$MREgg_est_pval[id]
+  feat_mrR_est_pval_FDR[[2]][,i] <- tmp_mrR$MREgg_est_pval_FDRcorr[id]
   
 }
 
@@ -247,6 +255,8 @@ colnames(feat_mr_est_low[[1]]) <- colnames(feat_mr_est_up[[1]])  <- tissue_name
 colnames(feat_mr_est[[2]]) <- colnames(feat_mr_est_se[[2]]) <- colnames(feat_mr_est_pval[[2]]) <- tissue_name
 colnames(feat_mrR_est[[2]]) <- colnames(feat_mrR_est_se[[2]]) <- colnames(feat_mrR_est_pval[[2]]) <- tissue_name
 colnames(feat_mr_est_low[[2]]) <- colnames(feat_mr_est_up[[2]])  <- tissue_name
+colnames(feat_mr_est_pval_FDR[[1]]) <- colnames(feat_mr_est_pval_FDR[[2]])  <- tissue_name
+colnames(feat_mrR_est_pval_FDR[[1]]) <- colnames(feat_mrR_est_pval_FDR[[2]])  <- tissue_name
 
 feat_corr <- lapply(feat_corr, function(x) x[id, ])
 feat_OR <- lapply(feat_OR, function(x) x[id, ])
@@ -258,6 +268,8 @@ feat_mr_est_up <- lapply(feat_mr_est_up, function(x) x[id, ])
 feat_mrR_est <- lapply(feat_mrR_est, function(x) x[id, ])
 feat_mrR_est_pval <- lapply(feat_mrR_est_pval, function(x) x[id, ])
 feat_mrR_est_se <- lapply(feat_mrR_est_se, function(x) x[id, ])
+feat_mr_est_pval_FDR <- lapply(feat_mr_est_pval_FDR, function(x) x[id, ])
+feat_mrR_est_pval_FDR <- lapply(feat_mrR_est_pval_FDR, function(x) x[id, ])
 
 # plot
 ############# make plot ################
@@ -376,12 +388,17 @@ plot_heatmap_OR <- function(type_mat, mat_OR, pheno_ann, pheno_info, color_tissu
   
 }
 
-plot_heatmap_mr <- function(type_mat, mat_mr, mat_pval, pheno_ann, pheno_info, color_tissues, height_pl = 17, width_pl=11, cap_val = 2, pheno_name, show_rownames = T, title_sub = 'MR-Egger estimate'){
+plot_heatmap_mr <- function(type_mat, mat_mr, mat_pval, mat_pval_FDR = NULL, pheno_ann, pheno_info, 
+                            color_tissues, height_pl = 17, width_pl=11, cap_val = 2, pheno_name, show_rownames = T, title_sub = 'MR-Egger estimate'){
   
   coul <- rev(colorRampPalette(brewer.pal(11, "RdBu"))(100))
   coul[50] <- '#ffffff'
   
   mat_mr[mat_pval>0.05] <- NA
+  labels_sign <- matrix('', nrow = nrow(mat_mr), ncol = ncol(mat_mr))
+  if(!is.null(mat_pval_FDR)){
+    labels_sign[mat_pval_FDR <= 0.05] <- '*'  
+  }
   
   tmp_mat <- as.matrix(mat_mr)
   tmp_mat[is.na(tmp_mat)] <- 0
@@ -409,6 +426,7 @@ plot_heatmap_mr <- function(type_mat, mat_mr, mat_pval, pheno_ann, pheno_info, c
   new_color = list(pheno = mat_colors[[1]], tissue_type = mat_colors_t[[1]])
   
   hm_pl <- pheatmap(mat=tmp_mat, color=coul, show_colnames = T, show_rownames = show_rownames, 
+                    display_numbers = labels_sign, fontsize_number = 12, number_color = 'black',
                     annotation_row = mat_row,  annotation_col = mat_col, annotation_names_col = F, annotation_names_row = F, 
                     cluster_rows=F, cluster_cols=F, border_color = 'darkgrey', 
                     annotation_colors = new_color, drop_levels = TRUE, fontsize_row = 10, fontsize_col = 10, fontsize = 12, 
@@ -452,7 +470,7 @@ for(i in 1:2){
     dat[id_inf] <- -log10(2*pnorm(-abs(feat_mr_est[[i]][id_MR,tissue_name][id_inf]/feat_mr_est_se[[i]][id_MR,tissue_name][id_inf])))*sign(feat_mr_est[[i]][id_MR,tissue_name][id_inf])
   }
   
-  plot_heatmap_mr(type_mat = type_data[i], mat_mr = dat, mat_pval = feat_mr_est_pval[[i]][id_MR,tissue_name],
+  plot_heatmap_mr(type_mat = type_data[i], mat_mr = dat, mat_pval = feat_mr_est_pval[[i]][id_MR,tissue_name], mat_pval_FDR = feat_mr_est_pval_FDR[[i]][id_MR,tissue_name], 
                   pheno_ann = color_pheno[match(unique(pheno_info[id_MR,]$pheno_type),color_pheno$pheno_type),], cap_val = min(c(10, max(abs(dat), na.rm = T))), 
                   pheno_info = pheno_info[id_MR,],  color_tissues = color_tissues, height_pl = 9, width_pl = 14, pheno_name = paste0('specPheno',pheno_name), show_rownames = T, 
                   title_sub = 'MR-Egger: signed -log10(pvalue)')
@@ -463,7 +481,7 @@ for(i in 1:2){
     dat[id_inf] <- -log10(2*pnorm(-abs(feat_mrR_est[[i]][id_MR,tissue_name][id_inf]/feat_mrR_est_se[[i]][id_MR,tissue_name][id_inf])))*sign(feat_mrR_est[[i]][id_MR,tissue_name][id_inf])
   }
   
-  plot_heatmap_mr(type_mat = type_data[i], mat_mr = dat, mat_pval = feat_mrR_est_pval[[i]][id_MR,tissue_name],
+  plot_heatmap_mr(type_mat = type_data[i], mat_mr = dat, mat_pval = feat_mrR_est_pval[[i]][id_MR,tissue_name], mat_pval_FDR = feat_mrR_est_pval_FDR[[i]][id_MR,tissue_name], 
                   pheno_ann = color_pheno[match(unique(pheno_info[id_MR,]$pheno_type),color_pheno$pheno_type),], cap_val = min(c(10, max(abs(dat), na.rm = T))), 
                   pheno_info = pheno_info[id_MR,],  color_tissues = color_tissues, height_pl = 9, width_pl = 14, pheno_name = paste0('reverse_specPheno',pheno_name), show_rownames = T, 
                   title_sub = 'MR-Egger reverse: signed -log10(pvalue)')
