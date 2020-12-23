@@ -206,7 +206,7 @@ cor(df_info$frac_impr_R2_test, df_info$n_samples) # -0.2819916
 df_tab <- data.frame(method = c('PriLer', 'elastic-net'), n_genes = c(sum(df_info$n_impr_R2_test), sum(df_info$tot_genes) - sum(df_info$n_impr_R2_test)),
                      type = c(rep('CV',2)))
 df_tab$type <- factor(df_tab$type)
-df_tab$add_info <- df_tab$n_genes[1]/sum(df_tab$n_genes)
+df_tab$add_info <- df_tab$n_genes[1]/sum(df_tab$n_genes)*100
 df_tab$add_info <- paste0(round(df_tab$add_info, digits = 3), '%')
 df_tab$add_info[2] <- NA
 group_name <- c(TeX('CV $corr^2$'))
@@ -228,7 +228,7 @@ ggsave( sprintf('%scomparison_methods_increaseAllTissues_PriLer_elnet.pdf', outF
 df_tab <- data.frame(method = rep(c('PriLer', 'elastic-net'), nrow(df_genes_R2)), 
                      n_genes = unlist(lapply(df_genes_R2$tissue, function(x) c(df_genes_R2$n_impr_R2_test[df_genes_R2$tissue == x], df_genes_R2$tot_genes[df_genes_R2$tissue == x] - df_genes_R2$n_impr_R2_test[df_genes_R2$tissue == x]))), 
                      add_info = NA, tissue = unlist(lapply(df_genes_R2$tissue, function(x) rep(x, 2))))
-df_tab$add_info[df_tab$method == 'PriLer'] <- df_genes_R2$n_impr_R2_test/df_genes_R2$tot_genes
+df_tab$add_info[df_tab$method == 'PriLer'] <- df_genes_R2$n_impr_R2_test/df_genes_R2$tot_genes*100
 df_tab$add_info[df_tab$method == 'PriLer'] <- paste0(round(df_tab$add_info[df_tab$method == 'PriLer'], digits = 3), '%')
 name_title <- c(TeX('CV $corr^2$'))
 df_tab$method <- factor(df_tab$method, levels = rev(c('PriLer', 'elastic-net')))
