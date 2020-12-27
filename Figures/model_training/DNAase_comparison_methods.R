@@ -249,4 +249,16 @@ pl <- ggplot(data = subset(df_plot, tissues != 'AllTissues'), aes(y = quant, x =
 ggsave(filename = sprintf('%spercentile_nsamples_DNAase_TissueSpec.png', inputFold), width = 12, height = 10, plot = pl, device = 'png')
 ggsave(filename = sprintf('%spercentile_nsamples_DNAase_TissueSpec.pdf', inputFold), width = 12, height = 10, plot = pl, device = 'pdf')
 
+pl <- ggplot(data = subset(df_plot, tissues %in% c('Heart_Left_Ventricle', 'Brain_Hippocampus', 'Muscle_Skeletal')), aes(y = quant, x = log_nsamples, color = type))+
+  geom_line()+
+  theme_bw()+ ylim(58, 100)+
+  facet_wrap(.~tissues, ncol = 6)+
+  ylab('percentile')+xlab('log2(n. biosamples + 1)')+
+  geom_text(data = subset(df_test_ks, tissue %in% c('Heart_Left_Ventricle', 'Brain_Hippocampus', 'Muscle_Skeletal')), mapping = aes(x = x, y = position, label = value, color = type), size = 3)+
+  theme(legend.position = 'bottom', strip.text = element_text(size = 8))+
+  scale_color_manual(values=color_type)
+ggsave(filename = sprintf('%spercentile_nsamples_DNAase_TissueSel.png', inputFold), width = 9, height = 4, plot = pl, device = 'png')
+ggsave(filename = sprintf('%spercentile_nsamples_DNAase_TissueSel.pdf', inputFold), width = 9, height = 4, plot = pl, device = 'pdf')
+
+
 
