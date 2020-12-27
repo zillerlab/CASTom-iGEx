@@ -29,7 +29,7 @@ create_df <- function(tissue_ann_file, dnase_file, name_type){
   
   dnaseAnn$numsamples_new <- dnaseAnn$numsamples
   dnaseAnn$numsamples_new[is.na(dnaseAnn$numsamples_new)] <- 0
-    
+  
   tmp <- lapply(tissues_name[-1], function(x) dnaseAnn$numsamples_new[snpsAnn[, x] == 1])
   tmp_tot <- dnaseAnn$numsamples_new[rowSums(snpsAnn[, tissues_name[-1]])>0]
   df <- data.frame(number_types = c(tmp_tot, unlist(tmp)), tissue = c(rep(tissues_name[1], length(tmp_tot)), 
@@ -57,7 +57,7 @@ compute_perc <- function(df, n_id){
 # Priler
 df_Priler <- create_df(tissue_ann_file = sprintf('%sresPrior_regSNPs_annotation.txt.gz', inputFold), 
                        dnase_file = sprintf('%sresPrior_regSNPs_annotationregion_dnaseAnnotated.bed', DNAaseFold), name_type = 'PriLer')
-  
+
 # PriLer (reliableGenes)
 df_Priler_relGenes <- create_df(tissue_ann_file = sprintf('%sresPrior_regSNPs_reliableGenes_annotation.txt.gz', inputFold), 
                                 dnase_file = sprintf('%sresPrior_regSNPs_reliableGenes_annotationregion_dnaseAnnotated.bed', DNAaseFold), name_type = 'PriLer (reliable Genes)')
@@ -66,16 +66,16 @@ df_Priler_herGenes <- create_df(tissue_ann_file = sprintf('%sresPrior_regSNPs_he
                                 dnase_file = sprintf('%sresPrior_regSNPs_heritableGenes_annotationregion_dnaseAnnotated.bed', DNAaseFold), name_type = 'PriLer (heritable Genes)')
 # el-net
 df_elnet <- create_df(tissue_ann_file = sprintf('%sresNoPrior_regSNPs_annotation.txt.gz', inputFold), 
-                       dnase_file = sprintf('%sresNoPrior_regSNPs_annotationregion_dnaseAnnotated.bed', DNAaseFold), name_type = 'el-net')
+                      dnase_file = sprintf('%sresNoPrior_regSNPs_annotationregion_dnaseAnnotated.bed', DNAaseFold), name_type = 'el-net')
 # el-net (reliableGenes)
 df_elnet_relGenes <- create_df(tissue_ann_file = sprintf('%sresNoPrior_regSNPs_reliableGenes_annotation.txt.gz', inputFold), 
-                                dnase_file = sprintf('%sresNoPrior_regSNPs_reliableGenes_annotationregion_dnaseAnnotated.bed', DNAaseFold), name_type = 'el-net (reliable Genes)')
+                               dnase_file = sprintf('%sresNoPrior_regSNPs_reliableGenes_annotationregion_dnaseAnnotated.bed', DNAaseFold), name_type = 'el-net (reliable Genes)')
 # el-net (heritableGenes)
 df_elnet_herGenes <- create_df(tissue_ann_file = sprintf('%sresNoPrior_regSNPs_heritableGenes_annotation.txt.gz', inputFold), 
-                                dnase_file = sprintf('%sresNoPrior_regSNPs_heritableGenes_annotationregion_dnaseAnnotated.bed', DNAaseFold), name_type = 'el-net (heritable Genes)')
+                               dnase_file = sprintf('%sresNoPrior_regSNPs_heritableGenes_annotationregion_dnaseAnnotated.bed', DNAaseFold), name_type = 'el-net (heritable Genes)')
 # TWAS
 df_TWAS <- create_df(tissue_ann_file = sprintf('%sTWAS_regSNPs_annotation.txt.gz', inputFold), 
-                    dnase_file = sprintf('%sTWAS_regSNPs_annotationregion_dnaseAnnotated.bed', DNAaseFold), name_type = 'TWAS')
+                     dnase_file = sprintf('%sTWAS_regSNPs_annotationregion_dnaseAnnotated.bed', DNAaseFold), name_type = 'TWAS')
 # prediXcan
 df_prediXcan <- create_df(tissue_ann_file = sprintf('%sprediXcan_regSNPs_annotation.txt.gz', inputFold), 
                           dnase_file = sprintf('%sprediXcan_regSNPs_annotationregion_dnaseAnnotated.bed', DNAaseFold), name_type = 'prediXcan')
@@ -91,43 +91,43 @@ df_Priler_perc$type <- 'PriLer'
 # PriLer (reliableGenes)
 tmp <- compute_perc(df_Priler_relGenes, n_id)
 df_Priler_relGenes_perc <- data.frame(n_samples_thr = rep(n_id, length(ncol(tmp))), tissue = as.vector(sapply(colnames(tmp), function(x) rep(x,length(n_id)))), 
-                             perc_higher = as.vector(tmp))
+                                      perc_higher = as.vector(tmp))
 df_Priler_relGenes_perc$type <- 'PriLer (reliable Genes)'
 
 # PriLer (heritableGenes)
 tmp <- compute_perc(df_Priler_herGenes, n_id)
 df_Priler_herGenes_perc <- data.frame(n_samples_thr = rep(n_id, length(ncol(tmp))), tissue = as.vector(sapply(colnames(tmp), function(x) rep(x,length(n_id)))), 
-                             perc_higher = as.vector(tmp))
+                                      perc_higher = as.vector(tmp))
 df_Priler_herGenes_perc$type <- 'PriLer (heritable Genes)'
 
 # el-net
 tmp <- compute_perc(df_elnet, n_id)
 df_elnet_perc <- data.frame(n_samples_thr = rep(n_id, length(ncol(tmp))), tissue = as.vector(sapply(colnames(tmp), function(x) rep(x,length(n_id)))), 
-                             perc_higher = as.vector(tmp))
+                            perc_higher = as.vector(tmp))
 df_elnet_perc$type <- 'el-net'
 
 # el-net (reliableGenes)
 tmp <- compute_perc(df_elnet_relGenes, n_id)
 df_elnet_relGenes_perc <- data.frame(n_samples_thr = rep(n_id, length(ncol(tmp))), tissue = as.vector(sapply(colnames(tmp), function(x) rep(x,length(n_id)))), 
-                                      perc_higher = as.vector(tmp))
+                                     perc_higher = as.vector(tmp))
 df_elnet_relGenes_perc$type <- 'el-net (reliable Genes)'
 
 # el-net (heritableGenes)
 tmp <- compute_perc(df_elnet_herGenes, n_id)
 df_elnet_herGenes_perc <- data.frame(n_samples_thr = rep(n_id, length(ncol(tmp))), tissue = as.vector(sapply(colnames(tmp), function(x) rep(x,length(n_id)))), 
-                                      perc_higher = as.vector(tmp))
+                                     perc_higher = as.vector(tmp))
 df_elnet_herGenes_perc$type <- 'el-net (heritable Genes)'
 
 # TWAS
 tmp <- compute_perc(df_TWAS, n_id)
 df_TWAS_perc <- data.frame(n_samples_thr = rep(n_id, length(ncol(tmp))), tissue = as.vector(sapply(colnames(tmp), function(x) rep(x,length(n_id)))), 
-                            perc_higher = as.vector(tmp))
+                           perc_higher = as.vector(tmp))
 df_TWAS_perc$type <- 'TWAS'
 
 # prediXcan
 tmp <- compute_perc(df_prediXcan, n_id)
 df_prediXcan_perc <- data.frame(n_samples_thr = rep(n_id, length(ncol(tmp))), tissue = as.vector(sapply(colnames(tmp), function(x) rep(x,length(n_id)))), 
-                            perc_higher = as.vector(tmp))
+                                perc_higher = as.vector(tmp))
 df_prediXcan_perc$type <- 'prediXcan'
 
 #### create general tables (at least 1 sample) ####
@@ -166,16 +166,16 @@ for(i in 1:length(type_analysis)){
   print(i)
   for(j in 1:length(tissues)){
     
-   tmp <- quantile(df_all$number_types[df_all$tissue == tissues[j] & df_all$type == type_analysis[i]], probs = quantile_sep)
-   df_plot <- rbind(df_plot, data.frame(stringsAsFactors = F, n_samples = tmp, quant = quantile_sep*100, tissues = rep(tissues[j], length(tmp)), 
-                                        type = rep(type_analysis[i], length(tmp))))
-   
-   # test difference with PriLer method
-   df_test <- rbind(df_test, data.frame(stringsAsFactors = F,tissues = tissues[j], type = type_analysis[i], 
-                                        wilcox_pvalue = wilcox.test(df_all$number_types[df_all$tissue == tissues[j] & df_all$type == type_analysis[i]], 
-                                                            df_all$number_types[df_all$tissue == tissues[j] & df_all$type == type_analysis[1]])$p.value, 
-                                        mean = mean(df_all$number_types[df_all$tissue == tissues[j] & df_all$type == type_analysis[i]])))
-  
+    tmp <- quantile(df_all$number_types[df_all$tissue == tissues[j] & df_all$type == type_analysis[i]], probs = quantile_sep)
+    df_plot <- rbind(df_plot, data.frame(stringsAsFactors = F, n_samples = tmp, quant = quantile_sep*100, tissues = rep(tissues[j], length(tmp)), 
+                                         type = rep(type_analysis[i], length(tmp))))
+    
+    # test difference with PriLer method
+    df_test <- rbind(df_test, data.frame(stringsAsFactors = F,tissues = tissues[j], type = type_analysis[i], 
+                                         wilcox_pvalue = wilcox.test(df_all$number_types[df_all$tissue == tissues[j] & df_all$type == type_analysis[i]], 
+                                                                     df_all$number_types[df_all$tissue == tissues[j] & df_all$type == type_analysis[1]])$p.value, 
+                                         mean = mean(df_all$number_types[df_all$tissue == tissues[j] & df_all$type == type_analysis[i]])))
+    
   }
   
   tmp <- quantile(df_all$number_types[df_all$tissue == 'AllTissues' & df_all$type == type_analysis[i]], probs = quantile_sep)
@@ -184,34 +184,67 @@ for(i in 1:length(type_analysis)){
   # test difference with PriLer method
   df_test <- rbind(df_test, data.frame(stringsAsFactors = F,tissues = 'AllTissues', type = type_analysis[i], 
                                        wilcox_pvalue = wilcox.test(df_all$number_types[df_all$tissue == 'AllTissues' & df_all$type == type_analysis[i]], 
-                                                           df_all$number_types[df_all$tissue == 'AllTissues' & df_all$type == type_analysis[1]])$p.value, 
+                                                                   df_all$number_types[df_all$tissue == 'AllTissues' & df_all$type == type_analysis[1]])$p.value, 
                                        mean = mean(df_all$number_types[df_all$tissue == 'AllTissues' & df_all$type == type_analysis[i]])))
   
 }
 
-df_plot$log_nsamples <- log2(df_plot$n_samples + 1)
 df_plot$tissues <- factor(df_plot$tissues, levels = c('AllTissues', tissues))
 df_plot$type[df_plot$type == type_analysis[1]] <- 'PriLer'
 df_plot$type[df_plot$type == type_analysis[2]] <- 'el-net'
 df_plot$type <- factor(df_plot$type, levels = c('PriLer', 'el-net', 'prediXcan', 'TWAS'))
+df_plot$log_nsamples <- log2(df_plot$n_samples + 1)
+df_test_ks <- data.frame(tissues = c(), type = c(), thr_quant = c(), ks_pvalue = c(), stringsAsFactors = F)
+type_analysis <- c('PriLer', 'el-net', 'prediXcan', 'TWAS')
+for(i in 2:length(type_analysis)){
+  
+  print(i)
+  for(j in 1:length(tissues)){
+    tmp <-  df_plot[df_plot$type %in% c(type_analysis[1],type_analysis[i]) & df_plot$tissue == tissues[j] & df_plot$n_samples>0, ]
+    thr <- min(tmp$quant)
+    df_test_ks <- rbind(df_test_ks, data.frame(tissues = tissues[j], type = type_analysis[i], thr_quant = thr, 
+                                               ks_pvalue = ks.test(x = df_plot$n_samples[df_plot$quant >= thr & df_plot$type == type_analysis[1] & df_plot$tissue == tissues[j]],
+            y = df_plot$n_samples[df_plot$quant >= thr & df_plot$type == type_analysis[i] & df_plot$tissue == tissues[j]], alternative = 'less')$p.value))
+  }
+  
+  tmp <-  df_plot[df_plot$type %in% c(type_analysis[1],type_analysis[i]) & df_plot$tissue == 'AllTissues' & df_plot$n_samples>0, ]
+  thr <- min(tmp$quant)
+  df_test_ks <- rbind(df_test_ks, data.frame(tissues = 'AllTissues', 
+                                             type = type_analysis[i],  thr_quant = thr, 
+                                             ks_pvalue = ks.test(x = df_plot$n_samples[df_plot$quant >= thr & df_plot$type == type_analysis[1] & df_plot$tissue == 'AllTissues'],
+                                                                 y = df_plot$n_samples[df_plot$quant >= thr & df_plot$type == type_analysis[i] & df_plot$tissue == 'AllTissues'], alternative = 'less')$p.value))
+  
+}
+write.table(x = df_test_ks, file = sprintf('%sKS_test_distribution_notzero.txt', inputFold), quote = F, col.names = T, row.names = F, sep = '\t')
 
-color_type <- c('#1F77B4FF', '#339733', '#FF7F0EFF', '#D62728FF')
+df_test_ks$value <- paste(df_test_ks$type,  formatC(df_test_ks$ks_pvalue, format = "e", digits = 1))
+df_test_ks$position <- 74
+df_test_ks$position[df_test_ks$type == 'prediXcan'] <- 68
+df_test_ks$position[df_test_ks$type == 'TWAS'] <- 62
+df_test_ks$tissue <- factor(df_test_ks$tissues, levels = c('AllTissues', tissues))
+df_test_ks$x <- 6.5
+df_test_ks$type <- factor(df_test_ks$type, level = type_analysis)
 
-pl <- ggplot(data = subset(df_plot, tissues == 'Skin_Not_Sun_Exposed_Suprapubic'), aes(x = quant, y = log_nsamples, color = type))+
+# color_type <- c('#1F77B4FF', '#339733', '#FF7F0EFF', '#D62728FF')
+color_type <- c('#1F77B4FF', 'darkgrey', '#FF7F0EFF', '#D62728FF')
+
+pl <- ggplot(data = subset(df_plot, tissues == 'AllTissues'), aes(y = quant, x = log_nsamples, color = type))+
   geom_line()+
-  theme_bw()+ xlim(50, 100)+
-  xlab('percentile')+ylab('log(n. biosamples + 1)')+ 
+  theme_bw()+ ylim(58, 100)+
+  ylab('percentile')+xlab('log2(n. biosamples + 1)')+ 
   theme(legend.position = 'right', plot.title = element_text(size=9))+
+  annotate("text", x = 7.5, y = df_test_ks$position[df_test_ks$tissue == 'AllTissues'], label = df_test_ks$value[df_test_ks$tissue == 'AllTissues'], color = c('darkgrey', '#FF7F0EFF', '#D62728FF'))+
   scale_color_manual(values=color_type)
 ggsave(filename = sprintf('%spercentile_nsamples_DNAase_AllTissues.png', inputFold), width = 6, height = 5, plot = pl, device = 'png')
 ggsave(filename = sprintf('%spercentile_nsamples_DNAase_AllTissues.pdf', inputFold), width = 6, height = 5, plot = pl, device = 'pdf')
 
-pl <- ggplot(data = subset(df_plot, tissues != 'AllTissues'), aes(x = quant, y = log_nsamples, color = type))+
+pl <- ggplot(data = subset(df_plot, tissues != 'AllTissues'), aes(y = quant, x = log_nsamples, color = type))+
   geom_line()+
-  theme_bw()+ xlim(50, 100)+
+  theme_bw()+ ylim(58, 100)+
   facet_wrap(.~tissues, ncol = 6)+
-  xlab('percentile')+ylab('log(n. biosamples + 1)')+ 
-  theme(legend.position = 'bottom', strip.text = element_text(size = 9))+
+  ylab('percentile')+xlab('log2(n. biosamples + 1)')+
+  geom_text(data = subset(df_test_ks, tissue != 'AllTissues'), mapping = aes(x = x, y = position, label = value, color = type), size = 3)+
+  theme(legend.position = 'bottom', strip.text = element_text(size = 8))+
   scale_color_manual(values=color_type)
 ggsave(filename = sprintf('%spercentile_nsamples_DNAase_TissueSpec.png', inputFold), width = 12, height = 10, plot = pl, device = 'png')
 ggsave(filename = sprintf('%spercentile_nsamples_DNAase_TissueSpec.pdf', inputFold), width = 12, height = 10, plot = pl, device = 'pdf')
