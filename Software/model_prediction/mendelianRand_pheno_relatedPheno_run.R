@@ -252,11 +252,12 @@ for(i in 1:length(pheno_type)){
       sign_common_pheno[[j]] <- sign_common_pheno[[j]][match(common_f, sign_common_pheno[[j]]$new_id),]
       tmp_corr <- cor_feat[match(sign_common_pheno[[j]][, id_name], rownames(cor_feat)), 
                            match(sign_common_pheno[[j]][, id_name], colnames(cor_feat))]
-    
+
       MRInputObject <- mr_input(bx = sign_common_rel[[j]][, beta_id], bxse = sign_common_rel[[j]][, se_beta_id],
                                 by = sign_common_pheno[[j]][, beta_id], byse = sign_common_pheno[[j]][, se_beta_id], 
                                 correlation = tmp_corr, snps = colnames(tmp_corr))
       MREggerObject <- tryCatch(mr_egger(MRInputObject, correl = T), error = function(x) NULL)
+      # MREggerObject <- mr_egger(MRInputObject, correl = T)
       if(!is.null(MREggerObject)){
         res_MR[[i]][j, ] <- c(length(common_f), MREggerObject@Estimate, MREggerObject@StdError.Est, MREggerObject@CILower.Est, 
                               MREggerObject@CIUpper.Est, MREggerObject@Pvalue.Est, MREggerObject@Intercept, 
