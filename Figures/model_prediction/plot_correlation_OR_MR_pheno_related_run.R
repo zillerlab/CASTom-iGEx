@@ -191,7 +191,7 @@ for(i in 1:2){
   write.table(file = sprintf('%s%s_correlation_allTissues.txt', outFold, type_data[i]), x = new, col.names = T, row.names = F, quote = F, sep = '\t')
   new <- cbind(feat_corr_pval_tot[[i]], data.frame(pheno = tot_pheno$names_field, pheno_type = tot_pheno$pheno_type))
   write.table(file = sprintf('%s%s_correlation_pvalue_allTissues.txt', outFold,  type_data[i]), x = new, col.names = T, row.names = F, quote = F, sep = '\t')
-
+  
   new <- cbind(feat_mr_est_tot[[i]],  data.frame(pheno = tot_pheno$names_field, pheno_type = tot_pheno$pheno_type))
   write.table(file = sprintf('%s%s_MRest_allTissues.txt', outFold, type_data[i]), x = new, col.names = T, row.names = F, quote = F, sep = '\t')
   new <- cbind(feat_mr_est_pval_tot[[i]],  data.frame(pheno = tot_pheno$names_field, pheno_type = tot_pheno$pheno_type))
@@ -226,7 +226,7 @@ if(length(id_a)>0){
 id_b <-  which(grepl('in group-defined amygdala activation mask', pheno_info$name_plot))
 if(length(id_b)>0){
   for(i in id_b){pheno_info$name_plot[i] <- paste0(strsplit(pheno_info$name_plot[i], split = '\\(in group-defined amygdala activation mask\\)')[[1]][1], 'in group-defined amygdala activation mask', 
-                                    strsplit(pheno_info$name_plot[i], split = '\\(in group-defined amygdala activation mask\\)')[[1]][2])}
+                                                   strsplit(pheno_info$name_plot[i], split = '\\(in group-defined amygdala activation mask\\)')[[1]][2])}
 }
 # pheno_info$name_plot[grepl('Heschl', pheno_info$name_plot)] <- sapply(pheno_info$name_plot[grepl('Heschl', pheno_info$name_plot)], function(x) paste(strsplit(x, ' \\((includes H1 and H2))\\ ')[[1]], collapse = ' '))
 pheno_info$name_plot[grepl('Duration to complete alphanumeric path \\(trail #2\\)', pheno_info$name_plot)] <- 'Duration to complete alphanumeric path (20157)'
@@ -394,14 +394,14 @@ plot_heatmap_mr <- function(type_mat, mat_mr, mat_pval, mat_pval_FDR = NULL, phe
   coul <- rev(colorRampPalette(brewer.pal(11, "RdBu"))(100))
   coul[50] <- '#ffffff'
   
-  mat_mr[mat_pval>0.05] <- NA
+  mat_mr[mat_pval>0.05] <- 0
   labels_sign <- matrix('', nrow = nrow(mat_mr), ncol = ncol(mat_mr))
   if(!is.null(mat_pval_FDR)){
     labels_sign[mat_pval_FDR <= 0.05] <- '*'  
   }
   
   tmp_mat <- as.matrix(mat_mr)
-  tmp_mat[is.na(tmp_mat)] <- 0
+  # tmp_mat[is.na(tmp_mat)] <- 0
   
   val <- cap_val
   mat_breaks <- seq(-val, val, length.out = 100)
@@ -430,7 +430,7 @@ plot_heatmap_mr <- function(type_mat, mat_mr, mat_pval, mat_pval_FDR = NULL, phe
                     annotation_row = mat_row,  annotation_col = mat_col, annotation_names_col = F, annotation_names_row = F, 
                     cluster_rows=F, cluster_cols=F, border_color = 'darkgrey', 
                     annotation_colors = new_color, drop_levels = TRUE, fontsize_row = 10, fontsize_col = 10, fontsize = 12, 
-                    main = sprintf('%s\n%s', title_sub, type_mat),
+                    main = sprintf('%s\n%s', title_sub, type_mat), na_col = "grey90",
                     breaks = mat_breaks, treeheight_row = 0, treeheight_col = 0, cellwidth = 12)
   
   
@@ -448,12 +448,12 @@ for(i in 1:2){
   plot_heatmap_corr(type_mat = type_data[i], mat_cor = feat_corr[[i]][,tissue_name], pheno_ann = color_pheno[match(unique(pheno_info$pheno_type),color_pheno$pheno_type),], 
                     pheno_info = pheno_info[, ],  color_tissues = color_tissues, height_pl = 13, width_pl = 14, pheno_name = pheno_name, show_rownames = T, 
                     cap_val = min(c(0.6, max(abs(feat_corr[[i]][,tissue_name]), na.rm = T))))
-
+  
   # Odds ratio
   plot_heatmap_OR(type_mat = type_data[i], mat_OR = feat_OR[[i]][,tissue_name], pheno_ann = color_pheno[match(unique(pheno_info$pheno_type),color_pheno$pheno_type),], 
                   pheno_info = pheno_info,  color_tissues = color_tissues, height_pl = 13, width_pl = 14, pheno_name = pheno_name, show_rownames = T, 
                   cap_val = min(c(10, max(abs(feat_OR[[i]][,tissue_name]), na.rm = T))))
-
+  
   # MR-Egger
   plot_heatmap_mr(type_mat = type_data[i], mat_mr = feat_mr_est[[i]][,tissue_name], mat_pval = feat_mr_est_pval[[i]][,tissue_name],
                   pheno_ann = color_pheno[match(unique(pheno_info$pheno_type),color_pheno$pheno_type),], cap_val = 1, 
@@ -511,7 +511,7 @@ pl <- ggplot(data = df_tot, aes(x = Tscore, y = pathScore, color = tissue))+
             color = 'black')+
   xlab('gene T-score')+ylab('Pathway score')+ 
   theme_bw()+ ggtitle('Spearman Correlation Z-statistic')+theme(legend.position = 'none', plot.title = element_text(hjust = 0.5), 
-                                                       legend.text = element_text(size = 6),  legend.key.size = unit(0.3, "cm"), legend.title = element_blank())+
+                                                                legend.text = element_text(size = 6),  legend.key.size = unit(0.3, "cm"), legend.title = element_blank())+
   guides(color=guide_legend(ncol=1))+
   geom_abline(slope = 1, intercept= 0, linetype = 'dashed', alpha = 0.6, color = 'black')+
   # geom_smooth(method=lm, se = FALSE, size = 0.5, linetype = 'dashed', alpha = 0.6, color = 'black')+
@@ -523,8 +523,8 @@ write.table(r2_val,file = paste0(file_name, '.txt') , col.names = T, row.names =
 
 # plot number of phenotypes that have MR estimate sign
 df_perc <- data.frame(nMR = colSums(feat_mr_est_pval_tot[[1]] < 0.05, na.rm = T), nCorr = colSums(!is.na(feat_mr_est_pval_tot[[1]])),
-                     perc = colSums(feat_mr_est_pval_tot[[1]] < 0.05, na.rm = T)/colSums(!is.na(feat_mr_est_pval_tot[[1]])), 
-                     type = rep('T-score', length(tissue_name)), tissue = tissue_name, stringsAsFactors = F)
+                      perc = colSums(feat_mr_est_pval_tot[[1]] < 0.05, na.rm = T)/colSums(!is.na(feat_mr_est_pval_tot[[1]])), 
+                      type = rep('T-score', length(tissue_name)), tissue = tissue_name, stringsAsFactors = F)
 df_perc <- rbind(df_perc, data.frame(nMR = colSums(feat_mr_est_pval_tot[[2]] < 0.05, na.rm = T), nCorr = colSums(!is.na(feat_mr_est_pval_tot[[2]])), 
                                      perc = colSums(feat_mr_est_pval_tot[[2]] < 0.05, na.rm = T)/colSums(!is.na(feat_mr_est_pval_tot[[2]])), 
                                      type = rep('Pathway score', length(tissue_name)), tissue = tissue_name, stringsAsFactors = F))
@@ -537,7 +537,7 @@ pl <- ggplot(data = df_perc, aes(x = tissue, y = nMR, fill = type))+
   geom_bar(alpha = 0.6, width = 0.8, color = 'black', stat = 'identity', position="dodge")+
   ylab('Number of significant MR estimates')+ 
   theme_bw()+ theme(axis.text.y = element_text(color = color_tissues$color), axis.title.y = element_blank(), legend.position = 'bottom', plot.title = element_text(hjust = 0.5), 
-                     legend.title = element_blank())+
+                    legend.title = element_blank())+
   scale_fill_manual(values = c('lightgrey', 'grey20'))+
   coord_flip()
 
@@ -600,9 +600,10 @@ if(any(id_inf)){
 
 if(grepl('CAD', pheno_name)){
   myPalette <- colorRampPalette(c('grey20', rev(brewer.pal(11, "Spectral"))))
-  pl <-  ggplot(subset(df_mr, tissue %in% c('Adipose_Subcutaneous', 'Adrenal_Gland', 'Artery_Aorta', 'Artery_Coronary', 'Heart_Left_Ventricle', 'Liver' ,'Whole_Blood')),
-              aes(x = pheno_name, y = MR_est, shape = sign, color = log_pval))+
-  # pl <-  ggplot(df_mr,aes(x = pheno_name, y = MR_est, shape = sign))+
+  pl <-  ggplot(df_mr,
+  # pl <-  ggplot(subset(df_mr, tissue %in% c('Adipose_Subcutaneous', 'Adrenal_Gland', 'Artery_Aorta', 'Artery_Coronary', 'Heart_Left_Ventricle', 'Liver' ,'Whole_Blood')),
+                aes(x = pheno_name, y = MR_est, shape = sign, color = log_pval))+
+    # pl <-  ggplot(df_mr,aes(x = pheno_name, y = MR_est, shape = sign))+
     geom_point(position=position_dodge(0.5))+geom_errorbar(aes(ymin=MR_est_CIl, ymax=MR_est_CIu), width=.2, position=position_dodge(0.5))+
     theme_bw()+ 
     facet_wrap(.~tissue, nrow = 1)+
@@ -615,11 +616,11 @@ if(grepl('CAD', pheno_name)){
     scale_shape_manual(values=c(0, 15))+
     guides(shape=FALSE, color = guide_colourbar(barwidth=10,label.position="bottom", barheight = 1))+labs(color = '-log10(pvalue)')+coord_flip()
   # scale_color_manual(values=color_tissues$color[color_tissues$tissue %in% c('Adipose_Subcutaneous', 'Artery_Aorta', 'Artery_Coronary', 'Heart_Left_Ventricle', 'Liver' ,'Whole_Blood')])
-
+  
   pl <- ggplot_gtable(ggplot_build(pl))
   stripr <- which(grepl('strip-t', pl$layout$name))
-  fills <- color_tissues$color[color_tissues$tissue %in% c('Adipose_Subcutaneous',  'Adrenal_Gland', 'Artery_Aorta', 'Artery_Coronary', 'Heart_Left_Ventricle', 'Liver' ,'Whole_Blood')]
-  # fills <- color_tissues$color
+  # fills <- color_tissues$color[color_tissues$tissue %in% c('Adipose_Subcutaneous',  'Adrenal_Gland', 'Artery_Aorta', 'Artery_Coronary', 'Heart_Left_Ventricle', 'Liver' ,'Whole_Blood')]
+  fills <- color_tissues$color
   k <- 1
   for (i in stripr) {
     j <- which(grepl('rect', pl$grobs[[i]]$grobs[[1]]$childrenOrder))
@@ -627,7 +628,7 @@ if(grepl('CAD', pheno_name)){
     pl$grobs[[i]]$grobs[[1]]$children[[j]]$gp$alpha <- 0.7
     k <- k+1
   }
-
+  
   ggsave(filename = sprintf("%s%s_MRestimates_%s_relatedPheno_specPheno.png", outFold, type_data[id_keep], pheno_name), width = 11, height = 4, plot = pl, device = 'png')
   ggsave(filename = sprintf("%s%s_MRestimates_%s_relatedPheno_specPheno.pdf", outFold, type_data[id_keep], pheno_name), width = 11, height = 4, plot = pl, device = 'pdf')
 }
