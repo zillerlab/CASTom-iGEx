@@ -581,58 +581,60 @@ write.table(df_perc,file = paste0(file_name, '.txt') , col.names = T, row.names 
 # rownames(df_perc) <- NULL
 
 #### plot specific MR results with pvalue and SE ###
-id_MR <- which(pheno_info$names_field %in% pheno_plot_MR)
-id_keep <- 2
-df_mr <- data.frame(MR_est = as.vector(feat_mr_est[[id_keep]][id_MR, ]), MR_est_CIl = as.vector(feat_mr_est_low[[id_keep]][id_MR, ]), 
+for(i in 1:2){
+
+  id_MR <- which(pheno_info$names_field %in% pheno_plot_MR)
+  id_keep <- i
+  df_mr <- data.frame(MR_est = as.vector(feat_mr_est[[id_keep]][id_MR, ]), MR_est_CIl = as.vector(feat_mr_est_low[[id_keep]][id_MR, ]), 
                     MR_est_CIu = as.vector(feat_mr_est_up[[id_keep]][id_MR, ]), MR_est_pval = as.vector(feat_mr_est_pval[[id_keep]][id_MR, ]), MR_est_se = as.vector(feat_mr_est_se[[id_keep]][id_MR, ]), 
                     pheno_name = rep(pheno_info$name_plot[id_MR], ncol(feat_mr_est[[id_keep]])), tissue = unlist(lapply(colnames(feat_mr_est[[id_keep]]), function(x) rep(x, length(id_MR)))), stringsAsFactors = F)
-df_mr$sign <- 'no'
-df_mr$sign[df_mr$MR_est_pval <= 0.05] <- 'yes'
-df_mr$sign <- factor(df_mr$sign, levels = c('no', 'yes'))
-df_mr$pheno_name <- factor(df_mr$pheno_name, levels = pheno_info$name_plot[id_MR])
-df_mr$tissue <- factor(df_mr$tissue, levels =color_tissues$tissues)
-df_mr$log_pval <- -log10(df_mr$MR_est_pval)
-id_inf <- df_mr$log_pval == Inf & !is.na(df_mr$log_pval)
-if(any(id_inf)){
-  df_mr$log_pval[id_inf] <- -log10(2*pnorm(-abs(df_mr$MR_est[id_inf]/df_mr$MR_est_se[id_inf])))
-}
+  df_mr$sign <- 'no'
+  df_mr$sign[df_mr$MR_est_pval <= 0.05] <- 'yes'
+  df_mr$sign <- factor(df_mr$sign, levels = c('no', 'yes'))
+  df_mr$pheno_name <- factor(df_mr$pheno_name, levels = pheno_info$name_plot[id_MR])
+  df_mr$tissue <- factor(df_mr$tissue, levels =color_tissues$tissues)
+  df_mr$log_pval <- -log10(df_mr$MR_est_pval)
+  id_inf <- df_mr$log_pval == Inf & !is.na(df_mr$log_pval)
+  if(any(id_inf)){
+    df_mr$log_pval[id_inf] <- -log10(2*pnorm(-abs(df_mr$MR_est[id_inf]/df_mr$MR_est_se[id_inf])))
+  }
 
 
-if(grepl('CAD', pheno_name)){
-  myPalette <- colorRampPalette(c('grey20', rev(brewer.pal(11, "Spectral"))))
-  pl <-  ggplot(df_mr,
-  # pl <-  ggplot(subset(df_mr, tissue %in% c('Adipose_Subcutaneous', 'Adrenal_Gland', 'Artery_Aorta', 'Artery_Coronary', 'Heart_Left_Ventricle', 'Liver' ,'Whole_Blood')),
-                aes(x = pheno_name, y = MR_est, shape = sign, color = log_pval))+
-    # pl <-  ggplot(df_mr,aes(x = pheno_name, y = MR_est, shape = sign))+
-    geom_point(position=position_dodge(0.5))+geom_errorbar(aes(ymin=MR_est_CIl, ymax=MR_est_CIu), width=.2, position=position_dodge(0.5))+
-    theme_bw()+ 
-    facet_wrap(.~tissue, nrow = 1)+
-    ylab('MR-Egger estimate') + geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey40')+
-    theme(legend.position = 'bottom', legend.title = element_text(size = 7), legend.text = element_text(size = 7), 
+  if(grepl('CAD', pheno_name)){
+    myPalette <- colorRampPalette(c('grey20', rev(brewer.pal(11, "Spectral"))))
+    pl <-  ggplot(df_mr,
+    # pl <-  ggplot(subset(df_mr, tissue %in% c('Adipose_Subcutaneous', 'Adrenal_Gland', 'Artery_Aorta', 'Artery_Coronary', 'Heart_Left_Ventricle', 'Liver' ,'Whole_Blood')),
+                  aes(x = pheno_name, y = MR_est, shape = sign, color = log_pval))+
+      # pl <-  ggplot(df_mr,aes(x = pheno_name, y = MR_est, shape = sign))+
+      geom_point(position=position_dodge(0.5))+geom_errorbar(aes(ymin=MR_est_CIl, ymax=MR_est_CIu), width=.2, position=position_dodge(0.5))+
+      theme_bw()+ 
+      facet_wrap(.~tissue, nrow = 1)+
+      ylab('MR-Egger estimate') + geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey40')+
+      theme(legend.position = 'bottom', legend.title = element_text(size = 7), legend.text = element_text(size = 7), 
           plot.title = element_text(size=9), axis.title.y = element_blank(),  axis.title.x = element_text(size = 9),
           axis.text.x = element_text(size = 8, angle = 0, hjust = 1), axis.text.y = element_text(size = 7.5), 
           strip.text = element_text(size=6.7))+
-    scale_colour_gradientn(colours = myPalette(100), limits=c(0, max(df_mr$log_pval, na.rm = T)))+
-    scale_shape_manual(values=c(0, 15))+
-    guides(shape=FALSE, color = guide_colourbar(barwidth=10,label.position="bottom", barheight = 1))+labs(color = '-log10(pvalue)')+coord_flip()
-  # scale_color_manual(values=color_tissues$color[color_tissues$tissue %in% c('Adipose_Subcutaneous', 'Artery_Aorta', 'Artery_Coronary', 'Heart_Left_Ventricle', 'Liver' ,'Whole_Blood')])
+      scale_colour_gradientn(colours = myPalette(100), limits=c(0, max(df_mr$log_pval, na.rm = T)))+
+      scale_shape_manual(values=c(0, 15))+
+      guides(shape=FALSE, color = guide_colourbar(barwidth=10,label.position="bottom", barheight = 1))+labs(color = '-log10(pvalue)')+coord_flip()
+    # scale_color_manual(values=color_tissues$color[color_tissues$tissue %in% c('Adipose_Subcutaneous', 'Artery_Aorta', 'Artery_Coronary', 'Heart_Left_Ventricle', 'Liver' ,'Whole_Blood')])
   
-  pl <- ggplot_gtable(ggplot_build(pl))
-  stripr <- which(grepl('strip-t', pl$layout$name))
-  # fills <- color_tissues$color[color_tissues$tissue %in% c('Adipose_Subcutaneous',  'Adrenal_Gland', 'Artery_Aorta', 'Artery_Coronary', 'Heart_Left_Ventricle', 'Liver' ,'Whole_Blood')]
-  fills <- color_tissues$color
-  k <- 1
-  for (i in stripr) {
-    j <- which(grepl('rect', pl$grobs[[i]]$grobs[[1]]$childrenOrder))
-    pl$grobs[[i]]$grobs[[1]]$children[[j]]$gp$fill <- fills[k]
-    pl$grobs[[i]]$grobs[[1]]$children[[j]]$gp$alpha <- 0.7
-    k <- k+1
+    pl <- ggplot_gtable(ggplot_build(pl))
+    stripr <- which(grepl('strip-t', pl$layout$name))
+    # fills <- color_tissues$color[color_tissues$tissue %in% c('Adipose_Subcutaneous',  'Adrenal_Gland', 'Artery_Aorta', 'Artery_Coronary', 'Heart_Left_Ventricle', 'Liver' ,'Whole_Blood')]
+    fills <- color_tissues$color
+    k <- 1
+    for (i in stripr) {
+      j <- which(grepl('rect', pl$grobs[[i]]$grobs[[1]]$childrenOrder))
+      pl$grobs[[i]]$grobs[[1]]$children[[j]]$gp$fill <- fills[k]
+      pl$grobs[[i]]$grobs[[1]]$children[[j]]$gp$alpha <- 0.7
+      k <- k+1
+    }
+  
+    ggsave(filename = sprintf("%s%s_MRestimates_%s_relatedPheno_specPheno.png", outFold, type_data[id_keep], pheno_name), width = 11, height = 4, plot = pl, device = 'png')
+    ggsave(filename = sprintf("%s%s_MRestimates_%s_relatedPheno_specPheno.pdf", outFold, type_data[id_keep], pheno_name), width = 11, height = 4, plot = pl, device = 'pdf')
   }
-  
-  ggsave(filename = sprintf("%s%s_MRestimates_%s_relatedPheno_specPheno.png", outFold, type_data[id_keep], pheno_name), width = 11, height = 4, plot = pl, device = 'png')
-  ggsave(filename = sprintf("%s%s_MRestimates_%s_relatedPheno_specPheno.pdf", outFold, type_data[id_keep], pheno_name), width = 11, height = 4, plot = pl, device = 'pdf')
 }
-
 
 # myPalette <- colorRampPalette(c('grey20', 'red'))
 # if(grepl('SCZ', pheno_name)){
