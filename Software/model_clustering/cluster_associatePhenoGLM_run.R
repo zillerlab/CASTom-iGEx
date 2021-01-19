@@ -28,6 +28,7 @@ parser$add_argument("--functR", type = "character", help = "functions to be used
 parser$add_argument("--type_data", type = "character", help = "tscore, path_Reactome or path_GO")
 parser$add_argument("--type_sim", type = "character", default = 'HK', help = "HK or ED or SNF")
 parser$add_argument("--type_input", type = "character", default = 'original', help = "original or zscaled")
+parser$add_argument("--risk_score", type = "logical", default = F, help = "if true, phenotype is risk score")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
 args <- parser$parse_args()
@@ -40,6 +41,7 @@ type_data <- args$type_data
 type_sim <- args$type_sim
 type_input <- args$type_input
 clusterFile <- args$clusterFile
+risk_score <- args$risk_score
 outFold <- args$outFold
 
 ####################################################################################################################
@@ -89,7 +91,15 @@ rm_col <- colnames(phenoDat[, id_bin & colSums(phenoDat != 0 & !is.na(phenoDat))
 phenoDat <- phenoDat[,!colnames(phenoDat) %in% rm_col]
 
 phenoInfo <- read.delim(phenoDescFile, h=T, stringsAsFactors = F, sep = '\t')
-phenoInfo <- phenoInfo[match(colnames(phenoDat), phenoInfo$pheno_id),]
+# get common pheno id (phenoDescFile can be used to filter)
+common_pheno <- intersect(phenoInfo$pheno_id, colnames(phenoDat))
+phenoInfo <- phenoInfo[match(common_pheno, phenoInfo$pheno_id),]
+phenoDat <- phenoDat[,match(common_pheno,colnames(phenoDat))]
+
+if(risk_score){
+  phenoInfo$transformed_type <- 'CONTINUOUS'
+}
+
 if(any(phenoInfo$Path %in% 'Online follow-up > Cognitive function online > Fluid intelligence')){
   phenoInfo$Field[phenoInfo$Path == 'Online follow-up > Cognitive function online > Fluid intelligence'] <- paste(phenoInfo$Field[phenoInfo$Path == 'Online follow-up > Cognitive function online > Fluid intelligence'], '(Online)')
 }
@@ -168,6 +178,7 @@ output$bin_reg = tot_bin_reg
 save(output, file = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation_GLMpairwise.RData', outFold, type_data, type_input, type_cluster, type_sim))
 
 ###############################################################################
+if(!risk_score){
 test_pheno <- tot_bin_reg
 test_pheno$sign <- 'no'
 test_pheno$sign[test_pheno$pval_corr_overall <= 0.05] <- 'yes'
@@ -200,7 +211,7 @@ pl <-  ggplot(test_pheno, aes(x = new_id, y = logpval, fill = sign))+
   coord_flip()
 ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation_GLMpairwise.png', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = height_pl, plot = pl, device = 'png')
 ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation_GLMpairwise.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = height_pl, plot = pl, device = 'pdf')
-
+}
 ###############################################################################################
 # same but not pairwise (1 gropu against all the others)
 
@@ -272,6 +283,7 @@ output$bin_reg = tot_bin_reg
 save(output, file = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation_GLM.RData', outFold, type_data, type_input, type_cluster, type_sim))
 
 ###############################################################################
+if(!risk_score){
 test_pheno <- tot_bin_reg
 test_pheno$sign <- 'no'
 test_pheno$sign[test_pheno$pval_corr <= 0.05] <- 'yes'
@@ -306,4 +318,4 @@ pl <-  ggplot(test_pheno, aes(x = new_id, y = logpval, fill = sign))+
   coord_flip()
 ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation_GLM.png', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = height_pl, plot = pl, device = 'png')
 ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation_GLM.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = height_pl, plot = pl, device = 'pdf')
-
+}

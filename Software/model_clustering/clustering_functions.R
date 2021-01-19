@@ -765,6 +765,22 @@ compute_reg_endopheno <- function(fmla, type_pheno, mat){
   
 }
 
+compute_reg_endopheno_lmm <- function(fmla, type_pheno, mat){
+  
+  res <- tryCatch(lmer(fmla, data = mat),warning=function(...) NULL, error=function(...) NULL)
+  if(!is.null(res)){
+      ci <- confint.merMod(res, level = 0.95)
+      ct <- coef(summary(res))  
+      output <- data.frame(beta = ct[rownames(ct) == 'gr_id1','Estimate'], se_beta = ct[rownames(ct) == 'gr_id1','Std. Error'], z = ct[rownames(ct) == 'gr_id1','t value'])
+      output$CI_low <- ci['gr_id1',1]
+      output$CI_up <- ci['gr_id1',2]
+  }else{
+    output <- data.frame(beta = c(), se_beta = c(), z = c(), CI_low = c(), CI_up = c())
+  }
+  return(output)
+}
+
+
 compute_reg_endopheno_multi <- function(fmla, type_pheno, mat, cov_int){
   
   
