@@ -13,7 +13,6 @@ suppressPackageStartupMessages(library(umap))
 suppressPackageStartupMessages(library(igraph))
 suppressPackageStartupMessages(library(Matrix))
 suppressPackageStartupMessages(library(SparseM))
-suppressPackageStartupMessages(library(SNFtool))
 suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(RColorBrewer))
 suppressPackageStartupMessages(library(pheatmap))
@@ -196,7 +195,7 @@ if(corr_thr < 1){
   }
   common_feat <- intersect(colnames(scoreMat), rownames(corr_feat))
   # clumping: sort according dev_geno (from association results)
-  feat_info <- res_pval[[1]][match(res_pval[[1]][, id_info],common_feat),c(id_info, id_geno_summ)]
+  feat_info <- res_pval[[1]][match(common_feat,res_pval[[1]][, id_info]),c(id_info, id_geno_summ)]
   feat_info <- feat_info[order(feat_info[,2], decreasing = T), ]
   corr_feat <- corr_feat[match(feat_info[,1], rownames(corr_feat)), match(feat_info[,1], colnames(corr_feat))]
   
@@ -223,7 +222,7 @@ if(corr_thr < 1){
   #   }
   # }
   element_rm <- unique(element_rm)
-  # scoreMat <- scoreMat[, match(common_feat, colnames(scoreMat))] # not necessary, already matched with res_pval
+  scoreMat <- scoreMat[, match(common_feat, colnames(scoreMat))] 
   input_data <- scoreMat[, !colnames(scoreMat) %in% element_rm]
   
 }else{
