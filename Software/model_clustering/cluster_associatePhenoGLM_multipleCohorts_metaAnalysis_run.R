@@ -61,10 +61,24 @@ outFold <- args$outFold
 # type_input <- 'zscaled'
 ####################################################################################################################
 
+####################################################################################################################
+# name_cohorts <- read.table('INPUT_DATA/SCZ_cohort_names_CLUST')$V1
+# phenoDatFile <- paste0('OUTPUT_CMC/predict_PGC/200kb/',name_cohorts,'/devgeno0.01_testdevgeno0/tscore_corrThr0.5_risk_score_relatedPhenotypes.txt')
+# phenoDescFile <- '/home/luciat/UKBB_SCZrelated/phenotypeDescription_rsSCZ.txt'
+# sampleAnnFile <- paste0('INPUT_DATA/Covariates/',name_cohorts,'.covariateMatrix_old.txt')
+# clusterFile <- 'OUTPUT_CMC/predict_PGC/200kb/Meta_Analysis_SCZ/devgeno0.01_testdevgeno0/tscore_zscaled_clusterCases_PGmethod_HKmetric.RData'
+# type_cluster <- 'Cases'
+# type_data <- 'tscore'
+# type_sim <- 'HK'
+# outFold <- './'
+# functR <- '/home/luciat/priler_project/Software/model_clustering/clustering_functions.R'
+# type_input <- 'zscaled'
+####################################################################################################################
+
 source(functR)
 phenoDat <- list()
 sampleAnn <- list()
-
+cl_cohort <- list()
 phenoInfo <- read.delim(phenoDescFile, h=T, stringsAsFactors = F, sep = '\t')
 
 if(length(clusterFile) == 1){
@@ -96,10 +110,11 @@ for(i in 1:length(name_cohorts)){
   
   if(length(clusterFile) == 1){
     
-    intersect_samples <- intersect(sampleAnn[[i]]$Individual_ID, cluster_output$sampleAnn$Individual_ID[cluster_output$sampleAnn$cohort == name_cohorts[i]])
+    intersect_samples <- intersect(sampleAnn[[i]]$Individual_ID, cluster_output$sampleInfo$Individual_ID[cluster_output$sampleInfo$cohort == name_cohorts[i]])
     sampleAnn[[i]] <- sampleAnn[[i]][match(intersect_samples, sampleAnn[[i]]$Individual_ID),]
     name_cl <- ifelse('cl_best' %in% names(cluster_output), 'cl_best', 'cl_new')
-    cluster_output <- cluster_output[which(names(cluster_output) == name_cl)][[1]]
+    tmp <- cluster_output[which(names(cluster_output) == name_cl)][[1]]
+    cl_cohort[[i]] <- tmp[match(sampleAnn[[i]]$Individual_ID,tmp$id),]
     
   }else{
     tmp <- get(load(clusterFile[i]))
@@ -136,8 +151,8 @@ if(length(clusterFile) > 1){
   cl <- do.call(rbind, cluster_output)
   cl_cohort <- cluster_output
 }else{
-  cl <- cluster_output
-  cl_cohort <- lapply(sort(unique(cluster_output$gr)), function(x) cluster_output[cluster_output$gr == x,])
+  cl <- cluster_output[which(names(cluster_output) == name_cl)][[1]]
+  cl <- cl[match(sampleAnn_tot$Individual_ID,cl$id),]
 }
 cl$cohort <- sampleAnn_tot$cohort
 gr_names <- sort(unique(cl$gr))
@@ -153,22 +168,23 @@ for(n in 1:length(name_cohorts)){
   
   print(name_cohorts[n])
   phenoInfo_cohort <- phenoInfo[match(colnames(phenoDat[[n]]), phenoInfo$pheno_id),]
+  covDat <- sampleAnn[[n]][, !colnames(sampleAnn[[n]]) %in% c('Individual_ID', 'genoSample_ID', 'Dx')]
+  fmla  <- as.formula(paste('pheno~gr_id+', paste0(colnames(covDat)[!colnames(covDat) %in% 'cohort'], collapse = '+')))
+  
+  gr_names_cohort <- as.numeric(names(which(table(cl_cohort[[n]]$gr) > 4)))
   
   ########################################
   #### binary regression (gi vs all) #####
   ########################################
   
-  covDat <- sampleAnn[[n]][, !colnames(sampleAnn[[n]]) %in% c('Individual_ID', 'genoSample_ID', 'Dx')]
-  fmla  <- as.formula(paste('pheno~gr_id+', paste0(colnames(covDat)[!colnames(covDat) %in% 'cohort'], collapse = '+')))
-
-  bin_reg <- vector(mode = 'list', length = length(gr_names))
-  for(i in 1:length(gr_names)){
+  bin_reg <- vector(mode = 'list', length = length(gr_names_cohort))
+  for(i in 1:length(gr_names_cohort)){
     
-    print(paste0('group', gr_names[i], '_vs_all'))
+    print(paste0('group', gr_names_cohort[i], '_vs_all'))
     
     # j vs all
-    pheno_case_tmp <- list(phenoDat[[n]][cl_cohort[[n]]$gr == gr_names[i],], phenoDat[[n]][cl_cohort[[n]]$gr != gr_names[i],])
-    covDat_tmp <- list(covDat[cl_cohort[[n]]$gr == gr_names[i],], covDat[cl_cohort[[n]]$gr != gr_names[i],]) 
+    pheno_case_tmp <- list(phenoDat[[n]][cl_cohort[[n]]$gr == gr_names_cohort[i],], phenoDat[[n]][cl_cohort[[n]]$gr != gr_names_cohort[i],])
+    covDat_tmp <- list(covDat[cl_cohort[[n]]$gr == gr_names_cohort[i],], covDat[cl_cohort[[n]]$gr != gr_names_cohort[i],]) 
     
     new <- do.call(rbind, pheno_case_tmp)
     colnames(new) <- paste0('p', colnames(new))
@@ -191,7 +207,7 @@ for(n in 1:length(name_cohorts)){
     phenoInfo_tmp <- phenoInfo_cohort[match(colnames(new), paste0('p',phenoInfo_cohort$pheno_id)),]
     
     bin_reg[[i]] <- cbind(data.frame(pheno_id = phenoInfo_tmp$pheno_id, Field = phenoInfo_tmp$Field, meaning = phenoInfo_tmp$Coding_meaning), res_glm)
-    bin_reg[[i]]$comp <- sprintf('gr%i_vs_all', gr_names[i])
+    bin_reg[[i]]$comp <- sprintf('gr%i_vs_all', gr_names_cohort[i])
     
   }
   
@@ -235,22 +251,23 @@ for(n in 1:length(name_cohorts)){
   
   print(name_cohorts[n])
   phenoInfo_cohort <- phenoInfo[match(colnames(phenoDat[[n]]), phenoInfo$pheno_id),]
-  
   covDat <- sampleAnn[[n]][, !colnames(sampleAnn[[n]]) %in% c('Individual_ID', 'genoSample_ID', 'Dx')]
   fmla  <- as.formula(paste('pheno~gr_id+', paste0(colnames(covDat)[!colnames(covDat) %in% 'cohort'], collapse = '+')))
+  
+  gr_names_cohort <- as.numeric(names(which(table(cl_cohort[[n]]$gr) > 4)))
   
   #######################################
   #### binary regression (gi vs gj) #####
   #######################################
-  bin_reg <- vector(mode = 'list', length = length(gr_names)-1)
+  bin_reg <- vector(mode = 'list', length = length(gr_names_cohort)-1)
   
-  for(i in 1:(length(gr_names)-1)){
+  for(i in 1:(length(gr_names_cohort)-1)){
     
-    print(paste0('group', gr_names[i], '_vs_groupj'))
+    print(paste0('group', gr_names_cohort[i], '_vs_groupj'))
     
     # j vs all
-    pheno_case_tmp <- lapply(gr_names[i:length(gr_names)], function(x) phenoDat[[n]][cl_cohort[[n]]$gr == x,])
-    covDat_tmp <- lapply(gr_names[i:length(gr_names)], function(x) covDat[cl_cohort[[n]]$gr == x,])
+    pheno_case_tmp <- lapply(gr_names_cohort[i:length(gr_names_cohort)], function(x) phenoDat[[n]][cl_cohort[[n]]$gr == x,])
+    covDat_tmp <- lapply(gr_names_cohort[i:length(gr_names_cohort)], function(x) covDat[cl_cohort[[n]]$gr == x,])
     bin_reg[[i]] <-  vector(mode = 'list', length = length(pheno_case_tmp)-1)
     
     for(j in 2:length(pheno_case_tmp)){
@@ -276,7 +293,7 @@ for(n in 1:length(name_cohorts)){
       phenoInfo_tmp <- phenoInfo_cohort[match(colnames(new), paste0('p',phenoInfo_cohort$pheno_id)),]
       
       bin_reg[[i]][[j-1]] <- cbind(data.frame(pheno_id = phenoInfo_tmp$pheno_id, Field = phenoInfo_tmp$Field, meaning = phenoInfo_tmp$Coding_meaning), res_glm)
-      bin_reg[[i]][[j-1]]$comp <- sprintf('gr%i_vs_gr%i', gr_names[i:length(gr_names)][j], gr_names[i])
+      bin_reg[[i]][[j-1]]$comp <- sprintf('gr%i_vs_gr%i', gr_names_cohort[i:length(gr_names_cohort)][j], gr_names_cohort[i])
       
     }
     
