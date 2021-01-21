@@ -849,6 +849,50 @@ compute_reg_endopheno_multi <- function(fmla, type_pheno, mat, cov_int){
   
 }
 
+#### meta analysis endophenotypes ####
+meta_analysis_res <- function(beta, se_beta, thr_het =0.001, type_pheno = NULL){
+  
+  if(all(beta == 0)){
+    df <- data.frame(beta = NA, se_beta = NA, z = NA, pvalue = NA, Cochran_stat = NA, Cochran_pval = NA, model = NA, OR_or_Beta = NA, CI_low = NA, CI_up = NA)
+  }else{
+  
+    model <- 'fixed'
+    w <- 1/(se_beta)^2
+    beta_all <- sum(beta*w)/sum(w)
+    se_all <- sqrt(1/sum(w))
+    z_all <- beta_all/se_all
+    p_all <- 2*pnorm(-abs(z_all), 0,1)
+    Q <- sum(w*((beta_all - beta)^2))
+    Q_pval <- pchisq(Q, df=nrow(tmp)-1, lower.tail=FALSE) # null hypothesis consistency
+    
+    if(Q_pval<=thr_het){
+      
+      tau2 <- max(0, (Q-nrow(tmp)+1)/(sum(w) - (sum(w^2)/sum(w))))
+      w_new <- 1/(tau2 + (se_beta)^2)
+      se_all <- sqrt(1/sum(w_new))
+      beta_all <- sum(beta*w_new)/sum(w_new)
+      z_all <- beta_all/se_all
+      p_all <- 2*pnorm(-abs(z_all), 0,1)
+      model <- 'random'
+    }
+    
+    df <- data.frame(beta = beta_all, se_beta = se_all, z = z_all, pvalue = p_all, Cochran_stat = Q, Cochran_pval = Q_pval, model = model)
+    if(!is.null(type_pheno)){
+      
+      if(type_pheno == 'CONTINUOUS'){
+        df$OR_or_Beta <- df$beta
+        df$CI_low <-  df$beta + qnorm(0.025)*df$se_beta
+        df$CI_up <-   df$beta + qnorm(0.975)*df$se_beta
+      }else{
+        df$OR_or_Beta <- exp(df$beta)
+        df$CI_low <- exp(df$beta + qnorm(0.025)*df$se_beta)
+        df$CI_up <- exp(df$beta + qnorm(0.975)*df$se_beta)
+      }
+    }
+  }
+  return(df)
+  
+}
 
 
 # compute_reg_features <- function(fmla, mat){
