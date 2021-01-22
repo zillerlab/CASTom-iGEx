@@ -226,8 +226,8 @@ for(j in 1:length(comp)){
   for(i in 1:length(pheno_id)){
     
     tmp <- do.call(rbind,lapply(reg_cohort, function(x) x[x$comp == comp[j] & x$pheno_id == pheno_id[i],]))
-    tmp$beta[is.na(tmp$beta)] <- 0
-    tmp$se_beta[is.na(tmp$se_beta)] <- 0
+    tmp$beta[is.na(tmp$beta) | is.nan(tmp$se_beta) | is.na(tmp$se_beta)] <- 0
+    tmp$se_beta[is.nan(tmp$se_beta)] <- NA
     
     tmp_meta <- meta_analysis_res(beta = tmp$beta, se_beta = tmp$se_beta, type_pheno = unique(tmp$type_pheno))
     tmp_meta <- cbind(data.frame(tmp[1,c('pheno_id','Field','meaning')]), tmp_meta)
@@ -314,8 +314,8 @@ for(j in 1:length(comp)){
   for(i in 1:length(pheno_id)){
     
     tmp <- do.call(rbind,lapply(reg_cohort, function(x) x[x$comp == comp[j] & x$pheno_id == pheno_id[i],]))
-    tmp$beta[is.na(tmp$beta)] <- 0
-    tmp$se_beta[is.na(tmp$se_beta)] <- 0
+    tmp$beta[is.na(tmp$beta) | is.nan(tmp$se_beta) | is.na(tmp$se_beta)] <- 0
+    tmp$se_beta[is.nan(tmp$se_beta)] <- NA
     
     tmp_meta <- meta_analysis_res(beta = tmp$beta, se_beta = tmp$se_beta, type_pheno = unique(tmp$type_pheno))
     tmp_meta <- cbind(data.frame(tmp[1,c('pheno_id','Field','meaning')]), tmp_meta)
