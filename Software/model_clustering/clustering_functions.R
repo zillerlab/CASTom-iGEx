@@ -863,11 +863,11 @@ meta_analysis_res <- function(beta, se_beta, thr_het = 0.001, type_pheno = NULL)
     z_all <- beta_all/se_all
     p_all <- 2*pnorm(-abs(z_all), 0,1)
     Q <- sum(w*((beta_all - beta)^2), na.rm = T)
-    Q_pval <- pchisq(Q, df=length(beta)-1, lower.tail=FALSE) # null hypothesis consistency
+    Q_pval <- pchisq(Q, df=length(se_beta[!is.na(se_beta)])-1, lower.tail=FALSE) # null hypothesis consistency
     
     if(Q_pval<=thr_het){
       
-      tau2 <- max(0, (Q-length(beta)+1)/(sum(w, na.rm = T) - (sum(w^2, na.rm = T)/sum(w, na.rm = T))))
+      tau2 <- max(0, (Q-length(se_beta[!is.na(se_beta)])+1)/(sum(w, na.rm = T) - (sum(w^2, na.rm = T)/sum(w, na.rm = T))))
       w_new <- 1/(tau2 + (se_beta)^2)
       se_all <- sqrt(1/sum(w_new, na.rm = T))
       beta_all <- sum(beta*w_new, na.rm = T)/sum(w_new, na.rm = T)
