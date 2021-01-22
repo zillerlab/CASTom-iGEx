@@ -171,7 +171,7 @@ for(n in 1:length(name_cohorts)){
   covDat <- sampleAnn[[n]][, !colnames(sampleAnn[[n]]) %in% c('Individual_ID', 'genoSample_ID', 'Dx')]
   fmla  <- as.formula(paste('pheno~gr_id+', paste0(colnames(covDat)[!colnames(covDat) %in% 'cohort'], collapse = '+')))
   
-  gr_names_cohort <- as.numeric(names(which(table(cl_cohort[[n]]$gr) > 4)))
+  gr_names_cohort <- as.numeric(names(which(table(cl_cohort[[n]]$gr) > 10)))
   
   ########################################
   #### binary regression (gi vs all) #####
@@ -254,7 +254,7 @@ for(n in 1:length(name_cohorts)){
   covDat <- sampleAnn[[n]][, !colnames(sampleAnn[[n]]) %in% c('Individual_ID', 'genoSample_ID', 'Dx')]
   fmla  <- as.formula(paste('pheno~gr_id+', paste0(colnames(covDat)[!colnames(covDat) %in% 'cohort'], collapse = '+')))
   
-  gr_names_cohort <- as.numeric(names(which(table(cl_cohort[[n]]$gr) > 4)))
+  gr_names_cohort <- as.numeric(names(which(table(cl_cohort[[n]]$gr) > 10)))
   
   #######################################
   #### binary regression (gi vs gj) #####
