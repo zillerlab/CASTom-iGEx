@@ -29,6 +29,7 @@ parser$add_argument("--type_data", type = "character", help = "tscore, path_Reac
 parser$add_argument("--type_sim", type = "character", default = 'HK', help = "HK or ED or SNF")
 parser$add_argument("--type_input", type = "character", default = 'original', help = "original or zscaled")
 parser$add_argument("--risk_score", type = "logical", default = F, help = "if true, phenotype is risk score")
+parser$add_argument("--rescale_pheno", type = "logical", default = F, help = "if true, continous phenotype rescaled")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
 args <- parser$parse_args()
@@ -42,6 +43,7 @@ type_sim <- args$type_sim
 type_input <- args$type_input
 clusterFile <- args$clusterFile
 risk_score <- args$risk_score
+rescale_pheno <- args$rescale_pheno
 outFold <- args$outFold
 
 ####################################################################################################################
@@ -55,6 +57,7 @@ outFold <- args$outFold
 # outFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/'
 # functR <- '/psycl/g/mpsziller/lucia/priler_project/Software/model_clustering/clustering_functions.R'
 # type_input <- 'zscaled'
+# rescale_pheno = T
 ####################################################################################################################
 
 source(functR)
@@ -98,6 +101,18 @@ phenoDat <- phenoDat[,match(common_pheno,colnames(phenoDat))]
 
 if(risk_score){
   phenoInfo$transformed_type <- 'CONTINUOUS'
+}
+
+if(rescale_pheno){
+  id_c <- which(phenoInfo$transformed_type == 'CONTINUOUS')
+  if(length(id_c) > 0){
+    for(i in id_c){
+      tmp <- scale(phenoDat[, i])
+      attr(tmp,  "scaled:center") <- NULL
+      attr(tmp,  "scaled:scale") <- NULL
+      phenoDat[, i] <- tmp[,1]
+    }
+  }
 }
 
 if(any(phenoInfo$Path %in% 'Online follow-up > Cognitive function online > Fluid intelligence')){

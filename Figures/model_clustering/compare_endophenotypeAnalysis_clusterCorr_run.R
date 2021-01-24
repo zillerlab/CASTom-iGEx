@@ -39,6 +39,7 @@ thr_plot <- args$thr_plot
 outFold <- args$outFold
 
 #####################################################################################################
+# tissue <- 'Liver'
 # setwd('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/')
 # corr_cl_file <- sprintf('OUTPUT_GTEx/predict_CAD/%s/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/PearC_clusterCases_CAD_HARD_groupCorrelation_relatedPheno.RData', tissue)
 # endopheno_analysis_file <- sprintf('OUTPUT_GTEx/predict_CAD/%s/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/tscore_zscaled_clusterCases_PGmethod_HKmetric_phenoAssociation_GLM_combined.txt', tissue)
@@ -160,7 +161,7 @@ plot_heatmap_gr(mat_gr = corr_cl_red$corr[, gr_name],  mat_pval_FDR =  corr_cl_r
 # plot phenotype significant in at least 1 group
 id_sign <- which(rowSums(abs(corr_cl$corr[,gr_name]) >= thr_plot)>0)
 corr_cl_sign <- list(corr = corr_cl$corr[id_sign,], pval = corr_cl$pval[id_sign,], 
-                    pval_FDRcorr = corr_cl$pval_FDRcorr[id_sign,], pheno = corr_cl$pheno[id_sign,])
+                     pval_FDRcorr = corr_cl$pval_FDRcorr[id_sign,], pheno = corr_cl$pheno[id_sign,])
 
 corr_cl_sign$pheno$name_plot <- corr_cl_sign$pheno$Field
 corr_cl_sign$pheno$name_plot[!is.na(corr_cl_sign$pheno$meaning) & grepl('Diagnoses', corr_cl_sign$pheno$Field)] <- corr_cl_sign$pheno$meaning[!is.na(corr_cl_sign$pheno$meaning) & grepl('Diagnoses', corr_cl_sign$pheno$Field)]
@@ -172,16 +173,16 @@ plot_heatmap_gr(mat_gr = corr_cl_sign$corr[, gr_name],  mat_pval_FDR =  corr_cl_
                 color_groups = color_groups, height_pl = 10, width_pl = 10, show_rownames = T, outFold = paste0(outFold, 'thr0.2_'))
 
 # compute overall concordance rate: significant correlations only
-thr_pval <- c(0.1, 0.05, 0.01, 0.001, 0.0001)
+thr_pval <- c(0.1, 0.05, 0.01, 0.001, 0.0001, 0.00001, 0.000001)
 df_repr <- list()
 
 for(j in 1:length(thr_pval)){
-
-  df_repr[[j]] <- data.frame(comp = gr_name, n_pheno = NA, n_same_sign = NA, fraction_rep = NA, pval = NA, thr_corr_FDR = thr_pval[j])
+  
+  df_repr[[j]] <- data.frame(comp = gr_name, n_pheno = NA, n_same_sign = NA, fraction_rep = NA, pval = NA, thr_corr = thr_pval[j])
   
   for(i in 1:length(gr_name)){
-
-    id <- corr_cl$pval_FDRcorr[, gr_name[i]] <= thr_pval[j] & !is.na(corr_cl$pval_FDRcorr[, gr_name[i]])
+    
+    id <- corr_cl$pval[, gr_name[i]] <= thr_pval[j] & !is.na(corr_cl$pval[, gr_name[i]])
     pheno_c <- intersect(corr_cl$pheno$pheno[id], endo_res_tot$pheno_id)
     c_gr <- corr_cl$corr[match(pheno_c, corr_cl$pheno$pheno), gr_name[i]]
     beta_endo <- endo_res_tot[endo_res_tot$comp %in% paste0(gr_name[i], '_vs_all'), ]
@@ -190,7 +191,7 @@ for(j in 1:length(thr_pval)){
     df_repr[[j]]$n_same_sign[i] <- sum(sign(c_gr*beta_endo) == 1)
     df_repr[[j]]$fraction_rep[i] <- sum(sign(c_gr*beta_endo) == 1)/length(pheno_c)
     df_repr[[j]]$pval[i] <- binom.test(x = df_repr[[j]]$n_same_sign[i], n = df_repr[[j]]$n_pheno[i])$p.value
-  
+    
   }
   
 }
@@ -200,7 +201,7 @@ df_repr <- do.call(rbind, df_repr)
 # plot distribution and save table
 write.table(file = sprintf('%sclusterCases_%s_groupCorrelation_relatedPheno_concordance.txt', outFold, pheno_name), x = df_repr, quote = F, sep = '\t', row.names = F, col.names = T)
 
-df_repr$new_thr <- -log10(df_repr$thr_corr_FDR)
+df_repr$new_thr <- -log10(df_repr$thr_corr)
 df_repr$new_pval <- -log10(df_repr$pval)
 df_repr$comp <- factor(df_repr$comp, levels = gr_name)
 
@@ -209,21 +210,16 @@ scale_pval <- (max(df_repr$new_pval) - min(df_repr$new_pval))/5
 pl <- ggplot(data = df_repr, aes(x = new_thr, y = fraction_rep, color = comp, group = comp, size = new_pval))+
   geom_point(alpha = 0.7)+
   geom_line(alpha = 0.7, size = 0.8)+
-  xlab('correlation FDR p-value threshold')+ylab('Fraction of concordance')+ 
+  xlab('correlation p-value threshold')+ylab('Fraction of concordance')+ 
   theme_bw()+theme(legend.position = 'right', plot.title = element_text(hjust = 0.5), 
-  legend.text = element_text(size = 7),  legend.title = element_text(size = 8), legend.key.size = unit(0.3, "cm"))+
+                   legend.text = element_text(size = 7),  legend.title = element_text(size = 8), legend.key.size = unit(0.3, "cm"))+
   scale_x_continuous(breaks=-log10(thr_pval), labels = thr_pval)+
   scale_size_continuous(breaks = seq(min(df_repr$new_pval), max(df_repr$new_pval), length.out = 5), 
-                         labels = formatC(10^(-seq(min(df_repr$new_pval), max(df_repr$new_pval), length.out = 5)), format = "e", digits = 2))+
+                        labels = formatC(10^(-seq(min(df_repr$new_pval), max(df_repr$new_pval), length.out = 5)), format = "e", digits = 2))+
   guides(color=guide_legend(title = ''), size = guide_legend(title = 'binomial test\np-value'))+
   scale_color_d3()
 
 ggsave(filename = sprintf('%sclusterCases_%s_groupCorrelation_relatedPheno_concordance.png', outFold, pheno_name), plot = pl, width = 5, height = 4.5, dpi = 500)
 ggsave(filename = sprintf('%sclusterCases_%s_groupCorrelation_relatedPheno_concordance.pdf', outFold, pheno_name), plot = pl, width = 5, height = 4.5, dpi = 500, compress = F)
-
-
-
-
-
 
 
