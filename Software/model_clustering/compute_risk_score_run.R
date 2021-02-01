@@ -30,6 +30,7 @@ parser$add_argument("--scale_rs", type = "logical", default = FALSE, help = "")
 parser$add_argument("--pheno_class_name", type = "character", nargs = '*', help = "")
 parser$add_argument("--pvalresFile", type = "character", nargs = '*', help = "file with pvalue results")
 parser$add_argument("--corr_thr", type = "double", default = 1, help = "correlation among features threshold")
+parser$add_argument("--n_max", type = "integer", default = 50000, help = "maximum number of samples to split data")
 parser$add_argument("--corrFile", type = "character",  help = "")
 parser$add_argument("--min_genes_path", type = "integer", default = 1, help = "minimum number of genes for a pathway, if > 1 recompute corrected pvalues")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
@@ -47,6 +48,7 @@ cases_only <- args$cases_only
 min_genes_path <- args$min_genes_path
 pheno_class_name <- args$pheno_class_name
 scale_rs <- args$scale_rs
+n_max <- args$n_max
 outFold <- args$outFold
 
 ###################################################################################################################
@@ -183,6 +185,8 @@ if(split_tot == 0){
 }
 # print(identical(colnames(scoreMat), res_pval[[1]][, id_info]))
 print(identical(sampleAnn$Individual_ID, rownames(scoreMat)))
+print(mem_used())
+
 
 #### filter features based on estimated correlation #####
 if(corr_thr < 1){
@@ -230,6 +234,9 @@ if(corr_thr < 1){
   input_data <- scoreMat
   
 }
+rm(scoreMat)
+print(mem_used())
+
 
 ###################################################################################################################
 # compute PRS
@@ -241,16 +248,17 @@ for(j in 1:length(pvalresFile)){
   print(paste( '#########', pheno_class_name[j], '#########'))
   
   res_pval <- get(load(pvalresFile[j]))
+  rm(final)
   pheno_info <- res_pval$pheno
   
   if(type_data == 'tscore'){
     res_pval <- res_pval$tscore
   }
   if(type_data == 'path_Reactome'){
-      res_pval <- res_pval$pathScore_reactome
+    res_pval <- res_pval$pathScore_reactome
   }  
   if(type_data == 'path_GO'){
-        res_pval <- res_pval$pathScore_GO
+    res_pval <- res_pval$pathScore_GO
   }
   
   # recompute pvalue if ngenes_tscore > 1
@@ -265,29 +273,54 @@ for(j in 1:length(pvalresFile)){
   if(!all(colnames(input_data) %in% res_pval[[1]][,id_info])){stop('not all features in input data also in association analysis')}
   
   risk_score[[j]] <- matrix(ncol = nrow(pheno_info), nrow = nrow(input_data))
+  
   for(i in 1:length(res_pval)){
     print(pheno_info$pheno_id[i])
-    tmp <- sapply(1:ncol(input_data), function(x) input_data[, x]*res_pval[[i]][res_pval[[i]][,id_info] == colnames(input_data)[x], id_pval-1])
-    colnames(tmp) <- colnames(input_data)
+    
+    tmp_z <- res_pval[[i]][match(colnames(input_data), res_pval[[i]][,id_info]),id_pval-1]
+    
+    if(nrow(input_data) > n_max){
+      
+      n_split <- floor(nrow(input_data)/100)
+      split_row <- lapply(1:100, function(x) (1:n_split) + n_split*(x-1))
+      if(max(split_row[[100]]) < nrow(input_data)){
+        split_row[[100]] <- c(split_row[[100]], (split_row[[100]][n_split]+1):nrow(input_data))
+      }
+      if(max(split_row[[100]]) > nrow(input_data)){
+        split_row[[100]] <- split_row[[100]][split_row[[100]] %in% 1:nrow(input_data)]
+      }
+      tmp <- list()
+      for(l in 1:length(split_row)){
+        tmp[[l]] <- input_data[split_row[[l]],]*matrix(rep(tmp_z, length(split_row[[l]])), byrow = T, nrow = length(split_row[[l]]))
+      }
+      tmp <- do.call(rbind, tmp)
+      colnames(tmp) <- colnames(input_data)
+      
+    }else{
+      # tmp <- sapply(1:ncol(input_data), function(x) input_data[, x]*res_pval[[i]][res_pval[[i]][,id_info] == colnames(input_data)[x], id_pval-1])
+      # colnames(tmp) <- colnames(input_data)
+      tmp <- input_data*matrix(rep(tmp_z, nrow(input_data)), byrow = T, nrow = nrow(input_data))
+      colnames(tmp) <- colnames(input_data)
+    }
     risk_score[[j]][,i] <- rowSums(tmp)  
   }
+  
   colnames(risk_score[[j]]) <- pheno_info$pheno_id
   if(scale_rs){
     risk_score[[j]] <- scale(risk_score[[j]])
     attr(risk_score[[j]], "scaled:center") <- NULL
     attr(risk_score[[j]], "scaled:scale") <- NULL
   }
-
+  
 }
 risk_score <- do.call(cbind, risk_score)
 sampleAnn_score <- cbind(sampleAnn_score, risk_score)
 
 write.table(sampleAnn_score, file = sprintf('%s%s_corrThr%s_risk_score_relatedPhenotypes.txt', outFold, type_data, as.character(corr_thr)), col.names = T, row.names = F, sep = '\t', quote = F)
 
-  
+
 tmp <- res_pval[[1]][match(colnames(input_data), res_pval[[1]][,id_info]),c(id_info, id_geno_summ)]
 write.table(tmp, file = sprintf('%s%s_features_risk_score_corrThr%s.txt', outFold, type_data, as.character(corr_thr)), col.names = T, row.names = F, sep = '\t', quote = F)
-
 
 
 
