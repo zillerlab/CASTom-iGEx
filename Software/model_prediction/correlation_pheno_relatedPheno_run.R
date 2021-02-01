@@ -203,14 +203,18 @@ if(grepl('CAD',pheno_name_comp)){
 if(grepl('SCZ', pheno_name_comp)){
   
   pheno_name <- c(read.table(sprintf('%smatch_cov_pheno.txt', phenoFold), h=F, stringsAsFactors = F)$V1, 'mixedpheno_Psychiatric', 'ICD10_Psychiatric', 'ICD9_Psychiatric', 
-                  read.table(sprintf('%smatch_cov_pheno_SchunkertApp.txt', phenoFold), h=F, stringsAsFactors = F)$V1, 'Blood_biochemistry')
+                  read.table(sprintf('%smatch_cov_pheno_SchunkertApp.txt', phenoFold), h=F, stringsAsFactors = F)$V1, 'Blood_biochemistry', 'Blood_count_ratio')
+  
   pheno_input <- read.delim(sprintf('%sphenotypeDescription_PHESANTproc.txt', phenoFold), h=T, stringsAsFactors = F, sep = '\t')
   tmp <- read.delim(sprintf('%sphenotypeDescription_PHESANTproc_CADrelatedpheno.txt', phenoFold), h=T, stringsAsFactors = F, sep = '\t')
   pheno_input <- rbind(pheno_input, tmp)
   pheno_input <- pheno_input[!duplicated(pheno_input$pheno_id),]
+  tmp <- read.delim(sprintf('%sphenotypeDescription_ratioBC_PHESANTproc.txt', phenoFold), h=T, stringsAsFactors = F, sep = '\t')
+  pheno_input <- rbind(pheno_input, tmp)
+  pheno_input <- pheno_input[!duplicated(pheno_input$pheno_id),]
   pheno_name <- pheno_name[!pheno_name %in% c('Numeric_memory','Diffusion_brain_MRI', 'Medical_conditions', 'ICD10_Psychiatric', 'ICD9_Psychiatric', 'Resting_functional_brain_MRI',
                                               'dMRI_skeleton', 'T2-weighted_brain_MRI', 'Estimated_nutrients_yesterday')]
-  
+  print(pheno_name)
 }
 
 pheno_info <- list()
