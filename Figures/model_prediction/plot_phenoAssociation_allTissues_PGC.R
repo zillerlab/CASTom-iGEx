@@ -149,7 +149,7 @@ pl_numberSpec_function(df = pathGO_nsgin_tissue, type_mat = 'path_GO', outFold =
 pl_numberSpec_function(df = pathwiki_nsgin_tissue, type_mat = 'path_Wiki2019Human', outFold = fold, type_dat = type_dat)
 
 ### manhattan plot ###
-if(grepl('SCZ', pheno)){n_sign=25}
+if(grepl('SCZ', pheno)){n_sign=30}
 # if(grepl('CAD', pheno)){n_sign=4}
 # if(grepl('MDD', pheno)){n_sign=20}
 # if(grepl('T1D', pheno)){n_sign=10}

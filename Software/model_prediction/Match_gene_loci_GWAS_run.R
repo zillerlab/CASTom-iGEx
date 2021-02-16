@@ -42,6 +42,7 @@ pheno_name <- args$pheno_name
 
 HLA_reg <- c(26000000, 34000000)
 gwas_res <- fread(GWAS_res, header = T, stringsAsFactors = F, data.table = F)
+
 if(pheno_name == 'SCZ'){
   colnames(gwas_res)[colnames(gwas_res) == 'CHR'] <- 'chr'
   colnames(gwas_res)[colnames(gwas_res) == 'P'] <- 'p.value_gc'
@@ -50,6 +51,10 @@ if(pheno_name == 'SCZ'){
   gwas_res$chr <- substr(gwas_res$chr, 4, 6)
   gwas_res$Markername <- paste0(gwas_res$chr, ':', gwas_res$bp_hg19, '_', gwas_res$A1, '_', gwas_res$A2)
 }
+if(grepl('CAD',pheno_name)){
+  colnames(gwas_res)[colnames(gwas_res) == 'p-value_gc'] <- 'p.value_gc'
+}
+
 gwas_res <- gwas_res[!is.na(gwas_res$chr), ]
 # correct pvalues
 gwas_res$pval_corr <- p.adjust(gwas_res$p.value_gc, method = 'BH')

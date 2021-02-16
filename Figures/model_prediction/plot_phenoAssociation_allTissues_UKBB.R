@@ -138,13 +138,37 @@ pl_numberSpec_function(df = pathGO_nsgin_tissue, type_mat = 'path_GO', outFold =
 
 ### manhattan plot ###
 if(grepl('SCZ', pheno)){n_sign=10}
-if(grepl('CAD', pheno)){n_sign=4}
+if(grepl('CAD', pheno)){n_sign=20}
 if(grepl('MDD', pheno)){n_sign=20}
 if(grepl('T1D', pheno)){n_sign=10}
 
 tscore_df <- create_df_manhattan_plot(tissues_name = tissues, res = tscore, id_pval = 8, pval_FDR = pval_FDR, df_color = color_tissues, id_name = 2, n_sign = n_sign, gene = T)
 # pathR_df <- create_df_manhattan_plot(tissues_name = tissues, res = pathR, id_pval = 13, pval_FDR = pval_FDR, df_color = color_tissues, id_name = 1, n_sign = 2)
 # pathGO_df <- create_df_manhattan_plot(tissues_name = tissues, res = pathGO, id_pval = 15, pval_FDR = pval_FDR, df_color = color_tissues, id_name = 2, n_sign = 2)
+# include only 1 gene per locus
+new_list <- tscore_df$df[tscore_df$df$sign_name == 'yes', ]
+dist_mat <- as.matrix(dist(new_list$id_pos,method = 'manhattan'))
+keep_t <- new_list$name
+# recursevly until no intersection
+tmp <- new_list
+while(any(dist_mat[upper.tri(dist_mat)] < 3)){
+  
+  t_list <- apply(dist_mat, 1, function(x) x < 3)
+  len_t <- c()
+  keep_t <- c()
+  for(j in 1:nrow(t_list)){
+    tmp_sel <-  new_list[new_list$name %in% tmp$name[t_list[j,]],]
+    tmp_sel <- tmp_sel[!tmp_sel$name %in% len_t, ]
+    len_t <- unique(c(len_t, tmp_sel$name))
+    keep_t <- unique(c(keep_t, tmp_sel$name[which.max(tmp_sel$pval_tr)]))
+  }
+  
+  tmp <- tmp[tmp$name %in% keep_t, ]
+  dist_mat <- as.matrix(dist(tmp$id_pos,method = 'manhattan'))
+  
+}
+tscore_df$df$sign_name[tscore_df$df$sign_name == 'yes' & !tscore_df$df$name %in% tmp$name] <- 'no'
+tscore_df$df$name[tscore_df$df$sign_name == 'no'] <- ''
 
 pl_manhattan_function(data_input = tscore_df, type_mat = 'tscore', outFold = fold, type_dat = type_dat)
 pl_manhattan_forpubl_function(data_input = tscore_df, type_mat = 'tscore', outFold = fold, type_dat = type_dat)
@@ -172,7 +196,7 @@ if(grepl('T1D', pheno) | grepl('SCZ', pheno)){
 # Venn diagram for significnat genes #
 if(gwas_known_file != 'NA'){
   venn_plot(gwas_known_file = gwas_known_file, tscore = tscore, pval_FDR = pval_FDR, type_dat = type_dat, type_mat = 'tscore')  
-
+  
   # manhattan plot for new associaiton
   new_loci <- read.table(priler_loci_file, h=T, stringsAsFactors = F, sep = '\t')
   new_loci_ann <- read.table(priler_loci_ann_file, h=T, stringsAsFactors = F, sep = '\t')
@@ -218,14 +242,14 @@ if(grepl('CAD', pheno)){
   best_path$zstat <- best_path[, 12]
   plot_best_path(best_res = best_path, color_tissues = color_tissues, title_plot = pheno, type_mat = 'path', outFold = fold, type_dat = type_dat, 
                  tissues = tissues, height_plot = 7, width_plot = 10, id_pval = 13)
- 
+  
 }
 
 
 ### example pathway enrichment
 if(pheno == 'CAD_HARD'){id_pval <- 1}
 if(pheno == 'CAD_SOFT'){id_pval <- 2}
-  
+
 if(pheno == 'CAD_HARD'){
   
   tissue <- 'Artery_Aorta'
@@ -270,9 +294,6 @@ if(pheno == 'CAD_HARD'){
   
 }
 
-    
-
-    
 
 
 

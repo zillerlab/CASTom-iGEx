@@ -210,9 +210,13 @@ create_df_manhattan_plot <- function(tissues_name, res, pval_FDR, df_color, id_p
     
     # annotate most significant element
     # df[[i]]$name[-order(df[[i]]$pval_tr, decreasing = T)[1:n_sign]] <- ''
-    df[[i]]$sign_name <- 'yes'
+    
     if(!is.null(n_sign)){
+      df[[i]]$sign_name <- 'yes'
       df[[i]]$sign_name[-order(df[[i]]$pval_tr, decreasing = T)[1:n_sign]] <- 'no'  
+    }else{
+      df[[i]]$sign_name <- 'no'
+      df[[i]]$sign_name[tmp[,id_pval+2]<=pval_FDR] <- 'yes'
     }
     # remove more than 1 from HLA region
     id_tmp <- which(df[[i]]$sign_name == 'yes' & df[[i]]$chr == 'chr6' &  df[[i]]$id <= HLA_reg[2] & df[[i]]$id >= HLA_reg[1] )
@@ -335,8 +339,8 @@ pl_manhattan_forpubl_function <- function(data_input, type_mat, outFold, type_da
     theme_bw()+theme(legend.position = 'none', plot.title = element_text(hjust = 0.5))+
     scale_color_manual(values = c('#C0C0C0', unique(data_input$color$color)))+
     scale_x_continuous(breaks=data_input$df_chr$pos_start, labels=data_input$df_chr$chr, expand = c(0.01, 0.01),  limits = c(0, max(df$id_pos)))+xlab('chromosome')+
-      theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
-      
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
+  
   ggsave(filename = paste0(file_name, '_p1.pdf'), plot = pl1, width = 11, height = 4, dpi = 500)
   ggsave(filename = paste0(file_name, '_p1.png'), plot = pl1, width = 11, height = 4, dpi = 500)
   
@@ -827,6 +831,5 @@ plot_showcase <- function(gene_res, gene_info, genes_path, tissue, pathway, colo
 #   new <- latest_res[tmp$chr_new[i] - as.numeric(latest_res$chr) == 0 & abs(tmp$TSS_start[i] - as.numeric(latest_res$pos))<500000 ,]
 #   if(nrow(new) == 0){tmp$new_loci[i] <- T}
 # }
-
 
 
