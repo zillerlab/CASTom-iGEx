@@ -70,6 +70,14 @@ outFold <- args$outFold
 source(functR)
 cluster_output <- get(load(clusterFile))
 
+# used in case of prediction
+if(!'samples_id' %in% names(cluster_output)){
+  cluster_output$samples_id <- cluster_output$sampleAnn$Individual_ID
+}
+if(!'cl_best' %in% names(cluster_output)){
+  cluster_output$cl_best <- cluster_output$cl_new
+}
+
 sampleAnn <- read.table(sampleAnnFile, h=T, stringsAsFactors = F, check.names = F)
 sampleAnn <- sampleAnn[match(cluster_output$samples_id, sampleAnn$Individual_ID), ]
 
@@ -107,17 +115,39 @@ if(min_genes_path > 1 & grepl('path',type_data)){
 # load input matrix 
 if(split_tot == 0){
   
-  scoreMat <- get(load(inputFile))
-  # filter out based on samples and ids
-  id_el <- intersect(scoreMat[,1], res_pval[, id_info])
-  scoreMat <- scoreMat[match(id_el,scoreMat[,1]), ]
+  if(grepl('.txt', inputFile, fixed = TRUE)){
+    scoreMat <- read.delim(inputFile, h=T, stringsAsFactors = F, check.names = F)
+    id_el <- intersect(scoreMat[,1], res_pval[, id_info])
+    scoreMat <- scoreMat[match(id_el,scoreMat[,1]), ]
+    # rownames(scoreMat) <- scoreMat[,1]
+    scoreMat <- scoreMat[,-1]
+    if(type_data == 'tscore'){
+      new_id <- unname(sapply(colnames(scoreMat), function(x) strsplit(x, split = ' vs reference')[[1]][1]))
+      colnames(scoreMat) <- new_id  
+    }
+  }else{
+    scoreMat <- get(load(inputFile))
+    # filter out based on samples and ids
+    id_el <- intersect(scoreMat[,1], res_pval[, id_info])
+    scoreMat <- scoreMat[match(id_el,scoreMat[,1]), ]
+  }
   
   common_samples <- sampleAnn$Individual_ID
   scoreMat <- t(scoreMat[,match(common_samples,colnames(scoreMat))])
   
   rownames(scoreMat) <- common_samples
   colnames(scoreMat) <- id_el
+  # filter out elements that are repeated twice:
+  id_dup <- names(which(table(colnames(scoreMat)) > 1)) 
+  scoreMat <- scoreMat[, !colnames(scoreMat) %in% id_dup]
+  
+  id_el <- intersect(colnames(scoreMat),  res_pval[, id_info])
+  scoreMat <- scoreMat[, match(id_el, colnames(scoreMat))]
   res_pval <- res_pval[match(id_el, res_pval[, id_info]),]
+  
+  # remove sample that have NAs
+  id_s <- rowSums(is.na(scoreMat)) == 0
+  if(!all(id_s)){scoreMat <- scoreMat[id_s, ]}
   
 }else{
   
@@ -170,7 +200,6 @@ print(identical(colnames(scoreMat), res_pval[, id_info]))
 print(identical(rownames(scoreMat), sampleAnn$Individual_ID))
 
 covDat <- sampleAnn[,!colnames(sampleAnn) %in% c('Individual_ID', 'Dx', 'genoSample_ID')]
-output <- list(data = scoreMat, cl = cluster_output$cl_best, cov = covDat)
 
 cl <-  cluster_output$cl_best$gr
 scale_data <- scale(scoreMat)
@@ -224,7 +253,7 @@ for(i in 1:length(gr_names)){
   }
   
   test_cov[[i]]$pval_corr <- p.adjust(test_cov[[i]]$pval, method = 'BH')
-
+  
 }
 
 
@@ -254,13 +283,13 @@ for(i in 1:length(gr_names)){
   test_feat[[i]]$CI_up <- NA
   
   for(l in 1:ncol(scale_data)){
-
-      print(l) 
-      tmp_data <- data.frame(f = scale_data[,l], g = gr_id)
-      tmp <- as.data.frame(wilcox_test(f~g,data = tmp_data, detailed = T))
-      test_feat[[i]]$pval[l] <- tmp$p
-      test_feat[[i]]$estimates[l] <- tmp$estimate
-      test_feat[[i]][l,c('CI_low', 'CI_up')] <- c(tmp$conf.low, tmp$conf.high)
+    
+    print(l) 
+    tmp_data <- data.frame(f = scale_data[,l], g = gr_id)
+    tmp <- as.data.frame(wilcox_test(f~g,data = tmp_data, detailed = T))
+    test_feat[[i]]$pval[l] <- tmp$p
+    test_feat[[i]]$estimates[l] <- tmp$estimate
+    test_feat[[i]][l,c('CI_low', 'CI_up')] <- c(tmp$conf.low, tmp$conf.high)
   }
   
   test_feat[[i]]$pval_corr <- p.adjust(test_feat[[i]]$pval, method = 'BH')
