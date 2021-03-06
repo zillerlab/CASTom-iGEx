@@ -29,8 +29,6 @@ parser$add_argument("--perc_par", type = "double", default = 0.1, help = "")
 parser$add_argument("--pathR_pheno_file", type = "character", help = "")
 parser$add_argument("--pathGO_pheno_file", type = "character", help = "")
 parser$add_argument("--tscore_pheno_file", type = "character", help = "")
-parser$add_argument("--refFold", type = "character", help = "")
-parser$add_argument("--thr_dist_par", type = "integer", default = 250000, help = "")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
 args <- parser$parse_args()
@@ -45,8 +43,6 @@ perc_par <- args$perc_par
 pathR_pheno_file <- args$pathR_pheno_file
 pathGO_pheno_file <- args$pathGO_pheno_file
 tscore_pheno_file <- args$tscore_pheno_file
-refFold <- args$refFold
-thr_dist_par <- args$thr_dist_par
 outFold <- args$outFold
 
 ########################################################################################################################
@@ -61,10 +57,6 @@ outFold <- args$outFold
 # pval_FDR_pheno <- 0.05
 # pval_FDR_rel <- 0.05
 # perc_par <- 0.3
-# thr_dist_par <- 250000
-# corrFile <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_UKBB/Brain_Frontal_Cortex_BA9/200kb/noGWAS/devgeno0.01_testdevgeno0/correlation_estimate_tscore.RData'
-# geneAnn_file <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_GTEx/train_GTEx/Brain_Frontal_Cortex_BA9/200kb/noGWAS/resPrior_regEval_allchr.txt'
-# refFold <- '/psycl/g/mpsziller/lucia/priler_project/refData/'
 ##########################################################################################################################
 
 ## create function to load data across all tissues ##
@@ -158,7 +150,6 @@ for(i in 1:nrow(tot_path)){
                             genes = strsplit(tot_path$genes_path[i], split = '[,]')[[1]])  
 }
 
-##
 # seperately for each tissue, find shared amount of genes and remove
 filt_path <- list()
 for(i in 1:length(tissue_name)){
@@ -196,48 +187,6 @@ for(i in 1:length(tissue_name)){
 }
 
 filt_path <- do.call(rbind, filt_path)
-
-##
-# seperately for each tissue, remove genes correlated
-filt_genes <- list()
-biomart_annTSS <- read.table(sprintf("%s/hg19.ENSEMBL_geneTSS_biomart_correct.txt", refFold), h=T, stringsAsFactors = F, sep = '\t')
-for(i in 1:length(tissue_name)){
-  
-  print(tissue_name[i])
-  ## load correlation matrix
-  #corrMat <- get(load(corrFile[i]))
-  #corrMat <- corrMat$cor
-  common_g <- intersect(tscore$ensembl_gene_id[tscore$tissue == tissue_name[i]], biomart_annTSS$ensembl_gene_id)
-  geneAnn <- biomart_annTSS[match(common_g, biomart_annTSS$ensembl_gene_id),]
-  
-  dist_mat <- mapply(function(x, y) abs(x - geneAnn$chromstart) < 250000 & y == geneAnn$chrom, x = geneAnn$chromstart, y = geneAnn$chrom)
-  tmp <- tscore[tscore$tissue == tissue_name[i], ]
-  
-  # recursevly until no intersection
-  while(any(dist_mat[upper.tri(dist_mat)])){
-    
-    len_gene <- c()
-    keep_gene <- c()
-    for(j in 1:nrow(dist_mat)){
-      tmp_sel <-  tscore[tscore$new_id %in% tmp$new_id[dist_mat[j,]],]
-      tmp_sel <- tmp_sel[!tmp_sel$new_id %in% len_gene, ]
-      len_gene <- unique(c(len_gene, tmp_sel$new_id))
-      set.seed(j)
-      keep_gene <- unique(c(keep_gene, tmp_sel$new_id[sample(1:nrow(tmp_sel), size = 1)]))
-      # keep_path <- unique(c(keep_path, tmp_sel$new_id[which.max(abs(tmp_sel[,12]))]))
-    }
-    keep_gene <- keep_gene[!is.na(keep_gene)]
-    
-    new_filt_gene <- tscore[tscore$new_id %in% keep_gene, ]
-    common_g <- intersect(new_filt_gene$ensembl_gene_id[new_filt_gene$tissue == tissue_name[i]], biomart_annTSS$ensembl_gene_id)
-    geneAnn <- biomart_annTSS[match(common_g, biomart_annTSS$ensembl_gene_id),]
-    dist_mat <- mapply(function(x, y) abs(x - geneAnn$chromstart) < 250000 & y == geneAnn$chrom, x = geneAnn$chromstart, y = geneAnn$chrom)
-    tmp <- new_filt_gene
-  }
-  filt_genes[[i]] <- tscore[tscore$new_id %in% keep_gene, ]
-}
-
-filt_genes <- do.call(rbind, filt_genes)
 
 # # filter based on BHcorr
 # tscore_red <- tscore[tscore[, 10] <= pval_FDR_pheno,]
@@ -327,7 +276,7 @@ for(j in 1:length(pheno_name)){
   if(grepl('SCZ', pheno_name_comp) & pheno_name[j] == 'Trail_making'){
     id_keep <-  which(!tmp$pheno$Field %in% c('Trail making completion status'))
   }
-  
+ 
   pheno_info[[j]] <- data.frame(pheno = tmp$pheno$pheno_id[id_keep], pheno_type = pheno_name[j], Field = tmp$pheno$Field[id_keep], meaning = tmp$pheno$Coding_meaning[id_keep])
   test_tscore[[j]] <- test_path[[j]] <- data.frame(N = rep(0, length(id_keep)),
                                                    K =rep(0, length(id_keep)), n =rep(0, length(id_keep)), k= rep(0, length(id_keep)), 
@@ -339,7 +288,7 @@ for(j in 1:length(pheno_name)){
   pathR_pheno <- new_pheno$pathR
   pathGO_pheno <- new_pheno$pathGO
   tot_path_pheno <- lapply(1:length(id_keep), function(x) rbind(cbind(pathR_pheno[[x]], data.frame(type = rep('Reactome', nrow(pathR_pheno[[x]])))), 
-                                                                cbind(pathGO_pheno[[x]][, !colnames(pathGO_pheno[[x]]) %in% c('path_id', 'path_ont')], data.frame(type = rep('GO', nrow(pathGO_pheno[[x]]))))))
+                                                      cbind(pathGO_pheno[[x]][, !colnames(pathGO_pheno[[x]]) %in% c('path_id', 'path_ont')], data.frame(type = rep('GO', nrow(pathGO_pheno[[x]]))))))
   
   for(i in 1:length(tot_path_pheno)){
     tot_path_pheno[[i]]$new_id <- paste0(tot_path_pheno[[i]]$new_id, '_type_', tot_path_pheno[[i]]$type)
@@ -348,7 +297,8 @@ for(j in 1:length(pheno_name)){
   # tscore_pheno <- lapply(tscore_pheno, function(x) x[x$new_id %in% tscore$new_id,])
   # tot_path_pheno <- lapply(tot_path_pheno, function(x) x[x$new_id %in% filt_path$new_id,])
   
-  common_g <- lapply(tscore_pheno, function(x) intersect(x$new_id, filt_genes$new_id))
+  common_g <- lapply(tscore_pheno, function(x) intersect(x$new_id, tscore$new_id))
+  
   test_tscore[[j]]$N <- sapply(common_g, length)
   test_tscore[[j]]$K <- sapply(common_g, function(x) nrow(tscore[tscore$new_id %in% x & tscore[,10] <= pval_FDR_pheno,]))
   test_tscore[[j]]$n <- mapply(function(x, y) sum(x[,10]<=pval_FDR_rel & x$new_id %in% y), x = tscore_pheno, y = common_g)
@@ -424,7 +374,8 @@ test_tscore$pheno_type <- pheno_info$pheno_type
 test_path$pheno_type <- pheno_info$pheno_type
 
 # save test results (to be used together for all the tissues)
-res_test_enrichment <- list(tscore = test_tscore, pathScore = test_path, pheno = pheno_info, path_ann = filt_path, gene_ann = filt_genes)
+res_test_enrichment <- list(tscore = test_tscore, pathScore = test_path, pheno = pheno_info, path_ann = filt_path)
 save(res_test_enrichment, file = sprintf('%scorrelation_enrich_%s_relatedPheno.RData', outFold, pheno_name_comp))
+
 
 

@@ -51,15 +51,15 @@ outFold <- args$outFold
 # type_data <- 'tscore'
 # type_input <- 'zscaled'
 # type_cluster <- 'Cases'
-# pheno_name <- 'CAD_HARD'
+# pheno_name <- 'SCZ'
 # color_tissues_file <- '/psycl/g/mpsziller/lucia/priler_project/Figures/color_tissues.txt'
-# gene_info_file <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/clLiver_tscoreOriginal_tscoreClusterCases_infoGenes.txt'
-# gene_feat_file  <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/clLiver_tscoreOriginal_tscoreClusterCases_featAssociation.txt'
-# pathR_info_file <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/clLiver_path_ReactomeOriginal_tscoreClusterCases_infoGenes.txt'
-# pathR_feat_file  <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/clLiver_path_ReactomeOriginal_tscoreClusterCases_featAssociation.txt'
-# pathGO_info_file <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/clLiver_path_GOOriginal_tscoreClusterCases_infoGenes.txt'
-# pathGO_feat_file  <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/clLiver_path_GOOriginal_tscoreClusterCases_featAssociation.txt'
-# outFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/clLiver_'
+# gene_info_file <- 'Meta_Analysis_SCZ/OUTPUT_all/SCZ_clustering/clDLPC_CMC_tscoreOriginal_tscoreClusterCases_infoGenes.txt'
+# gene_feat_file  <- 'Meta_Analysis_SCZ/OUTPUT_all/SCZ_clustering/clDLPC_CMC_tscoreOriginal_tscoreClusterCases_featAssociation.txt'
+# pathR_info_file <- 'Meta_Analysis_SCZ/OUTPUT_all/SCZ_clustering/clDLPC_CMC_path_ReactomeOriginal_tscoreClusterCases_infopath.txt'
+# pathR_feat_file  <- 'Meta_Analysis_SCZ/OUTPUT_all/SCZ_clustering/clDLPC_CMC_path_ReactomeOriginal_tscoreClusterCases_featAssociation.txt'
+# pathGO_info_file <- 'Meta_Analysis_SCZ/OUTPUT_all/SCZ_clustering/clDLPC_CMC_path_GOOriginal_tscoreClusterCases_infopath.txt'
+# pathGO_feat_file  <- 'Meta_Analysis_SCZ/OUTPUT_all/SCZ_clustering/clDLPC_CMC_path_GOOriginal_tscoreClusterCases_featAssociation.txt'
+# outFold <- 'Meta_Analysis_SCZ/OUTPUT_all/SCZ_clustering/clDLPC_CMC_'
 # cis_size <- 200000
 ########################################################################################################################
 
@@ -251,34 +251,35 @@ for(j in 1:length(chr_id)){
       it <- it+1
       print(it)
       
-      for(l in 1:(length(merge_pos)-1)){
+      if(length(merge_pos)>1){
         
-        if(!all(is.na(merge_pos[[l]]))){
+        for(l in 1:(length(merge_pos)-1)){
           
-          if(all(!merge_pos[[l]] %in% merge_pos[[l+1]])){
-            new_merge_pos <- list.append(new_merge_pos, merge_pos[[l]])
-          }else{
-            if(!(all(merge_pos[[l]] %in% merge_pos[[l+1]]) | all(merge_pos[[l+1]] %in% merge_pos[[l]]))){
-              new_merge_pos <- list.append(new_merge_pos, unique(c(merge_pos[[l]], merge_pos[[l+1]])))
+          if(!all(is.na(merge_pos[[l]]))){
+            
+            if(all(!merge_pos[[l]] %in% merge_pos[[l+1]])){
+              new_merge_pos <- list.append(new_merge_pos, merge_pos[[l]])
             }else{
-              if(all(merge_pos[[l+1]] %in% merge_pos[[l]])){
-                merge_pos[[l+1]] <- NA
-                new_merge_pos <- list.append(new_merge_pos, merge_pos[[l]])
+              if(!(all(merge_pos[[l]] %in% merge_pos[[l+1]]) | all(merge_pos[[l+1]] %in% merge_pos[[l]]))){
+                new_merge_pos <- list.append(new_merge_pos, unique(c(merge_pos[[l]], merge_pos[[l+1]])))
+              }else{
+                if(all(merge_pos[[l+1]] %in% merge_pos[[l]])){
+                  merge_pos[[l+1]] <- NA
+                  new_merge_pos <- list.append(new_merge_pos, merge_pos[[l]])
+                }
               }
             }
+            
           }
           
         }
-        
-      }
-      
+      }  
       new_merge_pos <- list.append(new_merge_pos, merge_pos[[length(merge_pos)]])
       
       all_merg <- all(!duplicated(unlist(new_merge_pos)))
       merge_pos <- new_merge_pos
       new_merge_pos <- list() 
-
-    }
+     }
     
     # remove NA
     merge_pos <- merge_pos[!sapply(merge_pos, function(x) all(is.na(x)))]
@@ -880,4 +881,5 @@ tot_pl <- ggarrange(plotlist = list(pl1, pl2), ncol=2, nrow=1, align = 'h', comm
 # tot_pl <- ggarrange(plotlist = list(pl1, pl2), ncol=1, nrow=2, align = 'v')
 ggsave(filename =  sprintf('%scluster_npath_npathgroup_path_GO_pertissues_%s_%s.png', outFold, type_data, type_input), plot = tot_pl, width = 7, height = 4.5, dpi = 500)
 ggsave(filename = sprintf('%scluster_npath_npathgroup_path_GO_pertissues_%s_%s.pdf', outFold, type_data, type_input), plot = tot_pl, width = 7, height = 4.5, dpi = 500, compress = F)
+
 

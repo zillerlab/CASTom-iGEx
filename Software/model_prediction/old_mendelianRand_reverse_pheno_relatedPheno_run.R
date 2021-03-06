@@ -1,4 +1,4 @@
-# Mendelian randomization (version 2, cosider all phenotypes regardelss correlation)
+# Mendelian randomization (version 1, cosider only endophenotypes with enrichement)
 
 options(stringsAsFactors=F)
 options(max.print=1000)
@@ -20,14 +20,13 @@ parser <- ArgumentParser(description="Mendelian Randomization for enriched relat
 parser$add_argument("--phenoFold", type = "character", help = "Folder with results phenotype annotation UKBB")
 parser$add_argument("--inputFold_rel", type = "character", nargs = '*',help = "Folder with results")
 parser$add_argument("--pval_FDR_pheno", type = "double", default = 0.05, help = "pval threshold to filter the genes and pathways (after BH correction) in main phenotype")
-parser$add_argument("--pval_corr", type = "double", default = 0.05, help = "pval threshold to filter phenotypes based on fisher test enrichment")
+parser$add_argument("--pval_FDR_corr", type = "double", default = 0.05, help = "pval threshold to filter phenotypes based on fisher test enrichment")
 parser$add_argument("--tissue_name", type = "character", nargs = '*', help = "tissue considered")
 parser$add_argument("--pheno_name_comp", type = "character", help = "name phenotype of interest")
 parser$add_argument("--pheno_file", type = "character", nargs = '*', help = "")
 parser$add_argument("--type_data", type = "character", help = "")
 parser$add_argument("--enrich_file", type = "character", help = "")
 parser$add_argument("--cor_file", type = "character", help = "")
-parser$add_argument("--MR_pheno_file", type = "character", default = NULL, help = "")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
 args <- parser$parse_args()
@@ -35,14 +34,13 @@ phenoFold <- args$phenoFold
 tissue_name <- args$tissue_name
 inputFold_rel <- args$inputFold_rel
 pval_FDR_pheno <- args$pval_FDR_pheno
-pval_corr <- args$pval_corr
+pval_FDR_corr <- args$pval_FDR_corr
 pheno_name_comp <- args$pheno_name_comp
 perc_par <- args$perc_par
 pheno_file <- args$pheno_file
 type_data <- args$type_data
 enrich_file <- args$enrich_file
 cor_file <- args$cor_file
-MR_pheno_file <- args$MR_pheno_file
 outFold <- args$outFold
 
 ########################################################################################################################
@@ -125,8 +123,8 @@ if(type_data == 'tscore'){
 }
 
 if(type_data == 'tot_path'){
-  if(grepl('CAD_', pheno_name_comp)){id_name <- 22}
-  if(grepl('SCZ', pheno_name_comp) | grepl('CADCardioG', pheno_name_comp)){id_name <- 25}
+  if(grepl('CAD', pheno_name_comp)){id_name <- 22}
+  if(grepl('SCZ', pheno_name_comp)){id_name <- 25}
   pval_id <- 13
   beta_id <- 10
   se_beta_id <- 11
@@ -168,44 +166,33 @@ if(type_data == 'tot_path'){
 # load correlation data
 cor_feat <- get(load(cor_file))
 cor_feat <- cor_feat$cor
-common_f <- intersect(feat_res[, id_name], colnames(cor_feat))
-feat_res <- feat_res[match(common_f, feat_res[,id_name]), ]
-cor_feat <- cor_feat[match(common_f, rownames(cor_feat)), match(common_f, colnames(cor_feat))]
+# common_f <- intersect(feat_res[, id_name], colnames(cor_feat))
+# feat_res <- feat_res[match(common_f, feat_res[,id_name]), ]
+# cor_feat <- cor_feat[match(common_f, rownames(cor_feat)), match(common_f, colnames(cor_feat))]
 
 # keep only phenotype that are correlated 
 enrich_feat <- enrich_feat[!is.na(enrich_feat$cor_pval_BHcorr),]
-enrich_feat <- enrich_feat[enrich_feat$cor_pval <= pval_corr, ]
+enrich_feat <- enrich_feat[enrich_feat$cor_pval_BHcorr <= pval_FDR_corr, ]
 # enrich_feat <- enrich_feat[!is.na(enrich_feat$fisher_pval_BHcorr),]
 # enrich_feat <- enrich_feat[enrich_feat$fisher_pval_BHcorr <= pval_FDR_fisher,]
 # enrich_feat <- enrich_feat[enrich_feat$k > 2, ]
 pheno_type <- unique(enrich_feat$pheno_type)
-if(!is.null(MR_pheno_file)){
-  MR_pheno_subset <- read.table(MR_pheno_file, h = F, stringsAsFactors = F, sep = '\t')$V1
-  pheno_type <- pheno_type[pheno_type %in% MR_pheno_subset]
-}
 print(pheno_type)
 
-res_MR_Egger <- list()
-res_MR_IVW <- list()
+res_MR <- list()
 
 for(i in 1:length(pheno_type)){
   
   print(pheno_type[i])
   
   tmp_pheno_red <- enrich_feat[enrich_feat$pheno_type %in% pheno_type[i], ]
-  res_MR_Egger[[i]] <- data.frame(nfeat = rep(NA, nrow(tmp_pheno_red)), MREgg_est = rep(NA, nrow(tmp_pheno_red)), MREgg_est_se = rep(NA, nrow(tmp_pheno_red)), 
-                                  MREgg_est_CIl = rep(NA, nrow(tmp_pheno_red)), MREgg_est_CIu = rep(NA, nrow(tmp_pheno_red)), 
-                                  MREgg_est_pval = rep(NA, nrow(tmp_pheno_red)), MREgg_int = rep(NA, nrow(tmp_pheno_red)), MREgg_int_se = rep(NA, nrow(tmp_pheno_red)), 
-                                  MREgg_int_CIl = rep(NA, nrow(tmp_pheno_red)), MREgg_int_CIu = rep(NA, nrow(tmp_pheno_red)), 
-                                  MREgg_int_pval = rep(NA, nrow(tmp_pheno_red)), MREgg_heter_stat  = rep(NA, nrow(tmp_pheno_red)),
-                                  MREgg_heter_pval = rep(NA, nrow(tmp_pheno_red)), MREgg_Isq  = rep(NA, nrow(tmp_pheno_red)))
-  
-  res_MR_IVW[[i]] <-  data.frame(nfeat = rep(NA, nrow(tmp_pheno_red)), MRIVW_est = rep(NA, nrow(tmp_pheno_red)), MRIVW_est_se = rep(NA, nrow(tmp_pheno_red)), 
-                                 MRIVW_est_CIl = rep(NA, nrow(tmp_pheno_red)), MRIVW_est_CIu = rep(NA, nrow(tmp_pheno_red)), 
-                                 MRIVW_est_pval = rep(NA, nrow(tmp_pheno_red)),
-                                 MRIVW_heter_stat  = rep(NA, nrow(tmp_pheno_red)),
-                                 MRIVW_heter_pval = rep(NA, nrow(tmp_pheno_red)))
-  
+  res_MR[[i]] <- data.frame(nfeat = rep(NA, nrow(tmp_pheno_red)), MREgg_est = rep(NA, nrow(tmp_pheno_red)), MREgg_est_se = rep(NA, nrow(tmp_pheno_red)), 
+                            MREgg_est_CIl = rep(NA, nrow(tmp_pheno_red)), MREgg_est_CIu = rep(NA, nrow(tmp_pheno_red)), 
+                            MREgg_est_pval = rep(NA, nrow(tmp_pheno_red)), MREgg_int = rep(NA, nrow(tmp_pheno_red)), MREgg_int_se = rep(NA, nrow(tmp_pheno_red)), 
+                            MREgg_int_CIl = rep(NA, nrow(tmp_pheno_red)), MREgg_int_CIu = rep(NA, nrow(tmp_pheno_red)), 
+                            MREgg_int_pval = rep(NA, nrow(tmp_pheno_red)), MREgg_heter_stat  = rep(NA, nrow(tmp_pheno_red)),
+                            MREgg_heter_pval = rep(NA, nrow(tmp_pheno_red)))
+    
   if(grepl('CAD', pheno_name_comp) & pheno_type[i] %in% c('Blood_biochemistry', 'Blood_count')){
     file_toload <- sprintf('%s/pval_%s_withMed_pheno_covCorr.RData', inputFold_rel, pheno_type[i])
   }else{
@@ -253,12 +240,12 @@ for(i in 1:length(pheno_type)){
   common_f <- lapply(tmp, function(x) intersect(x$new_id, feat_res$new_id))
   
   tmp <- mapply(function(x, y) x[match(y,x$new_id),], x = tmp, y = common_f,SIMPLIFY = F)
-  
+ 
   # sign_common_rel <- lapply(tmp, function(x) x[x$new_id %in% feat_res$new_id[feat_res[,pval_id+2] <= pval_FDR_pheno] & x[, pval_id +2] <= pval_FDR_rel,])
   # sign_common_pheno <- lapply(tmp, function(x) feat_res[feat_res$new_id %in% x$new_id[x[,pval_id+2] <= pval_FDR_rel] & feat_res[, pval_id +2] <= pval_FDR_pheno,])
   sign_common_pheno <- lapply(tmp, function(x) feat_res[feat_res[, pval_id + 2] <= pval_FDR_pheno & feat_res$new_id %in% x$new_id,])
   sign_common_rel <- mapply(function(x, y) x[match(y$new_id,x$new_id),], x = tmp, y = sign_common_pheno, SIMPLIFY = F)
-  
+
   for(j in 1:length(tmp)){
     
     common_f <- intersect(sign_common_rel[[j]]$new_id, sign_common_pheno[[j]]$new_id)
@@ -268,53 +255,36 @@ for(i in 1:length(pheno_type)){
       sign_common_pheno[[j]] <- sign_common_pheno[[j]][match(common_f, sign_common_pheno[[j]]$new_id),]
       tmp_corr <- cor_feat[match(sign_common_pheno[[j]][, id_name], rownames(cor_feat)), 
                            match(sign_common_pheno[[j]][, id_name], colnames(cor_feat))]
-      
+    
       MRInputObject <- mr_input(by = sign_common_rel[[j]][, beta_id], byse = sign_common_rel[[j]][, se_beta_id],
                                 bx = sign_common_pheno[[j]][, beta_id], bxse = sign_common_pheno[[j]][, se_beta_id], 
                                 correlation = tmp_corr, snps = colnames(tmp_corr))
       MREggerObject <- tryCatch(mr_egger(MRInputObject, correl = T), error = function(x) NULL)
       if(!is.null(MREggerObject)){
-        res_MR_Egger[[i]][j, ] <- c(length(common_f), MREggerObject@Estimate, MREggerObject@StdError.Est, MREggerObject@CILower.Est, 
-                                    MREggerObject@CIUpper.Est, MREggerObject@Pvalue.Est, MREggerObject@Intercept, 
-                                    MREggerObject@StdError.Int, MREggerObject@CILower.Int, MREggerObject@CIUpper.Int,
-                                    MREggerObject@Pvalue.Int, MREggerObject@Heter.Stat, MREggerObject@I.sq)
+        res_MR[[i]][j, ] <- c(length(common_f), MREggerObject@Estimate, MREggerObject@StdError.Est, MREggerObject@CILower.Est, 
+                              MREggerObject@CIUpper.Est, MREggerObject@Pvalue.Est, MREggerObject@Intercept, 
+                              MREggerObject@StdError.Int, MREggerObject@CILower.Int, MREggerObject@CIUpper.Int,
+                              MREggerObject@Pvalue.Int, MREggerObject@Heter.Stat)
       }else{
         print(paste('computational error for', tmp_pheno_red$names_field[j]))
       }
-      
-      MRIVWObject <- tryCatch(mr_ivw(MRInputObject, correl = T, model = 'random'), error = function(x) NULL)
-      # MREggerObject <- mr_egger(MRInputObject, correl = T)
-      if(!is.null(MRIVWObject)){
-        res_MR_IVW[[i]][j, ] <- c(length(common_f), MRIVWObject@Estimate, MRIVWObject@StdError, MRIVWObject@CILower, 
-                                  MRIVWObject@CIUpper, MRIVWObject@Pvalue, MRIVWObject@Heter.Stat)
-      }else{
-        print(paste('computational error for', tmp_pheno_red$names_field[j]))
-      }
-      
     }
     
   }
   
-  res_MR_Egger[[i]] <- cbind(res_MR_Egger[[i]], tmp_pheno_red[, c('names_field', 'pheno', 'pheno_type')])
-  res_MR_IVW[[i]] <- cbind(res_MR_IVW[[i]], tmp_pheno_red[, c('names_field', 'pheno', 'pheno_type')])
+  res_MR[[i]] <- cbind(res_MR[[i]], tmp_pheno_red[, c('names_field', 'pheno', 'pheno_type')])
   
 }
 
-res_MR_Egger <- do.call(rbind, res_MR_Egger)
-res_MR_IVW <- do.call(rbind, res_MR_IVW)
-res_MR_Egger <- res_MR_Egger[!is.na(res_MR_Egger$nfeat), ]
-res_MR_IVW <- res_MR_IVW[!is.na(res_MR_IVW$nfeat), ]
-
-res_MR_Egger$MREgg_est_pval_FDR <- p.adjust(res_MR_Egger$MREgg_est_pval, method = 'BH')
-res_MR_Egger$MREgg_int_pval_FDR <- p.adjust(res_MR_Egger$MREgg_int_pval, method = 'BH')
-res_MR_IVW$MRIVW_est_pval_FDR <- p.adjust(res_MR_IVW$MRIVW_est_pval, method = 'BH')
+res_MR <- do.call(rbind, res_MR)
+res_MR <- res_MR[!is.na(res_MR$nfeat), ]
+res_MR$MREgg_est_pval_FDRcorr <- p.adjust(res_MR$MREgg_est_pval, method = 'BH')
 
 # save results
-write.table(x = res_MR_Egger, file = sprintf('%sMendelian_randomization_reverse_Egger_%s_pvalFDRrel%s.txt', outFold, type_data, 
-                                             as.character(pval_FDR_pheno)), col.names = T, row.names = F, quote = F, sep = '\t')
+write.table(x = res_MR, file = sprintf('%sMendelian_randomization_reverse_%s_pvalFDRpheno%s.txt', outFold, type_data, 
+                                       as.character(pval_FDR_pheno)), col.names = T, row.names = F, quote = F, sep = '\t')
 
-write.table(x = res_MR_IVW, file = sprintf('%sMendelian_randomization_reverse_IVW_%s_pvalFDRrel%s.txt', outFold, type_data, 
-                                           as.character(pval_FDR_pheno)), col.names = T, row.names = F, quote = F, sep = '\t')
+
 
 
 

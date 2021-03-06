@@ -28,10 +28,13 @@ parser$add_argument("--phenoNew_file", nargs = '*', type = "character", help = "
 parser$add_argument("--type_cluster", type = "character",default = 'All', help = "All, Cases, Controls")
 parser$add_argument("--type_data", type = "character", help = "pathway or tscore")
 parser$add_argument("--clustFile", type = "character", help = "file cluster results")
+parser$add_argument("--featRel_model", type = "character", default = NULL, help = "file association features wilcoxon test")
 parser$add_argument("--clustFile_new", type = "character", nargs = '*', help = "file cluster results")
+parser$add_argument("--featRel_predict", type = "character", default = NULL, nargs = '*', help = "file association features wilcoxon test")
 parser$add_argument("--functR", type = "character", help = "functions to be used")
 parser$add_argument("--type_input", type = "character", default = 'original', help = "original or zscaled")
 parser$add_argument("--tissues_name", type = "character", help = "name tissue")
+parser$add_argument("--geneLoci_summ", type = "character", default = NULL, help = "file with group summary divided per loci")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
 args <- parser$parse_args()
@@ -45,20 +48,26 @@ type_input <- args$type_input
 type_cluster <- args$type_cluster
 tissues_name <- args$tissues_name
 phenoNew_file <- args$phenoNew_file
+featRel_predict <- args$featRel_predict
+featRel_model <- args$featRel_model
+geneLoci_summ <- args$geneLoci_summ
 outFold <- args$outFold
 
 ###################################################################################################################
 # functR <- '/psycl/g/mpsziller/lucia/priler_project/Software/model_clustering/clustering_functions.R'
-# cohort_name <- c('German5')
+# cohort_name <- paste0('German', 1:5)
 # type_data <- 'tscore'
 # type_input <- 'zscaled'
 # type_cluster <- 'Cases'
-# clustFile_new <- paste0('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Adipose_Visceral_Omentum/200kb/CAD_GWAS_bin5e-2/',cohort_name,'/devgeno0.01_testdevgeno0/CAD_HARD_clustering/tscore_zscaled_predictClusterCases_PGmethod_HKmetric.RData')
-# clustFile <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Adipose_Visceral_Omentum/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/tscore_zscaled_clusterCases_PGmethod_HKmetric.RData'
-# tissues_name <- 'Adipose_Visceral_Omentum'
+# clustFile_new <- paste0('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/',cohort_name,'/devgeno0.01_testdevgeno0/CAD_HARD_clustering/tscore_zscaled_predictClusterCases_PGmethod_HKmetric.RData')
+# clustFile <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/tscore_zscaled_clusterCases_PGmethod_HKmetric.RData'
+# tissues_name <- 'Liver'
 # phenoNew_file <-  paste0('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/INPUT_DATA_GTEx/CAD/Covariates/',cohort_name,'/phenotypeMatrix_CADrel_Cases.txt')
-# outFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Adipose_Visceral_Omentum/200kb/CAD_GWAS_bin5e-2/Meta_Analysis_CAD/CAD_HARD_clustering'
-# ##################################################################################################################
+# outFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/Meta_Analysis_CAD/CAD_HARD_clustering'
+# featRel_model <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues//200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/clLiver_tscoreOriginal_tscoreClusterCases_featAssociation.txt'
+# featRel_predict <- paste0('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues//200kb/CAD_GWAS_bin5e-2/',cohort_name,'/CAD_HARD_clustering/clLiver_tscoreOriginal_tscoreClusterCases_featAssociation.txt')
+# geneLoci_summ <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues//200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/clLiver_tscore_zscaled_clusterCases_summary_geneLoci_allTissues.txt'
+# #################################################################################################################
 
 source(functR)
 
@@ -71,6 +80,17 @@ df$percentage <- sapply(sort(unique(clust$gr)), function(x) length(which(clust$g
 data <- tmp$input_data
 mean_gr <- tmp$gr_input$mean
 
+# load associated features
+if(!is.null(featRel_model)){
+  featRel <- read.delim(featRel_model, h=T, stringsAsFactors = F, sep = '\t')
+  featRel <- featRel[featRel$pval_corr <= 0.05, ]
+  featRel$new_id <- paste(featRel$feat, featRel$comp, featRel$tissue, sep = '_')
+}
+
+if(!is.null(geneLoci_summ)){
+  geneLoci <- read.delim(geneLoci_summ, h=T, stringsAsFactors = F, sep = '\t') 
+}
+
 sampleAnn_new <- list()
 phenoDat_new <- list()
 clust_new <- list()
@@ -78,9 +98,11 @@ data_new <- list()
 df_new <- list()
 mean_gr_new <- list()
 df_corr <- list()
+df_corr_rel <- list()
+df_perc_loci <- list()
 
 for(i in 1:length(cohort_name)){
-  
+  print(cohort_name[i])
   tmp <- get(load(clustFile_new[i])) 
   
   sampleAnn_new[[i]] <- tmp$sampleAnn
@@ -108,10 +130,45 @@ for(i in 1:length(cohort_name)){
   df_corr[[i]]$CI_low <- sapply(df$gr[df$gr %in% colnames(mean_gr_new[[i]])], function(x) cor.test(mean_gr_new[[i]][,x], mean_gr[,x])$conf.int[1])
   df_corr[[i]]$CI_up <- sapply(df$gr[df$gr %in% colnames(mean_gr_new[[i]])], function(x) cor.test(mean_gr_new[[i]][,x], mean_gr[,x])$conf.int[2])
   
+  if(!is.null(featRel_predict)){
+    comp <- sort(unique(featRel$comp))
+    featRel_new <- read.delim(featRel_predict[i], h=T, stringsAsFactors = F, sep = '\t')
+    featRel_new$new_id <- paste(featRel_new$feat, featRel_new$comp, featRel_new$tissue, sep = '_')
+    featRel_new <- featRel_new[match(featRel$new_id, featRel_new$new_id), ]
+    # compute spearman correlation
+    df_corr_rel[[i]] <- data.frame(dataset = rep(cohort_name[i], P), gr = df$gr, corr = rep(NA, P), pvalue = rep(NA, P))
+    df_corr_rel[[i]]$corr <- sapply(comp, function(x) cor.test(featRel_new$estimates[featRel_new$comp == x], featRel$estimates[featRel$comp == x], method = 'spearman')$estimate)
+    df_corr_rel[[i]]$pvalue <- sapply(comp, function(x) cor.test(featRel_new$estimates[featRel_new$comp == x], featRel$estimates[featRel$comp == x], method = 'spearman')$p.value)
+  }
+  
+  if(!is.null(geneLoci_summ)){
+    
+    id <- sapply(df$gr, function(x) paste0(strsplit(x, split = '_')[[1]], collapse = ''))
+    df_perc_loci[[i]] <- data.frame(dataset = rep(cohort_name[i], P), gr = df$gr)
+    df_perc_loci[[i]]$nloci <- sapply(id, function(x) sum(grepl(x, geneLoci$comp_sign)))
+    for(j in 1:nrow(df)){
+      tmp <- geneLoci[grepl(id[j], geneLoci$comp_sign), ]
+      genes <- lapply(tmp$gene, function(x) strsplit(x, split = ',')[[1]])
+      id_keep <- sapply(genes, function(x) which.min(featRel$pval[featRel$comp == comp[j] & featRel$feat %in% x]))
+      genes <- mapply(function(x, y) featRel$new_id[featRel$comp == comp[j] & featRel$feat %in% x][y], x = genes, y = id_keep)
+      tmp_mod <- featRel[match(genes, featRel$new_id), ]
+      tmp_pred <- featRel_new[match(genes, featRel_new$new_id), ]
+      df_perc_loci[[i]]$nloci_rep[j] <- sum(sign(tmp_pred$estimates) == sign(tmp_mod$estimates)) 
+    }
+    df_perc_loci[[i]]$nperc_loci_rep <- df_perc_loci[[i]]$nloci_rep/df_perc_loci[[i]]$nloci
+  }
+  
 }
 
 df_tot <- rbind(df, do.call(rbind, df_new))
 df_corr_tot <- do.call(rbind, df_corr)
+if(!is.null(geneLoci_summ)){
+  df_perc_loci <- do.call(rbind, df_perc_loci)
+}
+if(!is.null(featRel_model)){
+  df_corr_rel <- do.call(rbind,  df_corr_rel)
+}
+
 
 # save and plot
 write.table(df_tot, file = sprintf('%s%s_%s_cluster%s_percentageGropus_prediction_model%s.txt', outFold, type_data, type_input, type_cluster, model_name),quote = F, 
@@ -119,6 +176,15 @@ write.table(df_tot, file = sprintf('%s%s_%s_cluster%s_percentageGropus_predictio
 
 write.table(df_corr_tot, file = sprintf('%s%s_%s_cluster%s_correlationMeanGroups_prediction_model%s.txt', outFold, type_data, type_input, type_cluster, model_name),quote = F, 
             col.names = T, row.names = T, sep = '\t')
+
+if(!is.null(featRel_model)){
+  write.table(df_corr_rel, file = sprintf('%s%s_%s_cluster%s_correlationSpear_WMWestSign_Groups_prediction_model%s.txt', outFold, type_data, type_input, type_cluster, model_name),quote = F, 
+              col.names = T, row.names = T, sep = '\t')
+}
+if(!is.null(geneLoci_summ)){
+  write.table(df_perc_loci, file = sprintf('%s%s_%s_cluster%s_numberLociRep_prediction_model%s.txt', outFold, type_data, type_input, type_cluster, model_name),quote = F, 
+              col.names = T, row.names = T, sep = '\t')
+}
 
 ###
 df_tot$new_id <- paste0(df_tot$dataset, '\n(', df_tot$type, ')')
@@ -154,6 +220,46 @@ pl <- ggplot(df_corr_tot, aes(x = dataset, y = corr, fill = gr, group = gr))+
 # scale_shape_manual(values=c(1, 19))+
 ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationMeanGroups_prediction_model%s.png', outFold, type_data, type_input, type_cluster, model_name), width = 6, height = 3.5, plot = pl, device = 'png')
 ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationMeanGroups_prediction_model%s.pdf', outFold, type_data, type_input, type_cluster, model_name), width = 6, height = 3.5, plot = pl, device = 'pdf')
+
+###
+if(!is.null(featRel_model)){
+  
+  df_corr_rel$dataset <- factor(df_corr_rel$dataset, levels = cohort_name)
+  df_corr_rel$gr <- factor(df_corr_rel$gr, levels = paste0('gr_', sort(unique(clust$gr))))
+  
+  pl <- ggplot(df_corr_rel, aes(x = dataset, y = corr, fill = gr, group = gr))+
+    geom_bar(stat = 'identity',width = 0.7, color = 'black', alpha = 0.7, position = position_dodge())+
+    # geom_errorbar(aes(ymin=CI_low, ymax=CI_up), width=.2, position=position_dodge(.75))+
+    theme_bw()+ 
+    coord_cartesian(ylim = c(ifelse(min(df_corr_rel$corr)<0.8, 0, 0.8),1)) +
+    ylab(sprintf('Spearman corr. from WMW estimates\nwith %s (model)', model_name))+ 
+    theme(legend.position = 'right', axis.title.x = element_blank())+
+    scale_fill_manual(values = gr_color)
+  # scale_shape_manual(values=c(1, 19))+
+  ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationSpear_WMWestSign_Groups_prediction_model%s.png', outFold, type_data, type_input, type_cluster, model_name), width = 6, height = 3.5, plot = pl, device = 'png')
+  ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationSpear_WMWestSign_Groups_prediction_model%s.pdf', outFold, type_data, type_input, type_cluster, model_name), width = 6, height = 3.5, plot = pl, device = 'pdf')
+  
+}
+
+###
+if(!is.null(geneLoci_summ)){
+  
+  df_perc_loci$dataset <- factor(df_perc_loci$dataset, levels = cohort_name)
+  df_perc_loci$gr <- factor(df_perc_loci$gr, levels = paste0('gr_', sort(unique(clust$gr))))
+  
+  pl <- ggplot(df_perc_loci,aes(x = nloci, y = nloci_rep, color = gr))+
+      geom_point(alpha = 0.7, size = 2)+
+      geom_abline(linetype = 'dashed', color = 'black')+
+      facet_wrap(.~dataset, nrow = 1)+
+      theme_bw()+ 
+      ylab('n. of loci reproduced')+ xlab('n. of loci')+
+      theme(legend.position = 'right')+
+      scale_color_manual(values = gr_color)
+      # scale_shape_manual(values=c(1, 19))+
+  ggsave(filename = sprintf('%s%s_%s_cluster%s_numberLociRep_Groups_prediction_model%s.png', outFold, type_data, type_input, type_cluster, model_name), width = 6, height = 2, plot = pl, device = 'png')
+  ggsave(filename = sprintf('%s%s_%s_cluster%s_numberLociRep_Groups_prediction_model%s.pdf', outFold, type_data, type_input, type_cluster, model_name), width = 6, height = 2, plot = pl, device = 'pdf')
+
+}
 
 
 #### endophenotype association ####

@@ -19,7 +19,10 @@ parser$add_argument("--keep_path_file", type = "character", default = 'NA', help
 parser$add_argument("--train_fold", type = "character", help = "train model fold")
 parser$add_argument("--train_fold_original", type = "character", nargs = '*', default = 'NA', help = "train model fold")
 parser$add_argument("--color_file", type = "character", help = "file with tissues color code")
-parser$add_argument("--genes_known_file", type = "character", default = 'NA', help = "previusly associated genes")
+parser$add_argument("--genes_known_file", type = "character", default = NULL, help = "previusly associated genes")
+parser$add_argument("--gwas_known_file", type = "character", default = NULL, help = "previusly associated genes")
+parser$add_argument("--priler_loci_file", type = "character", default = NULL, help = "")
+parser$add_argument("--priler_loci_ann_file", type = "character", default = NULL, help = "")
 parser$add_argument("--pheno", type = "character", help = "name phenotype")
 parser$add_argument("--type_dat", type = "character", help = "name to append to plot file")
 parser$add_argument("--pval_FDR", type = "double", default = 0.05, help = "pvalue threshold")
@@ -35,7 +38,10 @@ type_dat <- args$type_dat
 pval_FDR <- args$pval_FDR
 fold_geno_input <- args$fold_geno_input
 genes_known_file <- args$genes_known_file
+gwas_known_file <- args$gwas_known_file
 keep_path_file <- args$keep_path_file
+priler_loci_file <- args$priler_loci_file
+priler_loci_ann_file <- args$priler_loci_ann_file
 train_fold_original <- args$train_fold_original
 functR <- args$functR
 
@@ -143,7 +149,7 @@ pl_numberSpec_function(df = pathGO_nsgin_tissue, type_mat = 'path_GO', outFold =
 pl_numberSpec_function(df = pathwiki_nsgin_tissue, type_mat = 'path_Wiki2019Human', outFold = fold, type_dat = type_dat)
 
 ### manhattan plot ###
-if(grepl('SCZ', pheno)){n_sign=25}
+if(grepl('SCZ', pheno)){n_sign=30}
 # if(grepl('CAD', pheno)){n_sign=4}
 # if(grepl('MDD', pheno)){n_sign=20}
 # if(grepl('T1D', pheno)){n_sign=10}
@@ -183,29 +189,32 @@ pl_manhattan_function(data_input = tscore_red_df, type_mat = 'tscore', outFold =
 pl_manhattan_forpubl_function(data_input = tscore_red_df, type_mat = 'tscore', outFold = fold, type_dat = paste(type_dat, '(no MHC region)'))
 
 # Venn diagram for significnat genes #
-if(genes_known_file != 'NA'){
+if(!is.null(genes_known_file)){
+  venn_plot_genes(genes_known_file = genes_known_file, tscore = tscore_red, pval_FDR = pval_FDR, type_dat = type_dat, type_mat = 'tscore')
+}
+if(!is.null(gwas_known_file)){
   
-  venn_plot_genes(genes_known_file = genes_known_file, tscore = tscore_red, pval_FDR = pval_FDR, type_dat = type_dat, type_mat = 'tscore')  
-
-  # # manhattan plot for new associaiton
-  # new_loci <- read.table(priler_loci_file, h=T, stringsAsFactors = F, sep = '\t')
-  # new_loci_ann <- read.table(priler_loci_ann_file, h=T, stringsAsFactors = F, sep = '\t')
-  # new_loci_ann = new_loci_ann[!new_loci_ann$best_GWAS_sign,]
-  # tscore_df <- create_df_manhattan_plot(tissues_name = tissues, res = tscore, id_pval = 8, pval_FDR = pval_FDR, df_color = color_tissues, id_name = 2, gene = T)
-  # tscore_df$df$external_gene_name <- sapply(tscore_df$df$name, 
-  #                                           function(x) strsplit(x, split = '\n')[[1]][1])
-  # # modify annotation to plot only interested genes, only 1 gene per locus
-  # new_loci$id <- paste0(new_loci$external_gene_name, '\n', new_loci$tissue)
-  # tscore_df$df$sign_name[!tscore_df$df$name %in% new_loci$id] <- 'no'
-  # for(i in 1:nrow(new_loci_ann)){
-  #   tmp <- new_loci_ann$external_gene_name[i]
-  #   tmp <- strsplit(tmp, split = '[,]')[[1]]
-  #   id_keep <- which.max(abs(tscore_df$df$zstat[tscore_df$df$external_gene_name %in% tmp]))
-  #   names_excl <- tscore_df$df$name[tscore_df$df$external_gene_name %in% tmp][-id_keep]
-  #   tscore_df$df$sign_name[tscore_df$df$name %in% names_excl] <- 'no'
-  # }
-  # tscore_df$df$name[tscore_df$df$sign_name == 'no'] <- '' 
-  # pl_manhattan_function(data_input = tscore_df, type_mat = 'tscore', outFold = paste0(fold, 'newloci_'), type_dat = type_dat)
+  venn_plot(gwas_known_file = gwas_known_file, tscore = tscore_red, pval_FDR = pval_FDR, type_dat = type_dat, type_mat = 'tscore')
+    
+  # manhattan plot for new associaiton
+  new_loci <- read.table(priler_loci_file, h=T, stringsAsFactors = F, sep = '\t')
+  new_loci_ann <- read.table(priler_loci_ann_file, h=T, stringsAsFactors = F, sep = '\t')
+  new_loci_ann = new_loci_ann[!new_loci_ann$best_GWAS_sign,]
+  tscore_df <- create_df_manhattan_plot(tissues_name = tissues, res = tscore, id_pval = 8, pval_FDR = pval_FDR, df_color = color_tissues, id_name = 2, gene = T)
+  tscore_df$df$external_gene_name <- sapply(tscore_df$df$name, 
+                                             function(x) strsplit(x, split = '\n')[[1]][1])
+  # modify annotation to plot only interested genes, only 1 gene per locus
+  new_loci$id <- paste0(new_loci$external_gene_name, '\n', new_loci$tissue)
+  tscore_df$df$sign_name[!tscore_df$df$name %in% new_loci$id] <- 'no'
+  for(i in 1:nrow(new_loci_ann)){
+     tmp <- new_loci_ann$external_gene_name[i]
+     tmp <- strsplit(tmp, split = '[,]')[[1]]
+     id_keep <- which.max(abs(tscore_df$df$zstat[tscore_df$df$external_gene_name %in% tmp]))
+     names_excl <- tscore_df$df$name[tscore_df$df$external_gene_name %in% tmp][-id_keep]
+     tscore_df$df$sign_name[tscore_df$df$name %in% names_excl] <- 'no'
+  }
+  tscore_df$df$name[tscore_df$df$sign_name == 'no'] <- '' 
+  pl_manhattan_function(data_input = tscore_df, type_mat = 'tscore', outFold = paste0(fold, 'newloci_'), type_dat = type_dat)
   
 }
 
@@ -227,12 +236,12 @@ best_path <- tot_path[match(tmp_path, tot_path_id), ]
 # save table
 file_name <- sprintf('%s/table_%s_best_%s.txt', fold,  'path', type_dat)
 write.table(x = best_path, file = file_name, quote = F, sep = '\t', col.names = T, row.names = F)
-  
+
 best_path$logpval <-  -log10(best_path[, 13]) 
 best_path$zstat <- best_path[, 12]
 plot_best_path(best_res = best_path, color_tissues = color_tissues,
                title_plot = pheno, type_mat = 'path', outFold = fold, type_dat = type_dat, 
-                 tissues = unique(best_path$tissue), height_plot = 7, width_plot = 11, id_pval = 13)
+               tissues = unique(best_path$tissue), height_plot = 7, width_plot = 11, id_pval = 13)
 
 ### example pathway enrichment
 id_pval <- 1
@@ -321,8 +330,6 @@ plot_showcase(gene_res = gene_res, gene_info = gene_info, genes_path = genes_pat
               tissue = tissue, pathway = pathway, color_tmp = color_tmp, id_pval_path = 13, 
               pheno = pheno, fold = fold, resBeta = resBeta, train_fold_tissue = train_fold_tissue, fold_geno_input_tmp = fold_geno_input[2], 
               train_fold_original_tmp = train_fold_original[2], name_gwas_pval = 'PGC_PVAL')
-
-
 
 
 
