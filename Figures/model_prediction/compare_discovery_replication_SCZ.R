@@ -56,10 +56,10 @@ df_tscore_rep <- vector(mode = 'list', length = length(tissues_name))
 df_pathR_rep <- vector(mode = 'list', length = length(tissues_name))
 df_pathGO_rep <- vector(mode = 'list', length = length(tissues_name))
 
-dim_mat <- matrix(ncol = 3, nrow = length(tissues_name))
-dim_tissues <- matrix(ncol = 3, nrow = length(tissues_name)) 
-int_mat <- matrix(ncol = 3, nrow = length(tissues_name))
-pval_mat <- matrix(ncol = 3, nrow = length(tissues_name))
+dim_mat <- matrix(ncol = 4, nrow = length(tissues_name))
+dim_tissues <- matrix(ncol = 4, nrow = length(tissues_name)) 
+int_mat <- matrix(ncol = 4, nrow = length(tissues_name))
+pval_mat <- matrix(ncol = 4, nrow = length(tissues_name))
 
 for(i in 1:length(tissues_name)){
   
@@ -69,7 +69,7 @@ for(i in 1:length(tissues_name)){
   # discovery
   tmp <- get(load(discovery_res[i]))
   id_pheno <- 1
-
+  
   # remove pathway with only 1 gene, recompute correction
   tmp$pathScore_reactome[[id_pheno]] <- tmp$pathScore_reactome[[id_pheno]][tmp$pathScore_reactome[[id_pheno]]$ngenes_tscore >1,]
   tmp$pathScore_reactome[[id_pheno]][,14] <- qvalue(tmp$pathScore_reactome[[id_pheno]][,13])$qvalues
@@ -82,6 +82,7 @@ for(i in 1:length(tissues_name)){
   dim_tissues[i,1] <- nrow(tmp$tscore[[id_pheno]])
   dim_tissues[i,2] <- nrow(tmp$pathScore_reactome[[id_pheno]])
   dim_tissues[i,3] <- nrow(tmp$pathScore_GO[[id_pheno]])
+  dim_tissues[i,4] <- nrow(tmp$pathScore_GO[[id_pheno]]) + nrow(tmp$pathScore_reactome[[id_pheno]])
   
   # significance: FDR 0.05
   df_tscore_disc[[i]] <- tmp$tscore[[id_pheno]][tmp$tscore[[id_pheno]][,10] <= pval_thr_FDR, ]
@@ -102,14 +103,17 @@ for(i in 1:length(tissues_name)){
   dim_mat[i,1] <- nrow(df_tscore_disc[[i]])
   dim_mat[i,2] <- nrow(df_pathR_disc[[i]])
   dim_mat[i,3] <- nrow(df_pathGO_disc[[i]])
+  dim_mat[i,4] <-  nrow(df_pathR_disc[[i]]) + nrow(df_pathGO_disc[[i]])
   
   int_mat[i,1] <- length(which(sign(df_tscore_disc[[i]][,7])*sign(df_tscore_rep[[i]][,7]) == 1))
   int_mat[i,2] <- length(which(sign(df_pathR_disc[[i]][,12])*sign(df_pathR_rep[[i]][,12]) == 1))
   int_mat[i,3] <- length(which(sign(df_pathGO_disc[[i]][,14])*sign(df_pathGO_rep[[i]][,14]) == 1))
+  int_mat[i,4] <- int_mat[i,3] + int_mat[i,2]
   
   pval_mat[i,1] <- ifelse(dim_mat[i,1]>0, binom.test(int_mat[i,1], dim_mat[i,1], p = 0.5, alternative = c("greater"))$p.value, NA)
   pval_mat[i,2] <- ifelse(dim_mat[i,2]>0, binom.test(int_mat[i,2], dim_mat[i,2], p = 0.5, alternative = c("greater"))$p.value, NA)
   pval_mat[i,3] <- ifelse(dim_mat[i,3]>0, binom.test(int_mat[i,3], dim_mat[i,3], p = 0.5, alternative = c("greater"))$p.value, NA)
+  pval_mat[i,4] <- ifelse(dim_mat[i,4]>0, binom.test(int_mat[i,4], dim_mat[i,4], p = 0.5, alternative = c("greater"))$p.value, NA)
   
   if(nrow(df_tscore_rep[[i]])>0){
     df_tscore_disc[[i]]$SCZCMC_rep_z <- df_tscore_rep[[i]][,7]
@@ -130,7 +134,7 @@ for(i in 1:length(tissues_name)){
 }
 
 perc_mat <- int_mat/dim_mat
-colnames(perc_mat) = colnames(pval_mat) = colnames(int_mat) = colnames(dim_mat) = colnames(dim_tissues) = c('tscore', 'pathScore_reactome', 'pathScore_GO')
+colnames(perc_mat) = colnames(pval_mat) = colnames(int_mat) = colnames(dim_mat) = colnames(dim_tissues) = c('tscore', 'pathScore_reactome', 'pathScore_GO', 'pathScore_tot')
 dim_tissues <- cbind(data.frame(tissue = tissues_name, stringsAsFactors = F), as.data.frame(dim_tissues))
 int_mat <- cbind(data.frame(tissue = tissues_name, stringsAsFactors = F), as.data.frame(int_mat))
 dim_mat <- cbind(data.frame(tissue = tissues_name, stringsAsFactors = F), as.data.frame(dim_mat))
@@ -138,15 +142,20 @@ perc_mat <- cbind(data.frame(tissue = tissues_name, stringsAsFactors = F), as.da
 pval_mat <- cbind(data.frame(tissue = tissues_name, stringsAsFactors = F), as.data.frame(pval_mat))
 
 # add total 
-dim_tissues <- rbind(dim_tissues, data.frame(tissue = 'All Tissues', tscore = sum(dim_tissues$tscore), pathScore_reactome = sum(dim_tissues$pathScore_reactome), pathScore_GO = sum(dim_tissues$pathScore_GO)))
-int_mat <- rbind(int_mat, data.frame(tissue = 'All Tissues', tscore = sum(int_mat$tscore), pathScore_reactome = sum(int_mat$pathScore_reactome), pathScore_GO = sum(int_mat$pathScore_GO)))
-dim_mat <- rbind(dim_mat, data.frame(tissue = 'All Tissues', tscore = sum(dim_mat$tscore), pathScore_reactome = sum(dim_mat$pathScore_reactome), pathScore_GO = sum(dim_mat$pathScore_GO)))
+dim_tissues <- rbind(dim_tissues, data.frame(tissue = 'All Tissues', tscore = sum(dim_tissues$tscore), pathScore_reactome = sum(dim_tissues$pathScore_reactome), 
+                                             pathScore_GO = sum(dim_tissues$pathScore_GO),  pathScore_tot = sum(dim_tissues$pathScore_tot)))
+int_mat <- rbind(int_mat, data.frame(tissue = 'All Tissues', tscore = sum(int_mat$tscore), pathScore_reactome = sum(int_mat$pathScore_reactome),
+                                     pathScore_GO = sum(int_mat$pathScore_GO), pathScore_tot = sum(int_mat$pathScore_tot)))
+dim_mat <- rbind(dim_mat, data.frame(tissue = 'All Tissues', tscore = sum(dim_mat$tscore), pathScore_reactome = sum(dim_mat$pathScore_reactome), 
+                                     pathScore_GO = sum(dim_mat$pathScore_GO), pathScore_tot = sum(dim_mat$pathScore_tot)))
 perc_mat <- rbind(perc_mat, data.frame(tissue = 'All Tissues', tscore = int_mat$tscore[int_mat$tissue == 'All Tissues']/dim_mat$tscore[int_mat$tissue == 'All Tissues'], 
                                        pathScore_reactome = int_mat$pathScore_reactome[int_mat$tissue == 'All Tissues']/dim_mat$pathScore_reactome[int_mat$tissue == 'All Tissues'], 
-                                       pathScore_GO = int_mat$pathScore_GO[int_mat$tissue == 'All Tissues']/dim_mat$pathScore_GO[int_mat$tissue == 'All Tissues']))
+                                       pathScore_GO = int_mat$pathScore_GO[int_mat$tissue == 'All Tissues']/dim_mat$pathScore_GO[int_mat$tissue == 'All Tissues'], 
+                                       pathScore_tot = int_mat$pathScore_tot[int_mat$tissue == 'All Tissues']/dim_mat$pathScore_tot[int_mat$tissue == 'All Tissues']))
 pval_mat <- rbind(pval_mat, data.frame(tissue = 'All Tissues', tscore = binom.test(int_mat$tscore[int_mat$tissue == 'All Tissues'], dim_mat$tscore[dim_mat$tissue == 'All Tissues'], p = 0.5, alternative = c("greater"))$p.value, 
                                        pathScore_reactome = binom.test(int_mat$pathScore_reactome[int_mat$tissue == 'All Tissues'], dim_mat$pathScore_reactome[dim_mat$tissue == 'All Tissues'], p = 0.5, alternative = c("greater"))$p.value, 
-                                       pathScore_GO = binom.test(int_mat$pathScore_GO[int_mat$tissue == 'All Tissues'], dim_mat$pathScore_GO[dim_mat$tissue == 'All Tissues'], p = 0.5, alternative = c("greater"))$p.value))
+                                       pathScore_GO = binom.test(int_mat$pathScore_GO[int_mat$tissue == 'All Tissues'], dim_mat$pathScore_GO[dim_mat$tissue == 'All Tissues'], p = 0.5, alternative = c("greater"))$p.value, 
+                                       pathScore_tot = binom.test(int_mat$pathScore_tot[int_mat$tissue == 'All Tissues'], dim_mat$pathScore_tot[dim_mat$tissue == 'All Tissues'], p = 0.5, alternative = c("greater"))$p.value))
 
 res_tab <- list(dim_tissues = dim_tissues, dim_disc_sign = dim_mat, int_disc_rep = int_mat, perc_disc_rep = perc_mat, pval_disc_rep = pval_mat)
 
@@ -328,6 +337,5 @@ res_tab <- list(dim_tissues = dim_tissues, dim_union_sign = dim_union, corS_unio
                 corP_union = corP_mat, pval_corP_union = pval_corP_mat, jac_sim = jac_mat)
 # save
 save(res_tab,file = sprintf('%s/corr_discoverySCZPGCSign_replication%sCMCSign_pval%.2f.RData', outFold, pheno_name, pval_thr_corr))
-
 
 
