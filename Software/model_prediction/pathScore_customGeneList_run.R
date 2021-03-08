@@ -3,7 +3,7 @@
 options(stringsAsFactors=F)
 options(max.print=1000)
 suppressPackageStartupMessages(library(argparse))
-suppressPackageStartupMessages(library(PGSEA))
+#suppressPackageStartupMessages(library(PGSEA))
 suppressPackageStartupMessages(library(limma))
 suppressPackageStartupMessages(library(qvalue))
 
@@ -38,7 +38,7 @@ outFold <- args$outFold
 # modified version of PGSEA that returns the mean t-score of the genes in each gene set
 modPGSEA = function (exprs, geneSets, range=c(1,Inf), center=F, p.value=0.005, method="mean") {
   # initialize and prepare results matrix containing mean t-scores for each gene set and sample
-  if (is(exprs, "ExpressionSet")) exprs <- exprs(exprs)
+  #if (is(exprs, "ExpressionSet")) exprs <- exprs(exprs)
   if (!is.list(geneSets)) stop("geneSets need to be a list")
   if (center) exprs <- scale(exprs, scale = FALSE)
   results <- matrix(NA, length(geneSets), ncol(exprs))
