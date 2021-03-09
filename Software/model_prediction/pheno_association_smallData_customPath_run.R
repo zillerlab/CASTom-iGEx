@@ -27,6 +27,7 @@ parser$add_argument("--geneAnn_file", type = "character", help = "file with gene
 parser$add_argument("--functR", type = "character", help = "Rscript with functions to be used")
 parser$add_argument("--geneSetName", type = "character", help = "name pathway custom")
 parser$add_argument("--abs_tscore", type = "logical", default = F, help = "if true also the pathway using absolute values of tscore is computed")
+parser$add_argument("--not_rm_samepath", type = "logical", default = F, help = "if true do not remove common pathways")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
 args <- parser$parse_args()
@@ -44,24 +45,25 @@ geneAnn_file <- args$geneAnn_file
 functR <- args$functR
 geneSetName <- args$geneSetName
 abs_tscore <- args$abs_tscore
+not_rm_samepath <- args$not_rm_samepath
 outFold <- args$outFold
 
 # ##########################################################################################
-# covDat_file <- 'INPUT_DATA/Covariates/scz_aber_eur.covariateMatrix.txt'
-# outFold <- 'OUTPUT_CMC/predict_PGC/200kb/scz_aber_eur/devgeno0.01_testdevgeno0/'
-# pathwayStructure_file <- 'refData/CMC_GeneSets_Hypothesis-driven-for-Enrichement.RData'
+# covDat_file <- 'INPUT_DATA/Covariates/scz_ersw_eur.covariateMatrix_old.txt'
+# outFold <- 'OUTPUT_CMC/predict_PGC/200kb/scz_ersw_eur/devgeno0.01_testdevgeno0/'
+# pathwayStructure_file <- '/home/luciat/priler_project/refData/SCZ_LoF_GeneSets_ordered.RData'
 # thr_reliableGenes <- c(0.01,0)
-# sampleAnn_file <- 'INPUT_DATA/Covariates/scz_aber_eur.covariateMatrix.txt'
-# inputFold <- 'OUTPUT_CMC/predict_PGC/200kb/scz_aber_eur/devgeno0.01_testdevgeno0/'
-# phenoDat_file <- 'INPUT_DATA/Covariates/scz_aber_eur.phenoMatrix.txt'
+# sampleAnn_file <- 'INPUT_DATA/Covariates/scz_ersw_eur.covariateMatrix_old.txt'
+# inputFold <- 'OUTPUT_CMC/predict_PGC/200kb/scz_ersw_eur/devgeno0.01_testdevgeno0/'
+# phenoDat_file <- 'INPUT_DATA/Covariates/scz_ersw_eur.phenoMatrix.txt'
 # names_file <- 'SCZ_pheno'
 # phenoAnn_file <- 'INPUT_DATA/Covariates/phenotypeDescription_PGCcohorts.csv'
 # cov_corr <- T
 # ncores <- 10
-# geneSetName <- 'CMC_GeneSets'
+# geneSetName <- 'SCZ_LoF_GeneSets'
 # geneAnn_file <- 'OUTPUT_CMC/train_CMC/200kb/resPrior_regEval_allchr.txt'
-# functR <- 'RSCRIPTS/SCRIPTS_v2/AssociationAnalysis_functions_run.R'
-# ##########################################################################################
+# functR <- '/home/luciat/priler_project/Software/model_prediction/pheno_association_functions.R'
+# # ##########################################################################################
 
 
 source(functR)
@@ -126,7 +128,6 @@ identical(colnames(tmp), samplesID_new) # same order samples
 pathScore <- as.matrix(t(tmp))
 rm(tmp)
 
-
 # consider only pathaways that do not have gene repetition, on pathwayScoreID add gene info
 custom_pathway <- get(load(pathwayStructure_file))
 
@@ -140,28 +141,30 @@ ngenes_path <-  sapply(custom_pathway, function(x) length(unique(x$geneIds[x$gen
 ngenes_tscore_path <- sapply(genes_path, length)
 
 # remove pathway with the same genes, recompute qvalue
-rm_path <- c()
-len <- c()
-for(i in 1:length(genes_path)){
-  # print(i)
-  id <- which(sapply(genes_path, function(x) all(genes_path[[i]] %in% x) & all(x %in% genes_path[[i]])))
-  len[i] <- length(id)
-  ngenes_tmp <- ngenes_path[id]
-  # take the one woth the lower amount of genes
-  rm_path <- c(rm_path, path_name[id][-which.min(ngenes_tmp)])
-}
-
-rm_path <- unique(rm_path)
-id_rm <- which(pathScoreID %in% rm_path)
-if(length(id_rm)>0){
-  pathScore <- pathScore[,-id_rm]
-  pathScoreID <- pathScoreID[-id_rm]
-  custom_pathway <- custom_pathway[-id_rm]
-  path_name <- sapply(custom_pathway, function(x) x$name)
-  identical(path_name, pathScoreID)
-  genes_path <- lapply(custom_pathway, function(x) geneAnn$external_gene_name[geneAnn$external_gene_name %in% x$geneIds])
-  ngenes_path <- ngenes_path[-id_rm]
-  ngenes_tscore_path <- ngenes_tscore_path[-id_rm]
+if(!not_rm_samepath){
+  rm_path <- c()
+  len <- c()
+  for(i in 1:length(genes_path)){
+    # print(i)
+    id <- which(sapply(genes_path, function(x) all(genes_path[[i]] %in% x) & all(x %in% genes_path[[i]])))
+    len[i] <- length(id)
+    ngenes_tmp <- ngenes_path[id]
+    # take the one woth the lower amount of genes
+    rm_path <- c(rm_path, path_name[id][-which.min(ngenes_tmp)])
+  }
+  
+  rm_path <- unique(rm_path)
+  id_rm <- which(pathScoreID %in% rm_path)
+  if(length(id_rm)>0){
+    pathScore <- pathScore[,-id_rm]
+    pathScoreID <- pathScoreID[-id_rm]
+    custom_pathway <- custom_pathway[-id_rm]
+    path_name <- sapply(custom_pathway, function(x) x$name)
+    identical(path_name, pathScoreID)
+    genes_path <- lapply(custom_pathway, function(x) geneAnn$external_gene_name[geneAnn$external_gene_name %in% x$geneIds])
+    ngenes_path <- ngenes_path[-id_rm]
+    ngenes_tscore_path <- ngenes_tscore_path[-id_rm]
+  }
 }
 
 # add number of genes info and mean test_dev_geno and dev_geno
@@ -192,6 +195,7 @@ for(i in 1:length(genes_path)){
 print('pathScore mat loaded')
 
 if(abs_tscore){
+  
   ##########################################
   #### load custom pathScore abstscore #####
   ##########################################
@@ -389,7 +393,10 @@ for(n in 1:length(phenoDat_file)){
     df_corr_path[[j]] <- cbind(df_path_info, output)
     
     # qvalue:
-    qval <- qvalue(as.vector(df_corr_path[[j]][, names_df[j,4]]))
+    qval <- tryCatch(qvalue(as.vector(df_corr_path[[j]][, names_df[j,4]])), error=function(...) NULL)
+    if(is.null(qval)){
+      qval <- list(qvalue = rep(NA, nrow(df_corr_path[[j]])), pi0 = NA)  
+    }
     df_corr_path[[j]] <- cbind(df_corr_path[[j]], qval$qvalue)
     colnames(df_corr_path[[j]])[ncol(df_corr_path[[j]])] <-  names_df_qval[j]
     df_pi1$pathScore[j] <- 1 - qval$pi0
