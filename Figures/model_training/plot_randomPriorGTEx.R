@@ -109,6 +109,7 @@ for(i in 1:nrow(df_info)){
 
 # for each repetiton load final results
 df_res <- list()
+tot_mat_w <- list()
 for(i in 1:nrow(df_info)){
   
   tmp_file <- read.table(sprintf('%s/%s/rep1/%s', df_info$tissue[i], df_info$fold_var[i], df_info$file_prior[i]), stringsAsFactors = F, h=F)
@@ -122,9 +123,12 @@ for(i in 1:nrow(df_info)){
     tmp[,j] <- res_w$weights
   }
   
+  tot_mat_w[[i]] <- t(tmp*conv_par)
+  colnames(tot_mat_w[[i]]) <- names_p
+  
   df_res[[i]] <- data.frame(prior = names_p, stringsAsFactors = F)
   df_res[[i]]$mean_w <- rowMeans(tmp)*conv_par
-  df_res[[i]]$sd_w <- apply(tmp, 1, sd)
+  df_res[[i]]$sd_w <- apply(tmp*conv_par, 1, sd)
   
 }
 
@@ -228,7 +232,7 @@ for(i in 1:nrow(df_info)){
   ggsave(filename = sprintf('%smaxContrPrior_iteration_rV_%s.png', outFold, df_info$tissue[i]), plot = pl_it, width = 4, height = 4, dpi=500)
   ggsave(filename = sprintf('%smaxContrPrior_iteration_rV_%s.pdf', outFold, df_info$tissue[i]), plot = pl_it, width = 4, height = 4)
   
-  res <- list(weights = df_res[[i]], nsnps = df_rV_n, it = df_it[[i]], perc_shared = df_perc)
+  res <- list(weights = df_res[[i]], nsnps = df_rV_n, it = df_it[[i]], perc_shared = df_perc, tot_weights_rep = tot_mat_w[[i]])
   save(res, file = sprintf('%stotRes_rV_%s.RData', outFold, df_info$tissue[i]))
   
 }
@@ -294,6 +298,7 @@ for(i in 1:nrow(df_info)){
 
 # for each repetiton load final results
 df_res <- list()
+tot_mat_w <- list()
 for(i in 1:nrow(df_info)){
   
   tmp_file <- read.table(sprintf('%s/%s/rep1/%s', df_info$tissue[i], df_info$fold_epi[i], df_info$file_prior[i]), stringsAsFactors = F, h=F)
@@ -307,9 +312,12 @@ for(i in 1:nrow(df_info)){
     tmp[,j] <- res_w$weights
   }
   
+  tot_mat_w[[i]] <- t(tmp*conv_par)
+  colnames(tot_mat_w[[i]]) <- names_p
+  
   df_res[[i]] <- data.frame(prior = names_p, stringsAsFactors = F)
   df_res[[i]]$mean_w <- rowMeans(tmp)*conv_par
-  df_res[[i]]$sd_w <- apply(tmp, 1, sd)
+  df_res[[i]]$sd_w <- apply(tmp*conv_par, 1, sd)
   
 }
 
@@ -413,7 +421,7 @@ for(i in 1:nrow(df_info)){
   ggsave(filename = sprintf('%smaxContrPrior_iteration_rE_%s.png', outFold, df_info$tissue[i]), plot = pl_it, width = 4, height = 4, dpi=500)
   ggsave(filename = sprintf('%smaxContrPrior_iteration_rE_%s.pdf', outFold, df_info$tissue[i]), plot = pl_it, width = 4, height = 4)
   
-  res <- list(weights = df_res[[i]], nsnps = df_rE_n, it = df_it[[i]], perc_shared = df_perc)
+  res <- list(weights = df_res[[i]], nsnps = df_rE_n, it = df_it[[i]], perc_shared = df_perc, tot_weights_rep = tot_mat_w[[i]])
   save(res, file = sprintf('%stotRes_rE_%s.RData', outFold, df_info$tissue[i]))
   
 }
@@ -485,6 +493,7 @@ for(i in 1:nrow(df_info)){
 
 # for each repetiton load final results
 df_res <- list()
+tot_mat_w <- list()
 for(i in 1:nrow(df_info)){
   
   tmp_file <- read.table(sprintf('%s/%s/rep1/%s', df_info$tissue[i], df_info$fold_gwas[i], df_info$file_prior[i]), stringsAsFactors = F, h=F)
@@ -498,9 +507,12 @@ for(i in 1:nrow(df_info)){
     tmp[,j] <- res_w$weights
   }
   
+  tot_mat_w[[i]] <- t(tmp*conv_par)
+  colnames(tot_mat_w[[i]]) <- names_p
+  
   df_res[[i]] <- data.frame(prior = names_p, stringsAsFactors = F)
   df_res[[i]]$mean_w <- rowMeans(tmp)*conv_par
-  df_res[[i]]$sd_w <- apply(tmp, 1, sd)
+  df_res[[i]]$sd_w <- apply(tmp*conv_par, 1, sd)
   
 }
 
@@ -605,9 +617,8 @@ for(i in 1:nrow(df_info)){
   ggsave(filename = sprintf('%smaxContrPrior_iteration_rG_%s.png', outFold, df_info$tissue[i]), plot = pl_it, width = 4, height = 4, dpi=500)
   ggsave(filename = sprintf('%smaxContrPrior_iteration_rG_%s.pdf', outFold, df_info$tissue[i]), plot = pl_it, width = 4, height = 4)
   
-  res <- list(weights = df_res[[i]], nsnps = df_rG_n, it = df_it[[i]], perc_shared = df_perc)
+  res <- list(weights = df_res[[i]], nsnps = df_rG_n, it = df_it[[i]], perc_shared = df_perc, tot_weights_rep = tot_mat_w[[i]])
   save(res, file = sprintf('%stotRes_rG_%s.RData', outFold, df_info$tissue[i]))
   
 }
-
 
