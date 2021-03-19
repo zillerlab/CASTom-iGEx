@@ -246,7 +246,8 @@ if(!is.null(geneLoci_summ)){
   
   df_perc_loci$dataset <- factor(df_perc_loci$dataset, levels = cohort_name)
   df_perc_loci$gr <- factor(df_perc_loci$gr, levels = paste0('gr_', sort(unique(clust$gr))))
-  
+
+  if(length(cohort_name)>1){  
   pl <- ggplot(df_perc_loci,aes(x = nloci, y = nloci_rep, color = gr))+
       geom_point(alpha = 0.7, size = 2)+
       geom_abline(linetype = 'dashed', color = 'black')+
@@ -256,8 +257,20 @@ if(!is.null(geneLoci_summ)){
       theme(legend.position = 'right')+
       scale_color_manual(values = gr_color)
       # scale_shape_manual(values=c(1, 19))+
-  ggsave(filename = sprintf('%s%s_%s_cluster%s_numberLociRep_Groups_prediction_model%s.png', outFold, type_data, type_input, type_cluster, model_name), width = 6, height = 2, plot = pl, device = 'png')
-  ggsave(filename = sprintf('%s%s_%s_cluster%s_numberLociRep_Groups_prediction_model%s.pdf', outFold, type_data, type_input, type_cluster, model_name), width = 6, height = 2, plot = pl, device = 'pdf')
+  width_plot=1.5*length(cohort_name)
+  }else{
+   pl <- ggplot(df_perc_loci,aes(x = nloci, y = nloci_rep, color = gr))+
+      geom_point(alpha = 0.7, size = 2)+
+      geom_abline(linetype = 'dashed', color = 'black')+
+      theme_bw()+
+      ylab('n. of loci reproduced')+ xlab('n. of loci')+
+      theme(legend.position = 'right')+
+      scale_color_manual(values = gr_color)
+   width_plot=3
+  }
+
+  ggsave(filename = sprintf('%s%s_%s_cluster%s_numberLociRep_Groups_prediction_model%s.png', outFold, type_data, type_input, type_cluster, model_name), width = width_plot, height = 2, plot = pl, device = 'png')
+  ggsave(filename = sprintf('%s%s_%s_cluster%s_numberLociRep_Groups_prediction_model%s.pdf', outFold, type_data, type_input, type_cluster, model_name), width = width_plot, height = 2, plot = pl, device = 'pdf')
 
 }
 
