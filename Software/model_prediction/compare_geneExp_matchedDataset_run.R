@@ -45,8 +45,8 @@ for(i in 1:ncol(mat_genes[[1]])){
 }
 
 df_cor$keep <- NA
-id_rel <- (geneExpPred[[2]]$dev_geno>0.01 & geneExpPred[[2]]$test_dev_geno > 0) & 
-  (geneExpPred[[1]]$dev_geno>0.01 & geneExpPred[[1]]$test_dev_geno)
+id_rel <- (geneExpPred[[2]]$dev_geno >= 0.01 & geneExpPred[[2]]$test_dev_geno > 0) & 
+  (geneExpPred[[1]]$dev_geno >= 0.01 & geneExpPred[[1]]$test_dev_geno > 0)
 df_cor$keep[id_rel] <- F
 df_cor$keep[df_cor$cor >= corr_thr & id_rel] <- T
 
