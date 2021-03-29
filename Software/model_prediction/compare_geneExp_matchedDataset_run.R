@@ -50,7 +50,7 @@ id_rel <- (geneExpPred[[2]]$dev_geno>0.01 & geneExpPred[[2]]$test_dev_geno > 0) 
 df_cor$keep[id_rel] <- F
 df_cor$keep[df_cor$cor >= corr_thr & id_rel] <- T
 
-write.table(df_cor, file = sprintf('%stissue%s_filter_genes_matched_datasets.txt', outFold, tissue_name), 
+write.table(df_cor, file = sprintf('%s%s_filter_genes_matched_datasets.txt', outFold, tissue_name), 
             col.names = T, row.names = F, sep = '\t', quote = F)
 
 
