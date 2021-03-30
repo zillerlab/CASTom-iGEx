@@ -20,6 +20,7 @@ options(bitmapType = 'cairo', device = 'png')
 
 parser <- ArgumentParser(description="clustering using PG method")
 parser$add_argument("--inputFile", type = "character", default = 'NA', nargs = '*', help = "file to be loaded (predicted tscore or pathScore)")
+parser$add_argument("--genes_to_filter", type = "character", default = NULL, help = "additional file to filter genes")
 parser$add_argument("--name_cohorts", type = "character", nargs = '*', help = "name of the single cohorts")
 parser$add_argument("--sampleAnnFile", type = "character", nargs = '*', help = "file with samples to be used")
 parser$add_argument("--sampleOutFile", type = "character", default = 'NA', help = "file with samples to be excluded")
@@ -43,6 +44,7 @@ parser$add_argument("--outFold", type="character", help = "Output file [basename
 
 args <- parser$parse_args()
 name_cohorts <- args$name_cohorts
+genes_to_filter <- args$genes_to_filter
 pvalresFile <- args$pvalresFile
 sampleOutFile <- args$sampleOutFile
 tissues_name <- args$tissues_name
@@ -132,6 +134,12 @@ if(exclude_MHC & type_data == 'tscore'){
   res_pval <- res_pval[!(res_pval$chrom %in% 'chr6' & res_pval$start_position <=HLA_reg[2] & res_pval$start_position >= HLA_reg[1]) , ]
 }
 
+if(!is.null(genes_to_filter)){
+  genes_filt <- read.table(genes_to_filter, h=T, stringsAsFactors = F, sep = '\t')
+  genes_filt <- genes_filt[genes_filt$keep & !is.na(genes_filt$keep),]
+  res_pval <- res_pval[res_pval$ensembl_gene_id %in% genes_filt$ensembl_gene_id,]
+}
+
 ### load score data ###
 sampleAnn <- vector(mode = 'list', length = length(name_cohorts))
 scoreMat <- vector(mode = 'list', length = length(name_cohorts))
@@ -202,18 +210,33 @@ sampleAnn <- sampleAnn[match(rownames(scoreMat), sampleAnn$Temp_ID), ]
 sampleAnn$cohort_id <- as.numeric(as.factor(sampleAnn$cohort))
 
 # remove higly correlated features, keep highest association
+# remove higly correlated features, keep highest association
 cor_score <- cor(scoreMat)
-element_rm <- c()
-for(i in 1:(nrow(cor_score)-1)){
-  id <-  which(abs(cor_score[i:nrow(cor_score),i])>corr_thr)
-  if(length(id)>1){
-    element_rm <- c(element_rm, names(id)[-which.min(res_pval[match(names(id), res_pval[,id_info]),id_pval])])
+if(corr_thr < 1){
+  # clumping: sort according p-value (from association results)
+  feat_info <- res_pval[,c(id_info, id_pval)]
+  feat_info <- feat_info[order(feat_info[,2]), ]
+  cor_score <- cor_score[match(feat_info[,1], rownames(cor_score)), match(feat_info[,1], colnames(cor_score))]
+  element_rm <- c()
+  stop_cond <- F
+  list_feat <- feat_info[,1]
+  
+  while(!stop_cond){
+    
+    id <- which(abs(cor_score[,list_feat[1]])>corr_thr)
+    if(length(id)>1){
+      element_rm <- c(element_rm, names(id)[-which.min(feat_info[match(names(id),feat_info[,1]), 2])])
+    }
+    list_feat <- list_feat[!list_feat %in% names(id)]
+    # print(length(list_feat))
+    stop_cond <- length(list_feat) == 0
   }
+  
+  element_rm <- unique(element_rm)
+  print(paste(length(element_rm),'features removed due to high correlation'))
+  scoreMat <- scoreMat[, !colnames(scoreMat) %in% element_rm]
+  res_pval <- res_pval[match(colnames(scoreMat), res_pval[, id_info]),]
 }
-element_rm <- unique(element_rm)
-print(paste(length(element_rm),'features removed due to high correlation'))
-scoreMat <- scoreMat[,!colnames(scoreMat) %in% element_rm]
-res_pval <- res_pval[match(colnames(scoreMat), res_pval[, id_info]),]
 
 input_data <- scale(scoreMat)
 attr(input_data, "scaled:scale") <- NULL
