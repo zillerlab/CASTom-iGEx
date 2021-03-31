@@ -20,6 +20,7 @@ suppressPackageStartupMessages(library(ggplot2))
 options(bitmapType = 'cairo', device = 'png')
 
 parser <- ArgumentParser(description="gene-RS/path-RS for ax external cohort")
+parser$add_argument("--genes_to_filter", type = "character", default = NULL, help = "additional file to filter genes")
 parser$add_argument("--sampleAnn_file", type = "character", help = "")
 parser$add_argument("--inputFile", type = "character", help = "input files (scores)")
 parser$add_argument("--split_tot", type = "integer", default = 0, help = "if 0 then inpuntFile load alone, otherwise splitted version")
@@ -36,6 +37,7 @@ parser$add_argument("--min_genes_path", type = "integer", default = 1, help = "m
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
 args <- parser$parse_args()
+genes_to_filter <- args$genes_to_filter
 inputFile <- args$inputFile
 sampleAnn_file <- args$sampleAnn_file
 functR <- args$functR
@@ -52,21 +54,22 @@ n_max <- args$n_max
 outFold <- args$outFold
 
 ###################################################################################################################
-# sampleAnn_file <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/covariateMatrix_CADHARD_All.txt'
+# sampleAnn_file <- 'INPUT_DATA/Covariates/covariatesMatrix_red_latestW.txt'
 # functR <- '/psycl/g/mpsziller/lucia/priler_project/Software/model_clustering/clustering_functions.R'
-# outFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Heart_Left_Ventricle/200kb/CAD_GWAS_bin5e-2/German5/devgeno0.01_testdevgeno0/'
+# outFold <- 'OUTPUT_CMC/predict_UKBB/200kb/devgeno0.01_testdevgeno0/'
 # split_tot = 100
-# inputFile <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Heart_Left_Ventricle/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/predictedTscores_splitGenes'
-# corrFile <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Heart_Left_Ventricle/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/correlation_estimate_tscore.RData'
-# pvalresFile <- c('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Heart_Left_Ventricle/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/pval_Blood_biochemistry_withMed_pheno_covCorr.RData',
-# '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Heart_Left_Ventricle/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/pval_Blood_count_withMed_pheno_covCorr.RData')
+# inputFile <- 'OUTPUT_CMC/predict_UKBB/200kb/devgeno0.01_testdevgeno0/predictedTscores_splitGenes'
+# corrFile <- 'OUTPUT_CMC/predict_UKBB/200kb/devgeno0.01_testdevgeno0/correlation_estimate_tscore.RData'
+# pvalresFile <- c('OUTPUT_CMC/predict_UKBB/200kb/devgeno0.01_testdevgeno0/pval_Blood_biochemistry_pheno_covCorr.RData',
+# 'OUTPUT_CMC/predict_UKBB/200kb/devgeno0.01_testdevgeno0/pval_Blood_count_withMed_pheno_covCorr.RData')
 # type_data <- 'tscore'
-# cases_only <- T
+# cases_only <- F
 # min_genes_path <- 2
 # pheno_class_name <- c('Blood_biochemistry', 'Blood_count')
 # corr_thr <- 0.5
 # scale_rs <- T
-###################################################################################################################
+# genes_to_filter <- '/psycl/g/mpsziller/lucia/compare_prediction_UKBB_SCZ-PGC/DLPC_CMC_filter_genes_matched_datasets.txt'
+# ###################################################################################################################
 
 source(functR)
 
@@ -99,6 +102,13 @@ if(type_data == 'tscore'){
       stop('unknown pathway called')
     }
   }
+}
+
+if(!is.null(genes_to_filter)){
+  genes_filt <- read.table(genes_to_filter, h=T, stringsAsFactors = F, sep = '\t')
+  genes_filt <- genes_filt[genes_filt$keep & !is.na(genes_filt$keep),]
+  # the first one is used to filter input data
+  res_pval[[1]] <- res_pval[[1]][res_pval[[1]]$ensembl_gene_id %in% genes_filt$ensembl_gene_id,]
 }
 
 # # recompute pvalue if ngenes_tscore > 1
@@ -198,6 +208,7 @@ if(corr_thr < 1){
     res_pval[[1]] <- res_pval[[1]][res_pval[[1]][,id_info] %in% rownames(corr_feat), ]
   }
   common_feat <- intersect(colnames(scoreMat), rownames(corr_feat))
+  common_feat <- intersect(common_feat, res_pval[[1]][,id_info])
   # clumping: sort according dev_geno (from association results)
   feat_info <- res_pval[[1]][match(common_feat,res_pval[[1]][, id_info]),c(id_info, id_geno_summ)]
   feat_info <- feat_info[order(feat_info[,2], decreasing = T), ]
@@ -230,9 +241,7 @@ if(corr_thr < 1){
   input_data <- scoreMat[, !colnames(scoreMat) %in% element_rm]
   
 }else{
-  
-  input_data <- scoreMat
-  
+  input_data <- scoreMat[, colnames(scoreMat) %in% res_pval[[1]][, id_info]]
 }
 rm(scoreMat)
 print(mem_used())
@@ -321,6 +330,5 @@ write.table(sampleAnn_score, file = sprintf('%s%s_corrThr%s_risk_score_relatedPh
 
 tmp <- res_pval[[1]][match(colnames(input_data), res_pval[[1]][,id_info]),c(id_info, id_geno_summ)]
 write.table(tmp, file = sprintf('%s%s_features_risk_score_corrThr%s.txt', outFold, type_data, as.character(corr_thr)), col.names = T, row.names = F, sep = '\t', quote = F)
-
 
 
