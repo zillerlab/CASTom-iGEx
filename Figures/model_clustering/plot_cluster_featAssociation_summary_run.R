@@ -53,13 +53,13 @@ outFold <- args$outFold
 # type_cluster <- 'Cases'
 # pheno_name <- 'SCZ'
 # color_tissues_file <- '/psycl/g/mpsziller/lucia/priler_project/Figures/color_tissues.txt'
-# gene_info_file <- 'Meta_Analysis_SCZ/OUTPUT_all/SCZ_clustering/clDLPC_CMC_tscoreOriginal_tscoreClusterCases_infoGenes.txt'
-# gene_feat_file  <- 'Meta_Analysis_SCZ/OUTPUT_all/SCZ_clustering/clDLPC_CMC_tscoreOriginal_tscoreClusterCases_featAssociation.txt'
-# pathR_info_file <- 'Meta_Analysis_SCZ/OUTPUT_all/SCZ_clustering/clDLPC_CMC_path_ReactomeOriginal_tscoreClusterCases_infopath.txt'
-# pathR_feat_file  <- 'Meta_Analysis_SCZ/OUTPUT_all/SCZ_clustering/clDLPC_CMC_path_ReactomeOriginal_tscoreClusterCases_featAssociation.txt'
-# pathGO_info_file <- 'Meta_Analysis_SCZ/OUTPUT_all/SCZ_clustering/clDLPC_CMC_path_GOOriginal_tscoreClusterCases_infopath.txt'
-# pathGO_feat_file  <- 'Meta_Analysis_SCZ/OUTPUT_all/SCZ_clustering/clDLPC_CMC_path_GOOriginal_tscoreClusterCases_featAssociation.txt'
-# outFold <- 'Meta_Analysis_SCZ/OUTPUT_all/SCZ_clustering/clDLPC_CMC_'
+# gene_info_file <- 'Meta_Analysis_SCZ/OUTPUT_all/SCZ_clustering/matchUKBB_clDLPC_CMC_tscoreOriginal_tscoreClusterCases_infoGenes.txt'
+# gene_feat_file  <- 'Meta_Analysis_SCZ/OUTPUT_all/SCZ_clustering/matchUKBB_clDLPC_CMC_tscoreOriginal_tscoreClusterCases_featAssociation.txt'
+# pathR_info_file <- 'Meta_Analysis_SCZ/OUTPUT_all/SCZ_clustering/matchUKBB_clDLPC_CMC_path_ReactomeOriginal_tscoreClusterCases_infopath.txt'
+# pathR_feat_file  <- 'Meta_Analysis_SCZ/OUTPUT_all/SCZ_clustering/matchUKBB_clDLPC_CMC_path_ReactomeOriginal_tscoreClusterCases_featAssociation.txt'
+# pathGO_info_file <- 'Meta_Analysis_SCZ/OUTPUT_all/SCZ_clustering/matchUKBB_clDLPC_CMC_path_GOOriginal_tscoreClusterCases_infopath.txt'
+# pathGO_feat_file  <- 'Meta_Analysis_SCZ/OUTPUT_all/SCZ_clustering/matchUKBB_clDLPC_CMC_path_GOOriginal_tscoreClusterCases_featAssociation.txt'
+# outFold <- 'Meta_Analysis_SCZ/OUTPUT_all/SCZ_clustering/matchUKBB_clDLPC_CMC_'
 # cis_size <- 200000
 ########################################################################################################################
 
@@ -81,6 +81,9 @@ pathGO_feat$new_id <- paste0(pathGO_feat$feat, '_tissue_', pathGO_feat$tissue)
 
 tissues <- unique(gene_feat$tissue)
 color_tissues <- read.table(color_tissues_file, h=T, stringsAsFactors = F)
+if('DLPC' %in% tissues){
+  color_tissues$tissues[color_tissues$tissues == 'DLPC_CMC'] <- 'DLPC'
+}
 
 # for gene and each tissue, put count the number of associations and divide per loci
 ### gene ###
@@ -279,7 +282,7 @@ for(j in 1:length(chr_id)){
       all_merg <- all(!duplicated(unlist(new_merge_pos)))
       merge_pos <- new_merge_pos
       new_merge_pos <- list() 
-     }
+    }
     
     # remove NA
     merge_pos <- merge_pos[!sapply(merge_pos, function(x) all(is.na(x)))]
@@ -303,6 +306,7 @@ for(i in 1:nrow(alltissues_loci)){
   tmp_gr <- sapply(unique(gene_feat$comp[gene_feat$feat %in% genes & gene_feat$pval_corr <= 0.05]), function(x) strsplit(x, split = '_vs_all')[[1]][1])
   alltissues_loci$comp_sign[i] <-  paste0(tmp_gr, collapse = ',') 
 }
+alltissues_loci <- alltissues_loci[order(factor(alltissues_loci$chrom, levels = paste0('chr', 1:22)), alltissues_loci$start), ]
 # save
 write.table(x = alltissues_loci, file = sprintf('%s%s_%s_cluster%s_summary_geneLoci_allTissues.txt',outFold, type_data, type_input, type_cluster), 
             col.names = T, row.names = F, sep = '\t', quote = F)
@@ -356,7 +360,7 @@ pl1 <- ggplot(data = subset(df, tissue != 'All'), aes(x = tissue, y = ngenes, fi
   theme(legend.position = 'right', legend.key.size = unit(0.2, "cm"), 
         legend.text = element_text(size = 6), legend.title = element_blank(), 
         axis.title.y = element_blank(), axis.text.y = element_text(colour = newcolours[-1]))+
-  guides(fill=guide_legend(ncol=1))+
+  guides(fill=guide_legend(ncol=2))+
   scale_fill_manual(values = coul)+
   # scale_fill_d3()+
   coord_flip() 
@@ -409,7 +413,7 @@ pl1 <- ggplot(data = subset(df, tissue == 'All'), aes(x = comp, y = ngenes, fill
         axis.title.x = element_blank(), axis.text.x = element_text(colour = color_gr))+
   scale_fill_manual(values = coul)+
   guides(fill=guide_legend(ncol=2))
-  # scale_fill_d3()+
+# scale_fill_d3()+
 
 pl2 <- ggplot(data = subset(df_loci, tissue == 'All'), aes(x = comp, y = nloci))+
   geom_bar(alpha = 0.9, width = 0.5, stat = 'identity', fill = 'darkgrey')+
@@ -425,8 +429,6 @@ pl2 <- ggplot(data = subset(df_loci, tissue == 'All'), aes(x = comp, y = nloci))
 tot_pl <- ggarrange(plotlist = list(pl1, pl2), ncol=2, nrow=1, align = 'h')
 ggsave(filename =  sprintf('%scluster_ngenes_nloci_alltissues_%s_%s.png', outFold, type_data, type_input), plot = tot_pl, width = 4, height = 5, dpi = 500)
 ggsave(filename = sprintf('%scluster_ngenes_nloci_alltissues_%s_%s.pdf', outFold, type_data, type_input), plot = tot_pl, width = 4, height = 5, dpi = 500, compress = F)
-
-
 
 # # tot_pl <- ggarrange(plotlist = list(pl, pl_side), ncol=2, nrow=1, widths=c(1, 0.3), align = 'h', common.legend = TRUE)
 # tot_pl <- pl
@@ -511,7 +513,7 @@ for(i in 1:length(tissues)){
       
     }
   }
- 
+  
   tmp <-  lapply(merge_pos, function(x) data.frame(npath = length(x), path = paste0(tmp_info$path[x], collapse = '-and-'), 
                                                    mean_Zstat = mean(tmp_info$Zstat[x]), sd_Zstat = sd(tmp_info$Zstat[x]), 
                                                    highest_Zstat = tmp_info$Zstat[x][which.max(abs(tmp_info$Zstat[x]))], 
@@ -629,7 +631,7 @@ for(j in 1:length(tissues)){
 
 # same plot but n. of loci and not genes
 df_pathgroup <- data.frame(tissue = unlist(lapply(tissues, function(x) rep(x, length(gr_tot)))), comp = rep(gr_tot, length(tissues)), 
-                      ngroup = as.vector(sapply( tissues, function(x) sapply(gr_tot, function(y) sum(df$comp == y & df$tissue == x)))))
+                           ngroup = as.vector(sapply( tissues, function(x) sapply(gr_tot, function(y) sum(df$comp == y & df$tissue == x)))))
 
 df_pathgroup$comp <- factor(df_pathgroup$comp, levels = unname(gr_tot))
 df_pathgroup$tissue <- factor(df_pathgroup$tissue, levels =  tissues)
@@ -881,5 +883,6 @@ tot_pl <- ggarrange(plotlist = list(pl1, pl2), ncol=2, nrow=1, align = 'h', comm
 # tot_pl <- ggarrange(plotlist = list(pl1, pl2), ncol=1, nrow=2, align = 'v')
 ggsave(filename =  sprintf('%scluster_npath_npathgroup_path_GO_pertissues_%s_%s.png', outFold, type_data, type_input), plot = tot_pl, width = 7, height = 4.5, dpi = 500)
 ggsave(filename = sprintf('%scluster_npath_npathgroup_path_GO_pertissues_%s_%s.pdf', outFold, type_data, type_input), plot = tot_pl, width = 7, height = 4.5, dpi = 500, compress = F)
+
 
 
