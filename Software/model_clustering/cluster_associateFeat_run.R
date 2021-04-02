@@ -224,7 +224,7 @@ for(i in 1:length(gr_names)){
   
   # j vs all
   gr_id <- as.factor(as.numeric(cl == gr_names[i]))
-  test_cov[[i]] <- data.frame(cov = colnames(covDat), comp = rep(sprintf('gr%i_vs_all', i), ncol(covDat)))
+  test_cov[[i]] <- data.frame(cov = colnames(covDat), comp = rep(sprintf('gr%i_vs_all', gr_names[i]), ncol(covDat)))
   test_cov[[i]]$test_type<- NA
   test_cov[[i]]$pval<- NA
   test_cov[[i]]$estimates<- NA
@@ -276,7 +276,7 @@ for(i in 1:length(gr_names)){
   
   # j vs all
   gr_id <- as.factor(as.numeric(cl != gr_names[i]))
-  test_feat[[i]] <- data.frame(feat = colnames(scale_data), comp = rep(sprintf('gr%i_vs_all', i), ncol(scale_data)))
+  test_feat[[i]] <- data.frame(feat = colnames(scale_data), comp = rep(sprintf('gr%i_vs_all', gr_names[i]), ncol(scale_data)))
   test_feat[[i]]$pval<- NA
   test_feat[[i]]$estimates<- NA
   test_feat[[i]]$CI_low<- NA
