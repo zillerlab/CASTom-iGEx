@@ -54,19 +54,19 @@ geneLoci_summ <- args$geneLoci_summ
 outFold <- args$outFold
 
 ###################################################################################################################
-# functR <- '/psycl/g/mpsziller/lucia/priler_project/Software/model_clustering/clustering_functions.R'
-# cohort_name <- paste0('German', 1:5)
+# functR <- '/home/luciat/priler_project/Software/model_clustering/clustering_functions.R'
+# cohort_name <- 'scz_boco_eur'
 # type_data <- 'tscore'
 # type_input <- 'zscaled'
 # type_cluster <- 'Cases'
-# clustFile_new <- paste0('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/',cohort_name,'/devgeno0.01_testdevgeno0/CAD_HARD_clustering/tscore_zscaled_predictClusterCases_PGmethod_HKmetric.RData')
-# clustFile <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/tscore_zscaled_clusterCases_PGmethod_HKmetric.RData'
-# tissues_name <- 'Liver'
-# phenoNew_file <-  paste0('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/INPUT_DATA_GTEx/CAD/Covariates/',cohort_name,'/phenotypeMatrix_CADrel_Cases.txt')
-# outFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/Meta_Analysis_CAD/CAD_HARD_clustering'
-# featRel_model <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues//200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/clLiver_tscoreOriginal_tscoreClusterCases_featAssociation.txt'
-# featRel_predict <- paste0('/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues//200kb/CAD_GWAS_bin5e-2/',cohort_name,'/CAD_HARD_clustering/clLiver_tscoreOriginal_tscoreClusterCases_featAssociation.txt')
-# geneLoci_summ <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/AllTissues//200kb/CAD_GWAS_bin5e-2/UKBB/CAD_HARD_clustering/clLiver_tscore_zscaled_clusterCases_summary_geneLoci_allTissues.txt'
+# clustFile_new <-'OUTPUT_CMC/predict_PGC/200kb/scz_boco_eur/devgeno0.01_testdevgeno0/matchUKBB_filt0.1_tscore_zscaled_predictClusterCases_PGmethod_HKmetric.RData'
+# clustFile <- 'OUTPUT_CMC/predict_PGC/200kb/Meta_Analysis_SCZ/devgeno0.01_testdevgeno0/matchUKBB_filt0.1_tscore_zscaled_clusterCases_PGmethod_HKmetric.RData'
+# tissues_name <- 'DLPC_CMC'
+# phenoNew_file <-  ''
+# outFold <- 'OUTPUT_CMC/predict_PGC/200kb/scz_boco_eur/devgeno0.01_testdevgeno0/matchUKBB_filt0.1_'
+# featRel_model <- 'OUTPUT_all/clustering_res_matchUKBB/matchUKBB_filt0.1_clDLPC_CMC_tscoreOriginal_tscoreClusterCases_featAssociation.txt'
+# featRel_predict <- 'OUTPUT_CMC/predict_PGC/200kb/scz_boco_eur/devgeno0.01_testdevgeno0/matchUKBB_filt0.1_clDLPC_CMC_tscoreOriginal_tscoreClusterCases_featAssociation.txt'
+# geneLoci_summ <- 'OUTPUT_all/clustering_res_matchUKBB/matchUKBB_filt0.1_clDLPC_CMC_tscore_zscaled_clusterCases_summary_geneLoci_allTissues.txt'
 # #################################################################################################################
 
 source(functR)
@@ -74,6 +74,8 @@ source(functR)
 tmp <- get(load(clustFile)) 
 clust <- tmp$cl_best
 P <- length(unique(clust$gr))
+cl_name <- sort(unique(clust$gr))
+
 df <- data.frame(dataset = rep(model_name, P), type = rep('model', P), gr = paste0('gr_', sort(unique(clust$gr))))
 df$n <- sapply(sort(unique(clust$gr)), function(x) length(which(clust$gr == x)))
 df$percentage <- sapply(sort(unique(clust$gr)), function(x) length(which(clust$gr == x))/nrow(clust))
@@ -134,11 +136,15 @@ for(i in 1:length(cohort_name)){
     comp <- sort(unique(featRel$comp))
     featRel_new <- read.delim(featRel_predict[i], h=T, stringsAsFactors = F, sep = '\t')
     featRel_new$new_id <- paste(featRel_new$feat, featRel_new$comp, featRel_new$tissue, sep = '_')
-    featRel_new <- featRel_new[match(featRel$new_id, featRel_new$new_id), ]
+    common_f <- intersect(featRel_new$new_id, featRel$new_id)
+    featRel_new <- featRel_new[match(common_f, featRel_new$new_id), ]
+    tmp <- featRel[match(common_f, featRel$new_id),]
+    comp_new <- sort(unique(featRel_new$comp))
     # compute spearman correlation
     df_corr_rel[[i]] <- data.frame(dataset = rep(cohort_name[i], P), gr = df$gr, corr = rep(NA, P), pvalue = rep(NA, P))
-    df_corr_rel[[i]]$corr <- sapply(comp, function(x) cor.test(featRel_new$estimates[featRel_new$comp == x], featRel$estimates[featRel$comp == x], method = 'spearman')$estimate)
-    df_corr_rel[[i]]$pvalue <- sapply(comp, function(x) cor.test(featRel_new$estimates[featRel_new$comp == x], featRel$estimates[featRel$comp == x], method = 'spearman')$p.value)
+    df_corr_rel[[i]] <- df_corr_rel[[i]][df_corr_rel[[i]]$gr %in% colnames(mean_gr_new[[i]]), ]
+    df_corr_rel[[i]]$corr <- sapply(comp[comp %in% comp_new], function(x) cor.test(featRel_new$estimates[featRel_new$comp == x], tmp$estimates[tmp$comp == x], method = 'spearman')$estimate)
+    df_corr_rel[[i]]$pvalue <- sapply(comp[comp %in% comp_new], function(x) cor.test(featRel_new$estimates[featRel_new$comp == x], tmp$estimates[tmp$comp == x], method = 'spearman')$p.value)
   }
   
   if(!is.null(geneLoci_summ)){
@@ -246,9 +252,9 @@ if(!is.null(geneLoci_summ)){
   
   df_perc_loci$dataset <- factor(df_perc_loci$dataset, levels = cohort_name)
   df_perc_loci$gr <- factor(df_perc_loci$gr, levels = paste0('gr_', sort(unique(clust$gr))))
-
+  
   if(length(cohort_name)>1){  
-  pl <- ggplot(df_perc_loci,aes(x = nloci, y = nloci_rep, color = gr))+
+    pl <- ggplot(df_perc_loci,aes(x = nloci, y = nloci_rep, color = gr))+
       geom_point(alpha = 0.7, size = 2)+
       geom_abline(linetype = 'dashed', color = 'black')+
       facet_wrap(.~dataset, nrow = 1)+
@@ -256,22 +262,22 @@ if(!is.null(geneLoci_summ)){
       ylab('n. of loci reproduced')+ xlab('n. of loci')+
       theme(legend.position = 'right')+
       scale_color_manual(values = gr_color)
-      # scale_shape_manual(values=c(1, 19))+
-  width_plot=1.5*length(cohort_name)
+    # scale_shape_manual(values=c(1, 19))+
+    width_plot=1.5*length(cohort_name)
   }else{
-   pl <- ggplot(df_perc_loci,aes(x = nloci, y = nloci_rep, color = gr))+
+    pl <- ggplot(df_perc_loci,aes(x = nloci, y = nloci_rep, color = gr))+
       geom_point(alpha = 0.7, size = 2)+
       geom_abline(linetype = 'dashed', color = 'black')+
       theme_bw()+
       ylab('n. of loci reproduced')+ xlab('n. of loci')+
       theme(legend.position = 'right')+
       scale_color_manual(values = gr_color)
-   width_plot=3
+    width_plot=3
   }
-
+  
   ggsave(filename = sprintf('%s%s_%s_cluster%s_numberLociRep_Groups_prediction_model%s.png', outFold, type_data, type_input, type_cluster, model_name), width = width_plot, height = 2, plot = pl, device = 'png')
   ggsave(filename = sprintf('%s%s_%s_cluster%s_numberLociRep_Groups_prediction_model%s.pdf', outFold, type_data, type_input, type_cluster, model_name), width = width_plot, height = 2, plot = pl, device = 'pdf')
-
+  
 }
 
 
