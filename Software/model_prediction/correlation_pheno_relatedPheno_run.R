@@ -30,6 +30,7 @@ parser$add_argument("--pathR_pheno_file", type = "character", help = "")
 parser$add_argument("--pathGO_pheno_file", type = "character", help = "")
 parser$add_argument("--tscore_pheno_file", type = "character", help = "")
 parser$add_argument("--refFold", type = "character", help = "")
+parser$add_argument("--feat_filt", type = "character", default = NULL, nargs = 3, help = "first gene, second Reactome, third GO")
 parser$add_argument("--thr_dist_par", type = "integer", default = 250000, help = "")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
@@ -47,6 +48,7 @@ pathGO_pheno_file <- args$pathGO_pheno_file
 tscore_pheno_file <- args$tscore_pheno_file
 refFold <- args$refFold
 thr_dist_par <- args$thr_dist_par
+feat_filt <- args$feat_filt
 outFold <- args$outFold
 
 ########################################################################################################################
@@ -65,7 +67,8 @@ outFold <- args$outFold
 # corrFile <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_UKBB/Brain_Frontal_Cortex_BA9/200kb/noGWAS/devgeno0.01_testdevgeno0/correlation_estimate_tscore.RData'
 # geneAnn_file <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_GTEx/train_GTEx/Brain_Frontal_Cortex_BA9/200kb/noGWAS/resPrior_regEval_allchr.txt'
 # refFold <- '/psycl/g/mpsziller/lucia/priler_project/refData/'
-##########################################################################################################################
+# feat_filt <- paste0('/psycl/g/mpsziller/lucia/compare_prediction_UKBB_SCZ-PGC/' ,tissue_name, c('_filter_genes_matched_datasets.txt', '_filter_path_Reactome_matched_datasets.txt', '_filter_path_GO_matched_datasets.txt'))
+# #########################################################################################################################
 
 ## create function to load data across all tissues ##
 load_data <- function(data_file, pval_FDR, tissue_name, pval_id){
@@ -145,11 +148,29 @@ pathGO <- read.delim(pathGO_pheno_file, h=T, stringsAsFactors = F, sep = '\t')
 tscore <- tscore[tscore$tissue %in% tissue_name, ]
 pathR <- pathR[pathR$tissue %in% tissue_name, ]
 pathGO <- pathGO[pathGO$tissue %in% tissue_name, ]
+
+if(!is.null(feat_filt)){
+  gene_filt <- read.table(feat_filt[1], h=T, stringsAsFactors = F, sep = '\t')
+  gene_filt <- gene_filt[gene_filt$keep & !is.na(gene_filt$keep), ]
+  tscore <- tscore[tscore$ensembl_gene_id %in% gene_filt$ensembl_gene_id, ]
+  
+  pathR_filt <- read.delim(feat_filt[2], h=T, stringsAsFactors = F, sep = '\t')
+  pathR_filt <- pathR_filt[pathR_filt$keep & !is.na(pathR_filt$keep), ]
+  pathR <- pathR[pathR$path %in% pathR_filt$path_id, ]
+  
+  pathGO_filt <- read.delim(feat_filt[3], h=T, stringsAsFactors = F, sep = '\t')
+  pathGO_filt <- pathGO_filt[pathGO_filt$keep & !is.na(pathGO_filt$keep), ]
+  pathGO <- pathGO[pathGO$path_id %in% pathGO_filt$path_id, ]
+  
+}
+
 tscore$new_id <- paste0(tscore$ensembl_gene_id, '_tissue_', tscore$tissue)
 
 tot_path <- rbind(cbind(pathR, data.frame(type = rep('Reactome', nrow(pathR)))), 
                   cbind(pathGO[, !colnames(pathGO) %in% c('path_id', 'path_ont')], data.frame(type = rep('GO', nrow(pathGO)))))
 tot_path$new_id <- paste0(tot_path$path, '_tissue_', tot_path$tissue, '_type_', tot_path$type)
+
+
 
 # create list with pathway and gene annotation
 tot_path_ann <- vector(mode = 'list', length = nrow(tot_path))
