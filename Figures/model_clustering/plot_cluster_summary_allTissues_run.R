@@ -54,9 +54,9 @@ NMI_mat <- matrix(0, ncol = length(tissues_name), nrow = length(tissues_name))
 df_cluster <- data.frame(tissue = tissues_name, n_cluster = NA, mod = NA)
 df_div <- data.frame(tissue = c(), n_samples = c(), gr = c() )
 if(grepl('.txt', clust_res[1], fixed = T)){
-  df_cluster_noMHC <- data.frame(tissue = tissues_name, n_cluster = NA, mod = NA)
-  df_div_noMHC <- data.frame(tissue = c(), n_samples = c(), gr = c() )
-  NMI_mat_noMHC <- matrix(0, ncol = length(tissues_name), nrow = length(tissues_name))
+  df_cluster_filt <- data.frame(tissue = tissues_name, n_cluster = NA, mod = NA)
+  df_div_filt <- data.frame(tissue = c(), n_samples = c(), gr = c() )
+  NMI_mat_filt <- matrix(0, ncol = length(tissues_name), nrow = length(tissues_name))
   NMI_comp <- data.frame(tissue = c(), NMI = c())
 }
 
@@ -72,16 +72,16 @@ for(i in 1:length(tissues_name)){
     df_div <- rbind(df_div, data.frame(tissue = rep(tissues_name[i], tmp$info_tune$n_gr), n_samples = sapply(sort(unique(cl1)), function(x) sum(cl1 == x)), gr = sort(unique(cl1))))
   }else{
     tmp_str <- read.table(clust_res[i], header = T, stringsAsFactors = F, sep = '\t')
-    cl1 <- tmp_str$gr_allFeatures
-    cl1_noMHC <- tmp_str$gr_excludeMHC
+    cl1 <- tmp_str[,2]
+    cl1_filt <- tmp_str[,3]
     df_cluster$n_cluster[i] <- length(unique(cl1))
-    df_cluster_noMHC$n_cluster[i] <- length(unique(cl1_noMHC))
+    df_cluster_filt$n_cluster[i] <- length(unique(cl1_filt))
     df_div <- rbind(df_div, data.frame(tissue = rep(tissues_name[i],df_cluster$n_cluster[i]), 
                                        n_samples = sapply(sort(unique(cl1)), function(x) sum(cl1 == x)), gr = sort(unique(cl1))))
     
-    df_div_noMHC <- rbind(df_div_noMHC, data.frame(tissue = rep(tissues_name[i], df_cluster_noMHC$n_cluster[i]), 
-                                       n_samples = sapply(sort(unique(cl1_noMHC)), function(x) sum(cl1_noMHC == x)), gr = sort(unique(cl1_noMHC))))
-    NMI_comp <- rbind(NMI_comp, data.frame(tissue = tissues_name[i], NMI = compare(cl1, cl1_noMHC, method = 'nmi'))) 
+    df_div_filt <- rbind(df_div_filt, data.frame(tissue = rep(tissues_name[i], df_cluster_filt$n_cluster[i]), 
+                                       n_samples = sapply(sort(unique(cl1_filt)), function(x) sum(cl1_filt == x)), gr = sort(unique(cl1_filt))))
+    NMI_comp <- rbind(NMI_comp, data.frame(tissue = tissues_name[i], NMI = compare(cl1, cl1_filt, method = 'nmi'))) 
   }
   
   
@@ -94,10 +94,10 @@ for(i in 1:length(tissues_name)){
         NMI_mat[i, j] <- compare(cl1, cl2, method = 'nmi')
       }else{
         tmp_str <- read.table(clust_res[j], header = T, stringsAsFactors = F, sep = '\t')
-        cl2 <- tmp_str$gr_allFeatures
-        cl2_noMHC <- tmp_str$gr_excludeMHC
+        cl2 <- tmp_str[,2]
+        cl2_filt <- tmp_str[,3]
         NMI_mat[i, j] <- compare(cl1, cl2, method = 'nmi')
-        NMI_mat_noMHC[i, j] <- compare(cl1_noMHC, cl2_noMHC, method = 'nmi')
+        NMI_mat_filt[i, j] <- compare(cl1_filt, cl2_filt, method = 'nmi')
         
       }
       
@@ -106,8 +106,8 @@ for(i in 1:length(tissues_name)){
 }
 
 rownames(NMI_mat) <- colnames(NMI_mat) <- tissues_name
-if(exists('NMI_mat_noMHC')){
-  rownames(NMI_mat_noMHC) <- colnames(NMI_mat_noMHC) <- tissues_name
+if(exists('NMI_mat_filt')){
+  rownames(NMI_mat_filt) <- colnames(NMI_mat_filt) <- tissues_name
 }
 
 color_tissues <- read.table(color_tissues_file, h=T, stringsAsFactors = F)
@@ -115,25 +115,25 @@ color_tissues <- read.table(color_tissues_file, h=T, stringsAsFactors = F)
 # correlation
 NMI_mat <- NMI_mat + t(NMI_mat)
 diag(NMI_mat) <- NA
-if(exists('NMI_mat_noMHC')){
-  NMI_mat_noMHC <- NMI_mat_noMHC + t(NMI_mat_noMHC)
-  diag(NMI_mat_noMHC) <- NA
+if(exists('NMI_mat_filt')){
+  NMI_mat_filt <- NMI_mat_filt + t(NMI_mat_filt)
+  diag(NMI_mat_filt) <- NA
 }
 
-if(!exists('NMI_mat_noMHC')){
+if(!exists('NMI_mat_filt')){
 
   col <- colorRampPalette(brewer.pal(9, 'YlGnBu'))(100)
   ord <- corrMatOrder(NMI_mat, order="hclust", hclust.method = 'ward.D')
   newcolours <- color_tissues$color[match(tissues_name, color_tissues$tissues)][ord]
   title_pl <- sprintf('NMI %s %s', type_data, type_input)
 
-  pdf(file = sprintf('%s/NMI_%s_%s.pdf', outFold, type_data, type_input), width = 9, height = 6, compress = F, pointsize = 12)
+  pdf(file = sprintf('%sNMI_%s_%s.pdf', outFold, type_data, type_input), width = 9, height = 6, compress = F, pointsize = 12)
   corrplot(NMI_mat, type="upper", order = 'hclust', hclust.method = 'ward.D',
          tl.col = newcolours, tl.cex=1.2,
          col = c(col), method = 'color', tl.srt=45, cl.align.text='c',
          addCoef.col = "black",na.label = 'square', na.label.col = 'darkgrey', is.corr = F, number.cex=0.9, mar = c(0,0,1,0))
   dev.off()
-  png(file = sprintf('%s/NMI_%s_%s.png', outFold, type_data, type_input), width = 9, height = 6, res = 300, units = 'in')
+  png(file = sprintf('%sNMI_%s_%s.png', outFold, type_data, type_input), width = 9, height = 6, res = 300, units = 'in')
   corrplot(NMI_mat, type="upper", order = 'hclust', hclust.method = 'ward.D',
          tl.col = newcolours, tl.cex=1.2,
          col = c(col), method = 'color', tl.srt=45, cl.align.text='c',
@@ -144,7 +144,7 @@ if(!exists('NMI_mat_noMHC')){
   
   # create a unique matrix, on the diagonal the NMI with and without MHC
   new_mat <- diag(NMI_comp$NMI)
-  new_mat[lower.tri(new_mat)] <- NMI_mat_noMHC[lower.tri(NMI_mat_noMHC)]
+  new_mat[lower.tri(new_mat)] <- NMI_mat_filt[lower.tri(NMI_mat_filt)]
   new_mat[upper.tri(new_mat)] <- NMI_mat[upper.tri(NMI_mat)]
   colnames(new_mat) <- rownames(new_mat) <- tissues_name
   
@@ -152,13 +152,13 @@ if(!exists('NMI_mat_noMHC')){
   newcolours <- color_tissues$color[match(tissues_name, color_tissues$tissues)]
   title_pl <- sprintf('NMI %s %s', type_data, type_input)
   
-  pdf(file = sprintf('%s/NMI_withoutANDwithMHC_%s_%s.pdf', outFold, type_data, type_input), width = 10, height = 7, compress = F, pointsize = 12)
+  pdf(file = sprintf('%sNMI_withoutANDwithfilt_%s_%s.pdf', outFold, type_data, type_input), width = 10, height = 7, compress = F, pointsize = 12)
   corrplot(new_mat, type="full",
            tl.col = newcolours, tl.cex=1.2,
            col = c(col), method = 'color', tl.srt=45, cl.align.text='c',
            addCoef.col = "black",na.label = 'square', na.label.col = 'darkgrey', is.corr = F, number.cex=0.9, mar = c(0,0,1,0))
   dev.off()
-  png(file = sprintf('%s/NMI_withoutANDwithMHC_%s_%s.png', outFold, type_data, type_input), width = 10, height = 7, res = 300, units = 'in')
+  png(file = sprintf('%sNMI_withoutANDwithfilt_%s_%s.png', outFold, type_data, type_input), width = 10, height = 7, res = 300, units = 'in')
   corrplot(new_mat, type="full", 
            tl.col = newcolours, tl.cex=1.2,
            col = c(col), method = 'color', tl.srt=45, cl.align.text='c',
@@ -168,7 +168,7 @@ if(!exists('NMI_mat_noMHC')){
 }
 
 
-if(!exists('NMI_mat_noMHC')){
+if(!exists('NMI_mat_filt')){
   
   # plot clustering number distribution
   df_div$gr <- paste0('gr',df_div$gr)
@@ -208,14 +208,14 @@ if(!exists('NMI_mat_noMHC')){
 
   # plot clustering number distribution
   df_div$gr <- paste0('gr',df_div$gr)
-  df_div$type <- 'with MHC'
-  df_div_noMHC$gr <- paste0('gr',df_div_noMHC$gr)
-  df_div_noMHC$type <- 'without MHC'
-  df_tot <- rbind(df_div, df_div_noMHC)
+  df_div$type <- 'all Features'
+  df_div_filt$gr <- paste0('gr',df_div_filt$gr)
+  df_div_filt$type <- 'filtered Featrures'
+  df_tot <- rbind(df_div, df_div_filt)
   
   df_tot$gr <- factor(df_tot$gr)
   df_tot$tissue <- factor(df_tot$tissue, levels = tissues_name)
-  df_tot$type <- factor(df_tot$type, levels = c('with MHC', 'without MHC'))
+  df_tot$type <- factor(df_tot$type, levels = c('all Features', 'filtered Featrures'))
   newcolours <- color_tissues$color[match(tissues_name, color_tissues$tissues)]
   # color_gr <- rev(pal_d3("category10")(length(levels(df_div$gr))))
 
@@ -235,7 +235,7 @@ if(!exists('NMI_mat_noMHC')){
   ggsave(filename =  sprintf('%scluster_nsamples_%s_%s.png', outFold, type_data, type_input), plot = pl, width = 7, height = 4, dpi = 500)
   ggsave(filename = sprintf('%scluster_nsamples_%s_%s.pdf', outFold, type_data, type_input), plot = pl, width = 7, height = 4, dpi = 500, compress = F)
   
-  res <- list(NMI = NMI_mat, NMI_noMHC = NMI_mat_noMHC, NMI_comp = NMI_comp, div = df_tot)
+  res <- list(NMI = NMI_mat, NMI_filt = NMI_mat_filt, NMI_comp = NMI_comp, div = df_tot)
   
 }
 
