@@ -273,15 +273,15 @@ pl_manhattan_function <- function(data_input, type_mat, outFold, type_dat){
   
   pl <- ggplot(data = df, aes(x = id_pos, y = pval_tr, color = color, label = name))+
     geom_point(alpha = 0.8, size = 0.1)+
-    geom_text_repel(segment.color = 'grey50', size = 2, min.segment.length = unit(0, 'lines'),
+    geom_text_repel(segment.color = 'grey50', size = 2.5, min.segment.length = unit(0, 'lines'),
                     segment.alpha = 0.6,  force = 8) +
     ylab('-log10(pvalue)')+ggtitle(type_dat)+
-    theme_bw()+theme(legend.position = 'none', plot.title = element_text(hjust = 0.5))+
+    theme_bw()+theme(legend.position = 'none', plot.title = element_text(hjust = 0.5), axis.text = element_text(size=10), axis.title = element_text(size=12))+
     scale_color_manual(values = c('#C0C0C0', unique(data_input$color$color)))
   
   if(gene){
     pl <- pl+scale_x_continuous(breaks=data_input$df_chr$pos_start, labels=data_input$df_chr$chr)+xlab('chromosome')+
-      theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
+      theme(axis.text.x = element_text(angle = 45, vjust = 0.5, size=10))
     #geom_hline(yintercept = 8, linetype = 2, size = 0.3)
   }else{
     pl <- pl + xlab('pathways')+ theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
@@ -294,15 +294,15 @@ pl_manhattan_function <- function(data_input, type_mat, outFold, type_dat){
   # plot z-stat
   pl_z <- ggplot(data = df, aes(x = id_pos, y = zstat, color = color, label = name))+
     geom_point(alpha = 0.8, size = 0.1)+
-    geom_text_repel(segment.color = 'grey50', size = 2, min.segment.length = unit(0, 'lines'),
+    geom_text_repel(segment.color = 'grey50', size = 2.5, min.segment.length = unit(0, 'lines'),
                     segment.alpha = 0.6,  force = 8) +
     ylab('z statistic')+ggtitle(type_dat)+
-    theme_bw()+theme(legend.position = 'none', plot.title = element_text(hjust = 0.5))+
+    theme_bw()+theme(legend.position = 'none', plot.title = element_text(hjust = 0.5), axis.text = element_text(size=10), axis.title = element_text(size=12))+
     scale_color_manual(values = c('#C0C0C0', unique(data_input$color$color)))
   
   if(gene){
     pl_z <- pl_z+scale_x_continuous(breaks=data_input$df_chr$pos_start, labels=data_input$df_chr$chr)+xlab('chromosome')+
-      theme(axis.text.x = element_text(angle = 45, vjust = 0.5))+
+      theme(axis.text.x = element_text(angle = 45, vjust = 0.5, size=10))+
       geom_hline(yintercept = 0, linetype = 2, size = 0.3) + 
       ylim(min(df$zstat) - 3, max(df$zstat) + 3)
   }else{
@@ -333,13 +333,14 @@ pl_manhattan_forpubl_function <- function(data_input, type_mat, outFold, type_da
   pl1 <- ggplot(data = subset(df, sign == 'no'), aes(x = id_pos, y = pval_tr, color = color, label = name))+
     geom_point(alpha = 0.8, size = 0.1)+
     ylim(0, max(df$pval_tr))+ 
-    geom_text_repel(segment.color = 'grey50', size = 2, min.segment.length = unit(0, 'lines'),
+    geom_text_repel(segment.color = 'grey50', size = 2.5, min.segment.length = unit(0, 'lines'),
                     segment.alpha = 0.6,  force = 8) +
     ylab('-log10(pvalue)')+ggtitle(type_dat)+
-    theme_bw()+theme(legend.position = 'none', plot.title = element_text(hjust = 0.5))+
+    theme_bw()+theme(legend.position = 'none', plot.title = element_text(hjust = 0.5, color = 'white'), 
+                     axis.text = element_text(size=10, color = 'white'), axis.title = element_text(size=12, color = 'white'))+
     scale_color_manual(values = c('#C0C0C0', unique(data_input$color$color)))+
     scale_x_continuous(breaks=data_input$df_chr$pos_start, labels=data_input$df_chr$chr, expand = c(0.01, 0.01),  limits = c(0, max(df$id_pos)))+xlab('chromosome')+
-    theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
+    theme(axis.text = element_text(color = 'white', angle = 45, vjust = 0.5, size=10))
   
   ggsave(filename = paste0(file_name, '_p1.pdf'), plot = pl1, width = 11, height = 4, dpi = 500)
   ggsave(filename = paste0(file_name, '_p1.png'), plot = pl1, width = 11, height = 4, dpi = 500)
@@ -347,13 +348,13 @@ pl_manhattan_forpubl_function <- function(data_input, type_mat, outFold, type_da
   pl2 <- ggplot(data = subset(df, sign == 'yes'), aes(x = id_pos, y = pval_tr, color = color, label = name))+
     geom_point(alpha = 0.8, size = 0.1)+
     ylim(0, max(df$pval_tr))+ 
-    geom_text_repel(segment.color = 'grey50', size = 2, min.segment.length = unit(0, 'lines'),
+    geom_text_repel(segment.color = 'grey50', size = 2.5, min.segment.length = unit(0, 'lines'),
                     segment.alpha = 0.6,  force = 8) +
     ylab('-log10(pvalue)')+ggtitle(type_dat)+
-    theme_bw()+theme(legend.position = 'none', plot.title = element_text(hjust = 0.5))+
+    theme_bw()+theme(legend.position = 'none', plot.title = element_text(hjust = 0.5), axis.text = element_text(size=10), axis.title = element_text(size=12))+
     scale_color_manual(values = c(unique(data_input$color$color)))+
     scale_x_continuous(breaks=data_input$df_chr$pos_start, labels=data_input$df_chr$chr, expand = c(0.01, 0.01), limits = c(0, max(df$id_pos)))+xlab('chromosome')+
-    theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5, size=10))
   
   ggsave(filename = paste0(file_name, '_p2.pdf'), plot = pl2, width = 11, height = 4, dpi = 500)
   ggsave(filename = paste0(file_name, '_p2.png'), plot = pl2, width = 11, height = 4, dpi = 500)
@@ -362,13 +363,14 @@ pl_manhattan_forpubl_function <- function(data_input, type_mat, outFold, type_da
   # plot z-stat
   pl1_z <- ggplot(data = subset(df, sign == 'no'), aes(x = id_pos, y = zstat, color = color, label = name))+
     geom_point(alpha = 0.8, size = 0.1)+
-    geom_text_repel(segment.color = 'grey50', size = 2, min.segment.length = unit(0, 'lines'),
+    geom_text_repel(segment.color = 'grey50', size = 2.5, min.segment.length = unit(0, 'lines'),
                     segment.alpha = 0.6,  force = 8) +
     ylab('z statistic')+ggtitle(type_dat)+
-    theme_bw()+theme(legend.position = 'none', plot.title = element_text(hjust = 0.5))+
+    theme_bw()+theme(legend.position = 'none', plot.title = element_text(hjust = 0.5, color = 'white'),
+                     axis.text = element_text(size=10, color = 'white'), axis.title = element_text(size=12, color = 'white'))+
     scale_color_manual(values = c('#C0C0C0', unique(data_input$color$color)))+
     scale_x_continuous(breaks=data_input$df_chr$pos_start, labels=data_input$df_chr$chr, expand = c(0.01, 0.01),  limits = c(0, max(df$id_pos)))+xlab('chromosome')+
-    theme(axis.text.x = element_text(angle = 45, vjust = 0.5))+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5, color = 'white',size=10))+
     geom_hline(yintercept = 0, linetype = 2, size = 0.3) + 
     ylim(min(df$zstat) - 3, max(df$zstat) + 3)
   ggsave(filename = paste0(file_name_z, '_p1.pdf'), plot = pl1_z, width = 11, height = 5, dpi = 500)
@@ -376,13 +378,13 @@ pl_manhattan_forpubl_function <- function(data_input, type_mat, outFold, type_da
   
   pl2_z <- ggplot(data = subset(df, sign == 'yes'), aes(x = id_pos, y = zstat, color = color, label = name))+
     geom_point(alpha = 0.8, size = 0.1)+
-    geom_text_repel(segment.color = 'grey50', size = 2, min.segment.length = unit(0, 'lines'),
+    geom_text_repel(segment.color = 'grey50', size = 2.5, min.segment.length = unit(0, 'lines'),
                     segment.alpha = 0.6,  force = 8) +
     ylab('z statistic')+ggtitle(type_dat)+
-    theme_bw()+theme(legend.position = 'none', plot.title = element_text(hjust = 0.5))+
+    theme_bw()+theme(legend.position = 'none', plot.title = element_text(hjust = 0.5), axis.text = element_text(size=10), axis.title = element_text(size=12))+
     scale_color_manual(values = c(unique(data_input$color$color)))+
     scale_x_continuous(breaks=data_input$df_chr$pos_start, labels=data_input$df_chr$chr, expand = c(0.01, 0.01),  limits = c(0, max(df$id_pos)))+xlab('chromosome')+
-    theme(axis.text.x = element_text(angle = 45, vjust = 0.5))+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5, size = 10))+
     geom_hline(yintercept = 0, linetype = 2, size = 0.3) + 
     ylim(min(df$zstat) - 3, max(df$zstat) + 3)
   ggsave(filename = paste0(file_name_z, '_p2.pdf'), plot = pl2_z, width = 11, height = 5, dpi = 500)
@@ -500,6 +502,7 @@ plot_best_path <- function(best_res, tissues, color_tissues, title_plot, type_ma
   if('Brain_Hypothalamus' %in% df_tissues$tissue){df_tissues$id[df_tissues$tissue == 'Brain_Hypothalamus'] <- 'BHy'}
   if('Brain_Cerebellum' %in% df_tissues$tissue){df_tissues$id[df_tissues$tissue == 'Brain_Cerebellum'] <- 'BCe'}
   if('Brain_Cerebellar_Hemisphere' %in% df_tissues$tissue){df_tissues$id[df_tissues$tissue == 'Brain_Cerebellar_Hemisphere'] <- 'BCeH'}
+  if('DLPC_CMC' %in% df_tissues$tissue){df_tissues$id[df_tissues$tissue == 'DLPC_CMC'] <- 'DLPC'}
   
   best_res <- best_res[best_res$tissue %in% tissues, ]
   color_tmp <- color_tissues[match(tissues, color_tissues$tissues),]
@@ -728,7 +731,7 @@ plot_showcase <- function(gene_res, gene_info, genes_path, tissue, pathway, colo
     geom_point(alpha = 0.7, size = 1) + ggtitle(sprintf('Tscore association with %s', pheno))+
     scale_color_manual(values = c(color_tmp, "grey90", 'grey70')) +
     ylim(0, max(c(int_val, min(c(max(new_df$val), 8)))))+
-    geom_text(x=new_df$pos[nrow(new_df)-1000], y=int_val+0.5, label=genes_path$path$path, size = 5, color = color_tmp)+
+    geom_text(x=new_df$pos[nrow(new_df)-1000], y=int_val+0.5, label=genes_path$path$path, size = 4.5, color = color_tmp)+
     geom_text_repel(
       data = subset(new_df, path == 1), aes(label = new_df$name[new_df$path==1]), size = 3.9, color = 'black', box.padding = unit(0.35, "lines"), point.padding = unit(0.3, "lines"))+
     xlab('chromosome') +  ylab('-log10(pvalue)')+ theme_bw() +
@@ -739,8 +742,8 @@ plot_showcase <- function(gene_res, gene_info, genes_path, tissue, pathway, colo
     #scale_alpha_discrete(range = c(1, 0.5))+
     scale_x_continuous(breaks = df_add$start_plot, labels = paste0('chr', c(1:22)))
   
-  ggsave(filename = sprintf('%smanhattanPlot_tscore_genes_%s_%s_%s.png', fold, pheno, tissue, new_path), plot = pl_manh, width = 10, height = 5, dpi=500, device = 'png')
-  ggsave(filename = sprintf('%smanhattanPlot_tscore_genes_%s_%s_%s.pdf', fold, pheno, tissue, new_path), plot = pl_manh, width = 10, height = 5, device = 'pdf')
+  ggsave(filename = sprintf('%smanhattanPlot_tscore_genes_%s_%s_%s.png', fold, pheno, tissue, new_path), plot = pl_manh, width = 8, height = 5, dpi=500, device = 'png')
+  ggsave(filename = sprintf('%smanhattanPlot_tscore_genes_%s_%s_%s.pdf', fold, pheno, tissue, new_path), plot = pl_manh, width = 8, height = 5, device = 'pdf')
   
   ### plot SNPs gwas info for genes in the pathway ###
   df_genePath <- gene_tmp[gene_tmp$external_gene_name %in%  new_df$name[new_df$path == 1],]
@@ -808,8 +811,8 @@ plot_showcase <- function(gene_res, gene_info, genes_path, tissue, pathway, colo
                           high="red", space ="Lab")+
     labs(color = "reg. coefficient")
   
-  ggsave(filename = sprintf('%smanhattanPlot_GWASsnps_genes_%s_%s_%s.png', fold, pheno, tissue, new_path), plot = pl_manh_snps, width = 10, height = 3, dpi=500, device = 'png')
-  ggsave(filename = sprintf('%smanhattanPlot_GWASsnps_genes_%s_%s_%s.pdf', fold, pheno, tissue, new_path), plot = pl_manh_snps, width = 10, height = 3, device = 'pdf')
+  ggsave(filename = sprintf('%smanhattanPlot_GWASsnps_genes_%s_%s_%s.png', fold, pheno, tissue, new_path), plot = pl_manh_snps, width = 8, height = 3, dpi=500, device = 'png')
+  ggsave(filename = sprintf('%smanhattanPlot_GWASsnps_genes_%s_%s_%s.pdf', fold, pheno, tissue, new_path), plot = pl_manh_snps, width = 8, height = 3, device = 'pdf')
   
 }
 

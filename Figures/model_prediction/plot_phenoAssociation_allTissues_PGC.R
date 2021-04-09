@@ -153,8 +153,27 @@ if(grepl('SCZ', pheno)){n_sign=30}
 # if(grepl('CAD', pheno)){n_sign=4}
 # if(grepl('MDD', pheno)){n_sign=20}
 # if(grepl('T1D', pheno)){n_sign=10}
-
-tscore_df <- create_df_manhattan_plot(tissues_name = tissues, res = tscore, id_pval = 8, pval_FDR = pval_FDR, df_color = color_tissues, id_name = 2, n_sign = n_sign, gene = T)
+# abbreviate names tissues (too long)
+convert_tissue_name <- function(vect_name){
+  vect_name[vect_name %in% 'DLPC_CMC'] <- 'DLPC'
+  vect_name[vect_name %in% 'Brain_Caudate_basal_ganglia'] <- 'BCbg'
+  vect_name[vect_name %in% 'Brain_Cerebellar_Hemisphere'] <- 'BCeH'
+  vect_name[vect_name %in% 'Brain_Cerebellum'] <- 'BCe'
+  vect_name[vect_name %in% 'Brain_Cortex'] <- 'BC'
+  vect_name[vect_name %in% 'Brain_Frontal_Cortex_BA9'] <- 'BFCB'
+  vect_name[vect_name %in% 'Brain_Hippocampus'] <- 'BHi'
+  vect_name[vect_name %in% 'Brain_Hypothalamus'] <- 'BHy'
+  vect_name[vect_name %in% 'Brain_Nucleus_accumbens_basal_ganglia'] <- 'BNabg'
+  vect_name[vect_name %in% 'Cells_EBV-transformed_lymphocytes'] <- 'CEl'  
+  
+  return(vect_name)
+}
+tissues_short <- convert_tissue_name(tissues)
+tscore_short <- tscore 
+tscore_short$tissue <- convert_tissue_name(tscore_short$tissue)
+color_tissues_short <- color_tissues
+color_tissues_short$tissues <- convert_tissue_name(color_tissues_short$tissues)
+tscore_df <- create_df_manhattan_plot(tissues_name = tissues_short, res = tscore_short, id_pval = 8, pval_FDR = pval_FDR, df_color = color_tissues_short, id_name = 2, n_sign = n_sign, gene = T)
 # include only 1 gene per locus
 new_list <- tscore_df$df[tscore_df$df$sign_name == 'yes', ]
 dist_mat <- as.matrix(dist(new_list$id_pos,method = 'manhattan'))
@@ -195,23 +214,23 @@ if(!is.null(genes_known_file)){
 if(!is.null(gwas_known_file)){
   
   venn_plot(gwas_known_file = gwas_known_file, tscore = tscore_red, pval_FDR = pval_FDR, type_dat = type_dat, type_mat = 'tscore')
-    
+  
   # manhattan plot for new associaiton
   new_loci <- read.table(priler_loci_file, h=T, stringsAsFactors = F, sep = '\t')
   new_loci_ann <- read.table(priler_loci_ann_file, h=T, stringsAsFactors = F, sep = '\t')
   new_loci_ann = new_loci_ann[!new_loci_ann$best_GWAS_sign,]
   tscore_df <- create_df_manhattan_plot(tissues_name = tissues, res = tscore, id_pval = 8, pval_FDR = pval_FDR, df_color = color_tissues, id_name = 2, gene = T)
   tscore_df$df$external_gene_name <- sapply(tscore_df$df$name, 
-                                             function(x) strsplit(x, split = '\n')[[1]][1])
+                                            function(x) strsplit(x, split = '\n')[[1]][1])
   # modify annotation to plot only interested genes, only 1 gene per locus
   new_loci$id <- paste0(new_loci$external_gene_name, '\n', new_loci$tissue)
   tscore_df$df$sign_name[!tscore_df$df$name %in% new_loci$id] <- 'no'
   for(i in 1:nrow(new_loci_ann)){
-     tmp <- new_loci_ann$external_gene_name[i]
-     tmp <- strsplit(tmp, split = '[,]')[[1]]
-     id_keep <- which.max(abs(tscore_df$df$zstat[tscore_df$df$external_gene_name %in% tmp]))
-     names_excl <- tscore_df$df$name[tscore_df$df$external_gene_name %in% tmp][-id_keep]
-     tscore_df$df$sign_name[tscore_df$df$name %in% names_excl] <- 'no'
+    tmp <- new_loci_ann$external_gene_name[i]
+    tmp <- strsplit(tmp, split = '[,]')[[1]]
+    id_keep <- which.max(abs(tscore_df$df$zstat[tscore_df$df$external_gene_name %in% tmp]))
+    names_excl <- tscore_df$df$name[tscore_df$df$external_gene_name %in% tmp][-id_keep]
+    tscore_df$df$sign_name[tscore_df$df$name %in% names_excl] <- 'no'
   }
   tscore_df$df$name[tscore_df$df$sign_name == 'no'] <- '' 
   pl_manhattan_function(data_input = tscore_df, type_mat = 'tscore', outFold = paste0(fold, 'newloci_'), type_dat = type_dat)
@@ -330,7 +349,5 @@ plot_showcase(gene_res = gene_res, gene_info = gene_info, genes_path = genes_pat
               tissue = tissue, pathway = pathway, color_tmp = color_tmp, id_pval_path = 13, 
               pheno = pheno, fold = fold, resBeta = resBeta, train_fold_tissue = train_fold_tissue, fold_geno_input_tmp = fold_geno_input[2], 
               train_fold_original_tmp = train_fold_original[2], name_gwas_pval = 'PGC_PVAL')
-
-
 
 

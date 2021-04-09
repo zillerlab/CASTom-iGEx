@@ -646,7 +646,7 @@ ggsave(plot = pl, filename = sprintf('OUTPUT_GTEx/predict_CAD/AllTissues/200kb/C
 
 
 ## phenotypes ## 
-keep_pheno_sp <- c('LDL direct', 'Apolipoprotein A', 'Lymphocyte count', 'Haemoglobin concentration', 'Hyperlipidemia', 'Peripheral_vascular_disease', 'Age_stroke')
+keep_pheno_sp <- c('LDL direct', 'Apolipoprotein A', 'Lymphocyte count', 'Haemoglobin concentration', 'Hyperlipidemia', 'Chronic_obstructive_pulmonary_disease', 'Age_stroke')
 tmp <- get(load(sprintf('OUTPUT_GTEx/predict_CAD/%s/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/withMedication_tscore_zscaled_clusterCases_PGmethod_HKmetric_phenoAssociation_GLM.RData', tissue_name)))
 tmp_nom <- get(load(sprintf('OUTPUT_GTEx/predict_CAD/%s/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/nominalAnalysis_tscore_zscaled_clusterCases_PGmethod_HKmetric_phenoAssociation_GLM.RData', tissue_name)))
 
