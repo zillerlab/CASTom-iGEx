@@ -60,6 +60,8 @@ pheno_ann$color[pheno_ann$pheno_type == 'Blood_biochemistry'] <- 'blue4'
 pheno_ann$color[pheno_ann$pheno_type == 'Blood_count'] <- 'hotpink4'
 pheno_ann$color[pheno_ann$pheno_type == 'Smoking'] <- 'darkgreen'
 pheno_ann$color[pheno_ann$pheno_type == 'Trail_making'] <- 'lightpink4'
+pheno_ann$color[pheno_ann$pheno_type == 'Prospective_memory'] <- 'sienna1'
+pheno_ann$color[pheno_ann$pheno_type == 'Symbol_digit_substitution'] <- 'tan2'
 pheno_ann$color[pheno_ann$pheno_type %in% c('ICD10_Anaemia', 'ICD10_Circulatory_system', 'ICD10_Endocrine', 'ICD10_Respiratory_system')] <- 'grey40'
 
 phenoInfo <- read.delim(phenoInfo_file, header = T, stringsAsFactors = F, sep = '\t')
@@ -190,5 +192,127 @@ tot_pl <- ggarrange(plotlist = list(pl_beta1, pl_beta2), ncol = 1, nrow = 2, ali
 ggsave(filename = sprintf('%sriskScores_tscore_zscaled_cluster%s_GLM_beta_measureThr%s_selected.png', outFold, 'Cases', as.character(measureGoodness_thr)), width = len_w+3, height = len_h*0.1+2, plot = tot_pl, device = 'png', dpi=300)
 ggsave(filename = sprintf('%sriskScore_tscore_zscaled_cluster%s_GLM_beta_measureThr%s_selected.pdf', outFold,'Cases', as.character(measureGoodness_thr)), width = len_w+3, height = len_h*0.1+2, plot = tot_pl, device = 'pdf')
 
+####################################
+##### plot cognitive functions #####
+####################################
+id_FI <- as.character(c(486, 4935 ,4946 ,4957, 4968, 4979,4990,5001,5012,5556,5699,5779,5790,5866,20016))
+id_PaM <- as.character(c('399', '400'))
+id_NM <- as.character(c('20240'))
+id_RT <- as.character(c('20023'))
+id_PM <- as.character(c('20018'))
+id_SDS <- as.character(c('20230', '20159'))
+id_TM <- as.character(c('20156', '20157'))
+
+rs_red <- rs_res[rs_res$pheno_id %in% c(id_FI, id_TM, id_SDS, id_PM, id_RT, id_NM, id_PaM), ]
+P <- length(unique(rs_red$comp))
+df_red <- rs_red
+df_red$type_m <- 'not reliable'
+df_red$type_m[df_red$measure >= measureGoodness_thr] <- 'reliable'
+df_red$new_id <- df_red$Field
+df_red$new_id[!is.na(df_red$meaning)] <- paste(df_red$meaning[!is.na(df_red$meaning)], df_red$Field[!is.na(df_red$meaning)], sep = '\n')
+df_red$comp <- factor(df_red$comp, levels = unique(df_red$comp))
+df_red$new_id <- factor(df_red$new_id, levels = unique(df_red$new_id))
+df_red$pheno_type <- factor(df_red$pheno_type, levels = unique(df_red$pheno_type))
+df_red$type_m <- factor(df_red$type_m, levels = c('not reliable', 'reliable'))
+df_red$type_res <- 'beta'
+df_red$sign <- 'no'
+df_red$sign[df_red$pval_corr <= 0.05] <- 'yes'
+df_red$sign <- factor(df_red$sign, levels = c('no', 'yes'))
+thr_lims <- c(150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 1000, 2000, 2500, 3500)
+df_red$thr <- paste0('< ', thr_lims[1])
+for(i in 1:(length(thr_lims)-1)){
+  df_red$thr[df_red$measure > thr_lims[i] & df_red$measure <= thr_lims[i+1]] <- paste0('< ', thr_lims[i+1])
+}
+thr_lims <- unique(df_red$thr)
+thr_lims <- thr_lims[order(as.numeric(sapply(thr_lims, function(x) strsplit(x, split = '< ')[[1]][2])))]
+df_red$thr <- factor(df_red$thr, levels = rev(thr_lims))
+pheno_ann_red <- pheno_ann[match(df_red$pheno_type, pheno_ann$pheno_type), ]
+# divide in 2 part
+df_red1 <- subset(df_red, pheno_id %in% id_FI)
+df_red2 <- subset(df_red, !pheno_id %in% id_FI)
+pheno_ann_red1 <- pheno_ann[match(df_red1$pheno_type, pheno_ann$pheno_type), ]
+pheno_ann_red2 <- pheno_ann[match(df_red2$pheno_type, pheno_ann$pheno_type), ]
+
+len_w <- length(unique(df_red$comp))
+len_h <- length(unique(df_red$pheno_id))
+
+# pl_beta1 <-  ggplot(df_red1, aes(x = new_id, y = OR_or_Beta, shape = sign, color = thr))+
+#   geom_errorbar(aes(ymin=CI_low, ymax=CI_up), size = 0.3, width=.3, position=position_dodge(0.05), linetype="solid")+
+#   geom_point(position=position_dodge(0.05))+
+#   theme_bw()+ 
+#   ylab('Adjusted Beta (95% CI)')+ geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey40')+
+#   facet_wrap(comp~., nrow = 1, strip.position="top",  labeller = labeller(comp = labs_new))+
+#   theme(legend.position = 'right', plot.title = element_text(size=9), axis.title.y = element_blank(), axis.title.x = element_text(size=8),
+#         legend.key.size = unit(0.2, "cm"), 
+#         axis.text.x = element_text(size = 7, angle = 45, hjust = 1), axis.text.y = element_text(size = 7,  colour = pheno_ann_red1$color), 
+#         strip.text = element_text(size=8, color = 'white', face = 'bold'))+
+#   scale_shape_manual(values=c(1, 19))+
+#   scale_colour_grey()+
+#   guides(shape = FALSE)+
+#   coord_flip()
+# 
+# pl_beta1 <- ggplot_gtable(ggplot_build(pl_beta1))
+# stripr <- which(grepl('strip-t', pl_beta1$layout$name))
+# fills <- gr_color
+# k <- 1
+# for (i in stripr) {
+#   j <- which(grepl('rect', pl_beta1$grobs[[i]]$grobs[[1]]$childrenOrder))
+#   pl_beta1$grobs[[i]]$grobs[[1]]$children[[j]]$gp$fill <- fills[k]
+#   k <- k+1
+# }
+# 
+# 
+# pl_beta2 <-  ggplot(df_red2, aes(x = new_id, y = OR_or_Beta, shape = sign, color = thr))+
+#   geom_errorbar(aes(ymin=CI_low, ymax=CI_up), size = 0.3, width=.3, position=position_dodge(0.05), linetype="solid")+
+#   geom_point(position=position_dodge(0.05))+
+#   theme_bw()+ 
+#   ylab('Adjusted Beta (95% CI)')+ geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey40')+
+#   facet_wrap(comp~., nrow = 1, strip.position="top",  labeller = labeller(comp = labs_new))+
+#   theme(legend.position = 'right', plot.title = element_text(size=9), axis.title.y = element_blank(), axis.title.x = element_text(size=8),
+#         legend.key.size = unit(0.2, "cm"), 
+#         axis.text.x = element_text(size = 7, angle = 45, hjust = 1), axis.text.y = element_text(size = 7,  colour = pheno_ann_red2$color), 
+#         strip.text = element_text(size=8, color = 'white', face = 'bold'))+
+#   scale_shape_manual(values=c(1, 19))+
+#   scale_colour_grey()+
+#   guides(shape = FALSE)+
+#   coord_flip()
+# 
+# pl_beta2 <- ggplot_gtable(ggplot_build(pl_beta2))
+# stripr <- which(grepl('strip-t', pl_beta2$layout$name))
+# fills <- gr_color
+# k <- 1
+# for (i in stripr) {
+#   j <- which(grepl('rect', pl_beta2$grobs[[i]]$grobs[[1]]$childrenOrder))
+#   pl_beta2$grobs[[i]]$grobs[[1]]$children[[j]]$gp$fill <- fills[k]
+#   k <- k+1
+# }
+# tot_pl <- ggarrange(plotlist = list(pl_beta1, pl_beta2), ncol = 1, nrow = 2, align='v', heights = c(1, 0.6), common.legend = T)
+
+pl_beta <-  ggplot(df_red, aes(x = new_id, y = OR_or_Beta, shape = sign, color = thr))+
+  geom_errorbar(aes(ymin=CI_low, ymax=CI_up), size = 0.3, width=.3, position=position_dodge(0.05), linetype="solid")+
+  geom_point(position=position_dodge(0.05), size = 1)+
+  theme_bw()+
+  ylab('Adjusted Beta (95% CI)')+ geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey40')+
+  facet_wrap(comp~., nrow = 1, strip.position="top",  labeller = labeller(comp = labs_new))+
+  theme(legend.position = 'right', plot.title = element_text(size=9), axis.title.y = element_blank(), axis.title.x = element_text(size=8),
+        legend.key.size = unit(0.2, "cm"),
+        axis.text.x = element_text(size = 7, angle = 45, hjust = 1), axis.text.y = element_text(size = 7,  colour = pheno_ann_red$color),
+        strip.text = element_text(size=8, color = 'white', face = 'bold'))+
+  scale_shape_manual(values=c(1, 19))+
+  scale_colour_grey()+
+  guides(shape = FALSE)+
+  coord_flip()
+
+pl_beta <- ggplot_gtable(ggplot_build(pl_beta))
+stripr <- which(grepl('strip-t', pl_beta$layout$name))
+fills <- gr_color
+k <- 1
+for (i in stripr) {
+  j <- which(grepl('rect', pl_beta$grobs[[i]]$grobs[[1]]$childrenOrder))
+  pl_beta$grobs[[i]]$grobs[[1]]$children[[j]]$gp$fill <- fills[k]
+  k <- k+1
+}
+ggsave(filename = sprintf('%sriskScores_tscore_zscaled_cluster%s_GLM_beta_measureThr%s_CogntiveTests.png', outFold, 'Cases', as.character(measureGoodness_thr)), width = len_w+3, height = (len_h)*0.1+1, plot = pl_beta, device = 'png', dpi=320)
+ggsave(filename = sprintf('%sriskScore_tscore_zscaled_cluster%s_GLM_beta_measureThr%s_CogntiveTests.pdf', outFold,'Cases', as.character(measureGoodness_thr)), width = len_w+3, height = (len_h1+len_h2)*0.1+1, plot = pl_beta, device = 'pdf')
 
 
