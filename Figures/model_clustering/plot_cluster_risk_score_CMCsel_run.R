@@ -29,6 +29,8 @@ parser$add_argument("--color_pheno_file", type = "character", help = "")
 parser$add_argument("--pheno_name", type = "character", help = "")
 parser$add_argument("--phenoInfo_file", type = "character", help = "")
 parser$add_argument("--pheno_plot", type = "character", help = "")
+parser$add_argument("--riskScore_pair_file", default = NULL, type = "character", help = "")
+parser$add_argument("--R2_file", default = NULL, type = "character", help = "")
 parser$add_argument("--measureGoodness_thr", type = "integer", help = "")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
@@ -39,16 +41,21 @@ pheno_name <- args$pheno_name
 phenoInfo_file <- args$phenoInfo_file
 pheno_plot <- args$pheno_plot
 measureGoodness_thr <- args$measureGoodness_thr
+R2_file <- args$R2_file
+riskScore_pair_file <- args$riskScore_pair_file
 outFold <- args$outFold
 
-# ###################################################################################################################
+###################################################################################################################
 # pheno_name <- 'SCZ'
 # color_pheno_file <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/INPUT_DATA/Covariates/color_pheno_type_UKBB.txt'
 # riskScore_ann_file <- '/psycl/g/mpsziller/lucia/SCZ_PGC/eQTL_PROJECT/Meta_Analysis_SCZ/DLPC_CMC/SCZ_clustering/matchUKBB_updated_riskScores_tscore_zscaled_clusterCases_PGmethod_HKmetric_phenoAssociation_GLM_metaAnalysis_annotated.txt'
 # outFold <- paste0('/psycl/g/mpsziller/lucia/SCZ_PGC/eQTL_PROJECT/Meta_Analysis_SCZ/DLPC_CMC/SCZ_clustering/matchUKBB_updated')
 # phenoInfo_file <- '/psycl/g/mpsziller/lucia/SCZ_PGC/eQTL_PROJECT/phenotypeDescription_rsSCZ_updated.txt'
 # pheno_plot <- '/psycl/g/mpsziller/lucia/SCZ_PGC/eQTL_PROJECT/Meta_Analysis_SCZ/DLPC_CMC/SCZ_clustering/list_phenoid_plot'
-# ################################################################################################################
+# # to compute CRM
+# R2_file <- '/psycl/g/mpsziller/lucia/UKBB/eQTL_PROJECT/OUTPUT_CMC/predict_UKBB/200kb/devgeno0.01_testdevgeno0/matchPGC_updated_tscore_corrThr0.5_relatedPhenotypes_R2_risk_score_phenotype.txt'
+# riskScore_pair_file <- '/psycl/g/mpsziller/lucia/SCZ_PGC/eQTL_PROJECT/clustering_res_matchUKBB/DLPC_CMC/matchUKBB_allSamples_riskScores_updated_tscore_zscaled_clusterAll_PGmethod_HKmetric_phenoAssociation_GLMpairwise_metaAnalysis.txt'
+# ###############################################################################################################
 
 pheno_ann <- read.delim(color_pheno_file, header = T, stringsAsFactors = F)
 pheno_ann <- rbind(pheno_ann, data.frame(color = c('grey40', 'chocolate4', 'brown', 'brown','chartreuse4', 'brown'), pheno_type = c('ICD9-10_OPCS4', 'Medications', 'Medication',
@@ -71,6 +78,42 @@ if(!'pheno_type' %in% colnames(phenoInfo)){
   phenoInfo$pheno_type <- tmp_name
   phenoInfo$pheno_type[phenoInfo$pheno_type == 'Summary_Information_(diagnoses)'] <- 'ICD9-10_OPCS4'
 }
+
+##### update pairwise table if necessary ####
+if(!is.null(riskScore_pair_file)){
+  
+  rs_res <- read.delim(riskScore_pair_file, h=T, stringsAsFactors = F, sep = '\t')
+  rs_res <- rs_res[!is.na(rs_res$pvalue), ]
+  R2_pheno_rs <- read.delim(R2_file, h=T, stringsAsFactors = F, sep = '\t')
+  common_pheno <- intersect(R2_pheno_rs$pheno_id, unique(rs_res$pheno_id))
+  R2_pheno_rs <- R2_pheno_rs[match(common_pheno, R2_pheno_rs$pheno_id),]
+  rs_res_comp <- rs_res[rs_res$pheno_id %in% common_pheno,]
+  
+  # add measure info
+  comp_name <- sort(unique(rs_res_comp$comp))
+  rs_res_withmeas <- list()
+  for(i in 1:length(comp_name)){
+    
+    tmp_rs <- rs_res_comp[rs_res_comp$comp %in% comp_name[i], ]
+    c_pheno_tmp <- intersect(R2_pheno_rs$pheno_id, tmp_rs$pheno_id)
+    tmp_rs <- tmp_rs[match(c_pheno_tmp, tmp_rs$pheno_id),]
+    tmp_R2 <- R2_pheno_rs[match(c_pheno_tmp, R2_pheno_rs$pheno_id) , ]
+    tmp_rs$R2_risk <- tmp_R2$R2_risk
+    tmp_rs$Fstat_risk <- tmp_R2$Fstat_risk
+    tmp_rs$measure <- tmp_rs$Fstat*abs(tmp_rs$beta)
+    tmp_info <- phenoInfo[match(c_pheno_tmp, phenoInfo$pheno_id),]
+    tmp_rs$pheno_type <- tmp_info$pheno_type
+    rs_res_withmeas[[i]] <- tmp_rs
+    
+  }
+  rs_res_withmeas <- do.call(rbind, rs_res_withmeas)
+  # save updated table
+  name_file <- strsplit(riskScore_pair_file, split = '.txt')[[1]][1]
+  write.table(x = rs_res_withmeas, file = sprintf('%s_annotated.txt', name_file),
+              col.names = T, row.names = F, sep = '\t', quote = F)
+  
+}
+
 
 rs_res <- read.delim(riskScore_ann_file, h=T, stringsAsFactors = F, sep = '\t')
 rs_res <- rs_res[!is.na(rs_res$pvalue), ]
@@ -314,5 +357,6 @@ for (i in stripr) {
 }
 ggsave(filename = sprintf('%sriskScores_tscore_zscaled_cluster%s_GLM_beta_measureThr%s_CogntiveTests.png', outFold, 'Cases', as.character(measureGoodness_thr)), width = len_w+3, height = (len_h)*0.1+1, plot = pl_beta, device = 'png', dpi=320)
 ggsave(filename = sprintf('%sriskScore_tscore_zscaled_cluster%s_GLM_beta_measureThr%s_CogntiveTests.pdf', outFold,'Cases', as.character(measureGoodness_thr)), width = len_w+3, height = (len_h1+len_h2)*0.1+1, plot = pl_beta, device = 'pdf')
+
 
 
