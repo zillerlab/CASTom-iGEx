@@ -44,7 +44,7 @@ clusterFile <- args$clusterFile
 phenoDescCovFile <- args$phenoDescCovFile
 outFold <- args$outFold
 
-# ###################################################################################################################
+###################################################################################################################
 # tissue_name <- 'Whole_Blood'
 # type_cluster <- 'Cases'
 # type_data <- 'tscore'
@@ -53,11 +53,11 @@ outFold <- args$outFold
 # clusterFile <- sprintf('OUTPUT_GTEx/predict_UKBB/%s/200kb/noGWAS/devgeno0.01_testdevgeno0/Asthma_pheno/Asthma_clustering/tscore_zscaled_clusterCases_PGmethod_HKmetric.RData', tissue_name)
 # functR <- '/psycl/g/mpsziller/lucia/priler_project/Software/model_clustering/clustering_functions.R'
 # outFold <- sprintf('OUTPUT_GTEx/predict_CAD/%s/200kb/noGWAS/devgeno0.01_testdevgeno0/Asthma_clustering/', tissue_name)
-# covDatFile <- 'INPUT_DATA/Covariates/Asthma_clustering/covariateMatrix_Asthma_All_phenoAssoc_withMedication.txt'
-# phenoDatFile <- 'INPUT_DATA/Covariates/Asthma_clustering/phenotypeMatrix_Asthma_All_phenoAssoc_withMedication.txt'
-# phenoDescCovFile <- 'INPUT_DATA/Covariates/Asthma_clustering/phenotypeDescription_covariateMatrix_withMedication.txt'
-# phenoDescFile <- 'INPUT_DATA/Covariates/Asthma_clustering/phenotypeDescription_withMedication.txt'
-# ####################################################################################################################
+# covDatFile <- 'INPUT_DATA/Covariates/Asthma_clustering/covariateMatrix_Asthma_All_phenoAssoc_FEV1pred.txt'
+# phenoDatFile <- 'INPUT_DATA/Covariates/Asthma_clustering/phenotypeMatrix_Asthma_All_phenoAssoc_FEV1pred.txt'
+# phenoDescCovFile <- 'INPUT_DATA/Covariates/Asthma_clustering/phenotypeDescription_covariateMatrix_FEV1pred.txt'
+# phenoDescFile <- 'INPUT_DATA/Covariates/Asthma_clustering/phenotypeDescription_FEV1pred.txt'
+####################################################################################################################
 
 source(functR)
 res_tscore <- get(load(clusterFile))
@@ -72,7 +72,8 @@ phenoDat <- fread(phenoDatFile, h=T, stringsAsFactors = F, data.table = F)
 phenoDat <- phenoDat[match(res_tscore$samples_id, phenoDat$Individual_ID), ]
 phenoInfo <- fread(phenoDescFile, h=T, stringsAsFactors = F, data.table = F)
 # consider only certain class of phenotypes
-phenoInfo <- phenoInfo[phenoInfo$pheno_type %in% c('Arterial_stiffness', 'Blood_biochemistry', 'Blood_count', 'Blood_pressure', 'Body_size_measures', 'Hand_grip_strength', 'Impedance_measures', 
+phenoInfo <- phenoInfo[phenoInfo$pheno_type %in% c('Arterial_stiffness', 'Blood_biochemistry', 'Blood_count', 'Blood_pressure', 
+                                                   'Blood_count_ratio','Body_size_measures', 'Hand_grip_strength', 'Impedance_measures', 
                                                    'Residential_air_pollution', 'Spirometry'),]
 # exclude Nucleated red blood cell
 phenoInfo <- phenoInfo[!grepl('Nucleated red blood cell',phenoInfo$Field), ]
@@ -86,7 +87,10 @@ phenoInfo_treat <- rbind(phenoInfo_treat,
                                     nsamples_F= rep(NA,3), pheno_type = rep('Medication', 3)))
 
 fmla  <- as.formula(paste('pheno~', paste0(treat_pheno, collapse = '+'), '+', paste0(c(paste0('PC',1:10), 'Age', 'Gender'),  collapse = '+')))
-pheno_id <- phenoInfo$pheno_id
+pheno_id <- as.character(phenoInfo$pheno_id)
+if('12144der' %in% phenoInfo_treat$pheno_id){
+  phenoInfo_treat$Coding_meaning[phenoInfo_treat$pheno_id == '12144der'] <- 'Height derived'
+}
 
 res_diff <- list()
 for(p in 1:P){
