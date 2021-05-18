@@ -155,26 +155,26 @@ for(i in 1:length(chr)){
       len_gene <- unique(c(len_gene, tmp_sel$external_gene_name))
       keep_gene <- unique(c(keep_gene, tmp_sel$external_gene_name[which.max(abs(tmp_sel$Zstat))]))
     }
-     #print(keep_gene)
-     geneInfo_keep_chr[[i]] <- tmp_gene[tmp_gene$external_gene_name %in% keep_gene, ]
-     dist_mat <- sapply( geneInfo_keep_chr[[i]]$start_position, function(x) abs(x -  geneInfo_keep_chr[[i]]$start_position))
-     
-     if(any(dist_mat[upper.tri(dist_mat)] < 250000)){
-       locus_list <- apply(dist_mat, 1, function(x) x<250000)
-       len_gene <- c()
-       keep_gene <- c()
-       for(j in 1:nrow(locus_list)){
-         tmp_sel <-  geneInfo_keep_chr[[i]][locus_list[j,],]
-         tmp_sel <- tmp_sel[!tmp_sel$external_gene_name %in% len_gene, ]
-         len_gene <- unique(c(len_gene, tmp_sel$external_gene_name))
-         keep_gene <- unique(c(keep_gene, tmp_sel$external_gene_name[which.max(abs(tmp_sel$Zstat))]))
-       }
-       #print(keep_gene)
-       geneInfo_keep_chr[[i]] <- geneInfo_keep_chr[[i]][geneInfo_keep_chr[[i]]$external_gene_name %in% keep_gene, ]
-     }
-     
+    #print(keep_gene)
+    geneInfo_keep_chr[[i]] <- tmp_gene[tmp_gene$external_gene_name %in% keep_gene, ]
+    dist_mat <- sapply( geneInfo_keep_chr[[i]]$start_position, function(x) abs(x -  geneInfo_keep_chr[[i]]$start_position))
+    
+    if(any(dist_mat[upper.tri(dist_mat)] < 250000)){
+      locus_list <- apply(dist_mat, 1, function(x) x<250000)
+      len_gene <- c()
+      keep_gene <- c()
+      for(j in 1:nrow(locus_list)){
+        tmp_sel <-  geneInfo_keep_chr[[i]][locus_list[j,],]
+        tmp_sel <- tmp_sel[!tmp_sel$external_gene_name %in% len_gene, ]
+        len_gene <- unique(c(len_gene, tmp_sel$external_gene_name))
+        keep_gene <- unique(c(keep_gene, tmp_sel$external_gene_name[which.max(abs(tmp_sel$Zstat))]))
+      }
+      #print(keep_gene)
+      geneInfo_keep_chr[[i]] <- geneInfo_keep_chr[[i]][geneInfo_keep_chr[[i]]$external_gene_name %in% keep_gene, ]
+    }
+    
   }else{
-     geneInfo_keep_chr[[i]] <- tmp_gene
+    geneInfo_keep_chr[[i]] <- tmp_gene
   }
 }
 
@@ -304,7 +304,7 @@ print(identical(tmp$res_pval$path_id, colnames(pathGO_input)))
 print(identical(tmp$res_pval$path_id, tmp$test_feat$feat))
 colnames(pathGO_input) <- tmp$res_pval$path
 test_feat_pathGO$feat <- tmp$res_pval$path
-  
+
 keep_path <- unique(tmp$test_feat$feat[tmp$test_feat$pval_corr <= pval_feat])
 pathInfo <- tmp$res_pval
 pathInfo_keep <- pathInfo[match(keep_path, pathInfo[,1]),]
@@ -348,16 +348,16 @@ if(any(abs(cor_mat[upper.tri(cor_mat)]) > 0.6)){
   
   perc_mat <- sapply(go, function(y) sapply(go, function(x) length(intersect(y$new, x$new))/length(union(y$new, x$new))))
   if(any(perc_mat[upper.tri(perc_mat)] > 0.1)){
-   path_list <- apply(perc_mat, 1, function(x) x>0.1)
-   len_path <- c()
-   keep_path <- c()
+    path_list <- apply(perc_mat, 1, function(x) x>0.1)
+    len_path <- c()
+    keep_path <- c()
     for(j in 1:nrow(path_list)){
       tmp_sel <-  pathInfo_keep[pathInfo_keep[,1] %in% sapply(go[path_list[j,]], function(x) x$Term),]
       tmp_sel <- tmp_sel[!tmp_sel[,1] %in% len_path, ]
       len_path <- unique(c(len_path, tmp_sel[,1]))
       keep_path <- unique(c(keep_path, tmp_sel[which.max(abs(tmp_sel$Zstat)), 1]))
-   }
-   #print(keep_path)
+    }
+    #print(keep_path)
     pathInfo_keep <- pathInfo_keep[pathInfo_keep[,1] %in% keep_path, ]
   }
 }
@@ -417,14 +417,14 @@ print('tscore-path_GO heatmap finished')
 ##############################
 
 pheno_ann <- read.delim(color_file, header = T, stringsAsFactors = F)
-pheno_ann <- rbind(pheno_ann, data.frame(color = c('grey40', 'chocolate4', 'brown', 'brown','chartreuse4', 'brown'), pheno_type = c('ICD9-10_OPCS4', 'Medications', 'Medication', 
-                                                                                                                           'Medical_conditions', 'Alcohol', 'Asthma_related_drugs')))
+pheno_ann <- rbind(pheno_ann, data.frame(color = c('grey40', 'chocolate4', 'brown', 'brown','chartreuse4', 'brown', 'green'), pheno_type = c('ICD9-10_OPCS4', 'Medications', 'Medication', 
+                                                                                                                                    'Medical_conditions', 'Alcohol', 'Asthma_related_drugs', 'Height_derived')))
 pheno_ann$color[pheno_ann$pheno_type == 'Family_history'] <- 'orange3'
 pheno_ann$color[pheno_ann$pheno_type == 'Smoking'] <- 'darkgreen'
 pheno_ann$color[pheno_ann$pheno_type %in% c('ICD10_Anaemia', 'ICD10_Circulatory_system', 'ICD10_Endocrine', 'ICD10_Respiratory_system')] <- 'grey40'
 
 if(file.exists(endophenoFile[1])){
-
+  
   res_pheno <- list()
   for(i in 1:length(endophenoFile)){
     tmp <- get(load(endophenoFile[[i]]))
@@ -451,7 +451,7 @@ if(file.exists(endophenoFile[1])){
                 file = sprintf('%s%s_zscaled_cluster%s_PGmethod_HKmetric_phenoAssociation_GLM_combined.txt', outFold, type_cluster_data , type_cluster), 
                 col.names = T, row.names = F, sep = '\t', quote = F)
   }
-
+  
   id_keep <- unique(res_pheno$pheno_id[res_pheno$pvalue <= pval_pheno | res_pheno$pval_corr <= 0.05])
   df_red <- res_pheno[res_pheno$pheno_id %in% id_keep, ]
   
@@ -492,7 +492,7 @@ if(file.exists(endophenoFile[1])){
   #   coord_flip()
   # ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_phenoAssociation_GLM_betaOR.png', outFold, type_cluster), width = len_w+4, height = len_h*0.2+1.5, plot = pl_tot, device = 'png')
   # ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_phenoAssociation_GLM_betaOR.pdf', outFold, type_cluster), width = len_w+4, height = len_h*0.2+1.5, plot = pl_tot, device = 'pdf')
-
+  
   P <- length(unique(df_red$comp))
   gr_color <- pal_d3(palette = 'category20')(P)
   
@@ -560,11 +560,11 @@ if(file.exists(endophenoFile[1])){
   
   ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_phenoAssociation_GLM_betaOR.png', outFold, type_cluster), width = len_w+3, height = len_h*0.2+2, plot = tot_pl, device = 'png')
   ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_phenoAssociation_GLM_betaOR.pdf', outFold, type_cluster), width = len_w+3, height = len_h*0.2+2, plot = tot_pl, device = 'pdf')
-
+  
 }
 
 if(file.exists(endophenoPairwiseFile[1])){
-
+  
   res_pheno <- list()
   for(i in 1:length(endophenoPairwiseFile)){
     tmp <- get(load(endophenoPairwiseFile[[i]]))
@@ -592,7 +592,7 @@ if(file.exists(endophenoPairwiseFile[1])){
                 file = sprintf('%s%s_zscaled_cluster%s_PGmethod_HKmetric_phenoAssociation_GLMpairwise_combined.txt', outFold, type_cluster_data , type_cluster), 
                 col.names = T, row.names = F, sep = '\t', quote = F)
   }
-
+  
   id_keep <- unique(res_pheno$pheno_id[res_pheno$pvalue <= pval_pheno | res_pheno$pval_corr <= 0.05])
   df_red <- res_pheno[res_pheno$pheno_id %in% id_keep, ]
   
@@ -615,7 +615,7 @@ if(file.exists(endophenoPairwiseFile[1])){
   
   len_w <- length(unique(df_red$comp))
   len_h <- length(unique(df_red$pheno_id))
-
+  
   pl_OR <-  ggplot(subset(df_red, type_pheno != 'CONTINUOUS'), aes(x = new_id, y = OR_or_Beta, shape = sign))+
     geom_point()+geom_errorbar(aes(ymin=CI_low, ymax=CI_up), width=.2, position=position_dodge(0.05))+
     theme_bw()+ 
@@ -695,7 +695,7 @@ if(file.exists(endopheno_nominal_File[1])){
   df_red$type_res <- 'beta'
   df_red$type_res[df_red$type_pheno!= 'CONTINUOUS'] <- 'OR'
   df_red$type_res <- factor(df_red$type_res, levels = c('OR', 'beta'))
- 
+  
   len_w <- length(unique(df_red$comp))
   len_h <- length(unique(df_red$pheno_id))
   # change labels 
@@ -800,7 +800,7 @@ if(file.exists(treatmentResponseFile)){
   
   len_w <- round(nrow(df_red)/length(unique(df_red$gr)))
   len_h <- 4
-    
+  
   gr_color <- pal_d3(palette = 'category20')(length(unique(df_red$gr)))
   
   if(any(df_red$pheno_type == 'CONTINUOUS')){
@@ -814,7 +814,7 @@ if(file.exists(treatmentResponseFile)){
             axis.text.x = element_text(size = 7, angle = 45, hjust = 1), axis.text.y = element_text(size = 7), strip.text = element_text(size=8))+
       scale_shape_manual(values=c(1, 19))+
       scale_color_manual(values=gr_color)+guides(shape=FALSE)
-     # coord_flip()
+    # coord_flip()
   }
   if(any(df_red$pheno_type!= 'CONTINUOUS')){
     pl_OR <-  ggplot(subset(df_red, pheno_type != 'CONTINUOUS'), aes(x = new_id, y = gr_ORorBeta, group = gr, color = gr, shape = sign))+
@@ -829,19 +829,19 @@ if(file.exists(treatmentResponseFile)){
       scale_shape_manual(values=c(1, 19))+
       scale_color_manual(values=gr_color)+
       scale_y_continuous(trans='log')+guides(shape=FALSE)
-      # coord_flip()
+    # coord_flip()
     ratio_OR_beta <- sum(df_red$pheno_type == 'CONTINUOUS')/sum(df_red$pheno_type != 'CONTINUOUS')
   }
-    
-    if(any(df_red$pheno_type == 'CONTINUOUS') & any(df_red$pheno_type != 'CONTINUOUS')){
-      tot_pl <- ggarrange(plotlist = list(pl_OR, pl_beta), align = 'h', nrow = 1,  common.legend = T, widths = c(1, ratio_OR_beta*0.6))
+  
+  if(any(df_red$pheno_type == 'CONTINUOUS') & any(df_red$pheno_type != 'CONTINUOUS')){
+    tot_pl <- ggarrange(plotlist = list(pl_OR, pl_beta), align = 'h', nrow = 1,  common.legend = T, widths = c(1, ratio_OR_beta*0.6))
+  }else{
+    if(any(df_red$pheno_type == 'CONTINUOUS')){
+      tot_pl <- pl_beta
     }else{
-      if(any(df_red$pheno_type == 'CONTINUOUS')){
-        tot_pl <- pl_beta
-      }else{
-        tot_pl <- pl_OR
-      }
+      tot_pl <- pl_OR
     }
+  }
   
   ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse.png', outFold, type_cluster), width = len_w, height = len_h, plot = tot_pl, device = 'png')
   ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse.pdf', outFold, type_cluster), width = len_w, height = len_h, plot = tot_pl, device = 'pdf')
@@ -881,7 +881,7 @@ if(file.exists(treatmentResponsePairwiseFile)){
     tmp <- df_red[df_red$gr1 == tot_gr[i] | df_red$gr2 == tot_gr[i], ]
     feat_name <- unique(tmp$comb_name)
     df_tot_gr[[i]] <- data.frame(comb_name =c(),gr =c(), sign =c(),pheno_class =c(),new_id =c(),treat_meaning  =c(),
-                         gr_ORorBeta =c(),gr_CI_low =c(), gr_CI_up =c())
+                                 gr_ORorBeta =c(),gr_CI_low =c(), gr_CI_up =c())
     for(j in 1:length(feat_name)){
       df_new <- data.frame(comb_name = feat_name[j], gr = tot_gr[i], sign = any(tmp$sign[tmp$comb_name == feat_name[j]] == 'yes'), 
                            pheno_class = tmp$pheno_class[tmp$comb_name == feat_name[j]][1], 
@@ -960,10 +960,12 @@ if(file.exists(treatmentResponseFile) & pheno_name == 'Asthma'){
   # consider only medicine specific for CAD
   p1 <- res_treat[res_treat$pheno_Field %in% c('Forced expiratory volume in 1-second (FEV1), predicted', 
                                                'C-reactive protein', 'White blood cell (leukocyte) count','Lymphocyte percentage', 'Basophill percentage', 'Eosinophill percentage', 
-                                               'Monocyte percentage', 'Neutrophill percentage') & 
+                                               'Monocyte percentage', 'Neutrophill percentage', 'Eosinophill-to-Lymphocyte ratio', 
+                                               'Neutrophill-to-Lymphocyte ratio',  'Platelet-to-Lymphocyte ratio') & 
                     res_treat$treat_meaning %in% c('H1 antihistamine', 'Muscarinic antagonists (SAMA)', 'Muscarinic antagonists (LAMA)', 
-                    'Methylxanthines', 'Corticosteroids', 'Degranulation inhibitors', 'Leukotrienes', 'non-selective beta-2-agonists', 
-                     'Selective beta-2-agonists (SABA)', 'Selective beta-2-agonists (LABA)'),]
+                                                   'Methylxanthines', 'Inhaled Corticosteroids', 
+                                                   'Oral Corticosteroids','Degranulation inhibitors', 'Leukotrienes', 'non-selective beta-2-agonists', 
+                                                   'Selective beta-2-agonists (SABA)', 'Selective beta-2-agonists (LABA)'),]
   name_p1 <- unique(p1$treat_meaning)
   
   p2 <- res_treat[res_treat$pheno_Field %in% c('C-reactive protein', 'White blood cell (leukocyte) count','Lymphocyte percentage',
@@ -997,32 +999,32 @@ if(file.exists(treatmentResponseFile) & pheno_name == 'Asthma'){
   
   pl_beta_p1 <-  ggplot(subset(df_red, treat_meaning %in% c('Ibuprofen (e.g. Nurofen)', 'Paracetamol', 'Aspirin')), 
                         aes(x = new_id, y = gr_ORorBeta, group = gr, color = gr, shape = sign))+
-      geom_point(position=position_dodge(0.5))+geom_errorbar(aes(ymin=gr_CI_low, ymax=gr_CI_up), width=.2, position=position_dodge(0.5))+
-      theme_bw()+ 
-      ylab('Adjusted Beta (95% CI)')+geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey40')+
-      facet_wrap(treat_meaning~., nrow = 1, strip.position="top", scales = 'free_x')+
-      theme(legend.position = 'none', legend.title = element_blank(), legend.text = element_text(size = 9), 
-            plot.title = element_text(size=9), axis.title.y = element_blank(),  axis.title.x = element_text(size = 9),
-            axis.text.x = element_text(size = 9, angle = 0, hjust = 1), axis.text.y = element_text(size = 9), strip.text = element_text(size=9))+
-      scale_shape_manual(values=c(1, 19))+
-      scale_color_manual(values=gr_color)+guides(shape=FALSE)+
+    geom_point(position=position_dodge(0.5))+geom_errorbar(aes(ymin=gr_CI_low, ymax=gr_CI_up), width=.2, position=position_dodge(0.5))+
+    theme_bw()+ 
+    ylab('Adjusted Beta (95% CI)')+geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey40')+
+    facet_wrap(treat_meaning~., nrow = 1, strip.position="top", scales = 'free_x')+
+    theme(legend.position = 'none', legend.title = element_blank(), legend.text = element_text(size = 9), 
+          plot.title = element_text(size=9), axis.title.y = element_blank(),  axis.title.x = element_text(size = 9),
+          axis.text.x = element_text(size = 9, angle = 0, hjust = 1), axis.text.y = element_text(size = 9), strip.text = element_text(size=9))+
+    scale_shape_manual(values=c(1, 19))+
+    scale_color_manual(values=gr_color)+guides(shape=FALSE)+
     coord_flip()
-    
-    pl_beta_p2 <-  ggplot(subset(df_red, !treat_meaning %in% c('Ibuprofen (e.g. Nurofen)', 'Paracetamol', 'Aspirin')), 
-                          aes(x = new_id, y = gr_ORorBeta, group = gr, color = gr, shape = sign))+
-      geom_point(position=position_dodge(0.5))+geom_errorbar(aes(ymin=gr_CI_low, ymax=gr_CI_up), width=.2, position=position_dodge(0.5))+
-      theme_bw()+ 
-      ylab('Adjusted Beta (95% CI)')+geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey40')+
-      facet_wrap(treat_meaning~., nrow = 3, strip.position="top", scales = 'free_x')+
-      theme(legend.position = 'right', legend.title = element_blank(), legend.text = element_text(size = 9), 
-            plot.title = element_text(size=9), axis.title.y = element_blank(),  axis.title.x = element_text(size = 9),
-            axis.text.x = element_text(size = 9, angle = 0, hjust = 1), axis.text.y = element_text(size = 9), strip.text = element_text(size=9))+
-      scale_shape_manual(values=c(1, 19))+
-      scale_color_manual(values=gr_color)+guides(shape=FALSE)+
+  
+  pl_beta_p2 <-  ggplot(subset(df_red, !treat_meaning %in% c('Ibuprofen (e.g. Nurofen)', 'Paracetamol', 'Aspirin')), 
+                        aes(x = new_id, y = gr_ORorBeta, group = gr, color = gr, shape = sign))+
+    geom_point(position=position_dodge(0.5))+geom_errorbar(aes(ymin=gr_CI_low, ymax=gr_CI_up), width=.2, position=position_dodge(0.5))+
+    theme_bw()+ 
+    ylab('Adjusted Beta (95% CI)')+geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey40')+
+    facet_wrap(treat_meaning~., nrow = 3, strip.position="top", scales = 'free_x')+
+    theme(legend.position = 'right', legend.title = element_blank(), legend.text = element_text(size = 9), 
+          plot.title = element_text(size=9), axis.title.y = element_blank(),  axis.title.x = element_text(size = 9),
+          axis.text.x = element_text(size = 9, angle = 0, hjust = 1), axis.text.y = element_text(size = 9), strip.text = element_text(size=9))+
+    scale_shape_manual(values=c(1, 19))+
+    scale_color_manual(values=gr_color)+guides(shape=FALSE)+
     coord_flip()
- 
+  
   tot_pl <- ggarrange(plotlist = list(pl_beta_p2, pl_beta_p1), align = 'hv', nrow = 2, common.legend = T, heights=c(1, 0.35))
-
+  
   ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_%smedAll.png', outFold, type_cluster, pheno_name), width = len_w, height = len_h, plot = tot_pl, device = 'png')
   ggsave(filename = sprintf('%stscore_zscaled_cluster%s_PGmethod_HKmetric_treatmentResponse_%smedAll.pdf', outFold, type_cluster, pheno_name), width = len_w, height = len_h, plot = tot_pl, device = 'pdf')
   
@@ -1106,9 +1108,11 @@ if(file.exists(treatmentResponsePairwiseFile) & pheno_name == 'Asthma'){
   # consider only medicine specific for CAD
   p1 <- res_treat[res_treat$pheno_Field %in% c('Forced expiratory volume in 1-second (FEV1), predicted', 
                                                'C-reactive protein', 'White blood cell (leukocyte) count','Lymphocyte percentage', 'Basophill percentage', 'Eosinophill percentage', 
-                                               'Monocyte percentage', 'Neutrophill percentage') & 
+                                               'Monocyte percentage', 'Neutrophill percentage', 'Eosinophill-to-Lymphocyte ratio', 
+                                               'Neutrophill-to-Lymphocyte ratio',  'Platelet-to-Lymphocyte ratio') & 
                     res_treat$treat_meaning %in% c('H1 antihistamine', 'Muscarinic antagonists (SAMA)', 'Muscarinic antagonists (LAMA)', 
-                                                   'Methylxanthines', 'Corticosteroids', 'Degranulation inhibitors', 'Leukotrienes', 'non-selective beta-2-agonists', 
+                                                   'Methylxanthines', 'Inhaled Corticosteroids', 
+                                                   'Oral Corticosteroids', 'Degranulation inhibitors', 'Leukotrienes', 'non-selective beta-2-agonists', 
                                                    'Selective beta-2-agonists (SABA)', 'Selective beta-2-agonists (LABA)'),]
   name_p1 <- unique(p1$treat_meaning)
   
@@ -1521,9 +1525,6 @@ if(file.exists(treatmentResponsePairwiseFile) & pheno_name == 'CAD'){
 #   
 # }
 # 
-
-
-
 
 
 
