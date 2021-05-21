@@ -230,7 +230,7 @@ for(j in 1:length(pheno_var)){
   
   df_tscore_all[[j]][, paste0(pheno_var[[j]]$pheno, '_qval')] <- qvalue(df_tscore_all[[j]][,paste0(pheno_var[[j]]$pheno, '_pval')])$qvalue
   df_tscore_all[[j]][, paste0(pheno_var[[j]]$pheno, '_pval_BHcorr')] <- p.adjust(df_tscore_all[[j]][,paste0(pheno_var[[j]]$pheno, '_pval')], method = 'BH')
-  df_pi1$tscore[j] <- 1- pi0est(df_tscore_all[[j]][,paste0(pheno_var[[j]]$pheno, '_pval')], lambda = 0.5)$pi0
+  df_pi1$tscore[j] <- 1-try(pi0est(df_tscore_all[[j]][,paste0(pheno_var[[j]]$pheno, '_pval')], lambda = 0.5)$pi0)
   
   #### pathway ####
   common_path <- names(which(table(df_path_cohorts[[j]]$path) == length(pheno_var[[j]]$cohorts)))
@@ -277,7 +277,7 @@ for(j in 1:length(pheno_var)){
   
   df_path_all[[j]][, paste0(pheno_var[[j]]$pheno, '_qval')] <- qvalue(df_path_all[[j]][,paste0(pheno_var[[j]]$pheno, '_pval')])$qvalue
   df_path_all[[j]][, paste0(pheno_var[[j]]$pheno, '_pval_BHcorr')] <- p.adjust(df_path_all[[j]][,paste0(pheno_var[[j]]$pheno, '_pval')], method = 'BH')
-  df_pi1$pathScore[j] <- 1- pi0est(df_path_all[[j]][,paste0(pheno_var[[j]]$pheno, '_pval')], lambda = 0.5)$pi0
+  df_pi1$pathScore[j] <- try(1- pi0est(df_path_all[[j]][,paste0(pheno_var[[j]]$pheno, '_pval')], lambda = 0.5)$pi0)
   
   # annotate
   info_pathScore[[j]] <- vector(mode = 'list', length = nrow(df_path_all[[j]]))
@@ -338,7 +338,7 @@ for(j in 1:length(pheno_var)){
     
     df_path_abstscore_all[[j]][, paste0(pheno_var[[j]]$pheno, '_qval')] <- qvalue(df_path_abstscore_all[[j]][,paste0(pheno_var[[j]]$pheno, '_pval')])$qvalue
     df_path_abstscore_all[[j]][, paste0(pheno_var[[j]]$pheno, '_pval_BHcorr')] <- p.adjust(df_path_abstscore_all[[j]][,paste0(pheno_var[[j]]$pheno, '_pval')], method = 'BH')
-    df_pi1$pathScore_abstscore[j] <- 1- pi0est(df_path_abstscore_all[[j]][,paste0(pheno_var[[j]]$pheno, '_pval')], lambda = 0.5)$pi0
+    df_pi1$pathScore_abstscore[j] <- try(1- pi0est(df_path_abstscore_all[[j]][,paste0(pheno_var[[j]]$pheno, '_pval')], lambda = 0.5)$pi0)
     
     # annotate
     info_pathScore_abstscore[[j]] <- vector(mode = 'list', length = nrow(df_path_abstscore_all[[j]]))
