@@ -215,8 +215,9 @@ merge_loci_genes <- function(gene_table, cis_size, bp_loci, tissue = 'combined')
     }
     
   }
-  
+  tmp_loci$start[tmp_loci$start < 0] <- 0
   tmp_loci$loci_id <- paste0(tmp_loci$chrom,':',round(tmp_loci$start/1000000, digits = 1), '-', round(tmp_loci$end/1000000, digits = 1), 'Mb')
+  tmp_loci$loci_complete <- paste0(tmp_loci$chrom,':',tmp_loci$start, '-', tmp_loci$end)
   return(tmp_loci)
 }
 # tissue specific
@@ -243,8 +244,10 @@ for(t in tissues_name){
 all_loci <- merge_loci_genes(gene_table = gene_table, cis_size = cis_size, bp_loci = bp_loci)
 # annotate significant table for loci id
 gene_table$loci <- NA
+gene_table$loci_complete <- NA
 for(i in 1:nrow(gene_table)){
   gene_table$loci[i] <- all_loci$loci_id[grepl(gene_table$ensembl_gene_id[i], all_loci$ensembl_gene)]  
+  gene_table$loci_complete[i] <- all_loci$loci_complete[grepl(gene_table$ensembl_gene_id[i], all_loci$ensembl_gene)]
 }
 gene_table <- gene_table[, !colnames(gene_table) %in% 'new_id']
 
