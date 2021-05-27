@@ -643,5 +643,177 @@ plot_showcase <- function(gene_res, gene_info, genes_path, tissue, pathway, colo
   
 }
 
+plot_classPath <- function(path_sign,gene_tot,id_pval,id_pval_gene,pval_FDR, fold, pheno, tissue_type = 'all', width_pl = 4, height_pl = 7){
+    if(!tissue_type %in% c('all', 'specific')){
+        stop('tissue_type must be "all" or "specific"')
+    }
+    df_path <- data.frame(type_path = path_sign$type_path, tissue = path_sign$tissue, 
+    path = path_sign$path, ngenes_tscore = path_sign$ngenes_tscore,
+    log10p = -log10(path_sign[,id_pval]), zstat = path_sign[,id_pval-1], 
+    impr = as.numeric(path_sign$improvement_sign), 
+    no_sign_genes = NA, stringsAsFactors = F)
+    df_path$min_gene_log10p <- df_path$max_gene_log10p <- df_path$mean_gene_log10p <- NA
+    df_path$min_gene_z <- df_path$max_gene_z <- df_path$mean_gene_z <-NA
+    for(i in 1:nrow(path_sign)){
+        tmp_g <- strsplit(path_sign$genes_path[i], split = ',')[[1]]
+        id <- gene_tot$external_gene_name %in% tmp_g & gene_tot$tissue == path_sign$tissue[i]
+        df_path$min_gene_log10p[i] <- min(-log10(gene_tot[id,id_pval_gene]))
+        df_path$max_gene_log10p[i] <- max(-log10(gene_tot[id,id_pval_gene]))
+        df_path$mean_gene_log10p[i] <- mean(-log10(gene_tot[id,id_pval_gene]))
+        df_path$min_gene_z[i] <- min(gene_tot[id,id_pval_gene-1])
+        df_path$max_gene_z[i] <- max(gene_tot[id,id_pval_gene-1])
+        df_path$mean_gene_z[i] <- mean(gene_tot[id,id_pval_gene-1])
+        df_path$no_sign_genes[i] <- all(gene_tot[id,id_pval_gene+2] > pval_FDR)
+    }
+    color_class <- c('#E7EBE0FF','#7DB46CFF', '#ABD6DFFF')
+    df_path$class <- NA
+    df_path$class_effect <- NA
+    df_path$class[df_path$impr == 0] <- 'genes P < pathway P'
+    df_path$class[df_path$impr == 1 & df_path$no_sign_genes] <- 'pathway P < genes P\ngenes FDR > 0.05'
+    df_path$class[df_path$impr == 1 & !df_path$no_sign_genes] <- 'pathway P < genes P\ngenes FDR < 0.05'
+    table(df_path$class)
+    table(df_path$class)/nrow(df_path)
+    df_path$class <- factor(df_path$class, levels = c('genes P < pathway P', 'pathway P < genes P\ngenes FDR < 0.05', 'pathway P < genes P\ngenes FDR > 0.05'))
+    if(tissue_type == 'all'){
+        df_path$tissue_tot = 'Combined tissues'
+        df_path$tissue_tot = factor(df_path$tissue_tot)
+        pval_pl <- formatC(kruskal.test(df_path$log10p, g = df_path$class)$p.value, format = "e", digits = 2)
 
+        pl1 <- ggplot(data = df_path, aes(x = tissue_tot, fill = class))+
+            geom_bar(stat = 'count', position = position_dodge(width = 0.9), color = 'black')+
+            theme_classic()+ 
+            ylab('n. significant pathways')+
+            scale_fill_manual(values = color_class)+
+            theme(legend.position = 'right', axis.title.x = element_blank(),legend.title = element_blank(), axis.text = element_text(size = 11))
 
+        pl2 <- ggplot(df_path, aes(x = tissue_tot, y = log10p, fill = class, group = class))+
+          geom_violin(width=1, position = position_dodge(width = 0.9))+
+          geom_boxplot(width=0.1,position = position_dodge(width = 0.9), fill = 'white')+
+          geom_hline(linetype = 'dashed', yintercept = 3, color = 'black')+
+          geom_hline(linetype = 'dashed', yintercept = 2, color = 'darkgrey')+
+          ylab('-log10(P) pathway')+
+          scale_fill_manual(values = color_class)+
+          annotate("text", x = 1.1, y = max(df_path$log10p), label = sprintf('P=%s', pval_pl))+
+          theme_classic()+theme(legend.position = 'right', axis.title.x = element_blank(), legend.title = element_blank(),  axis.text = element_text(size = 11))
+        
+    }else{
+        
+        df_path$tissue_tot = df_path$tissue
+        df_path$tissue_tot = factor(df_path$tissue_tot)
+        pval_pl <- data.frame(tissue_tot = unique(df_path$tissue_tot), 
+                              pval = sapply(unique(df_path$tissue_tot), function(x) formatC(kruskal.test(df_path$log10p[df_path$tissue == x], g = df_path$class[df_path$tissue == x])$p.value, format = "e", digits = 2)))
+        pval_pl$pval <- sprintf('P=%s', pval_pl$pval)
+        pval_pl$tissue = factor(pval_pl$tissue_tot)
+        pl1 <- ggplot(data = df_path, aes(x = tissue_tot, fill = class))+
+            geom_bar(stat = 'count', position = position_dodge(width = 0.9), color = 'black')+
+            facet_wrap(.~tissue_tot, nrow = 2, scales = 'free_x')+
+            theme_classic()+ 
+            ylab('n. significant pathways')+
+            scale_fill_manual(values = color_class)+
+            theme(legend.position = 'right', axis.title.x = element_blank(),legend.title = element_blank(),  axis.text.x = element_blank(), axis.text = element_text(size = 11))
+                                            
+       pl2 <- ggplot(df_path, aes(x = tissue_tot, y = log10p, fill = class))+
+          geom_violin(width=1, position = position_dodge(width = 0.9))+
+          geom_hline(linetype = 'dashed', yintercept = 3, color = 'black')+
+          geom_hline(linetype = 'dashed', yintercept = 2, color = 'darkgrey')+
+          facet_wrap(.~tissue_tot, nrow = 2, scales = 'free')+
+          ylab('-log10(P) pathway')+
+          scale_fill_manual(values = color_class)+
+          geom_text(data=pval_pl, mapping = aes(label = pval), x = Inf, y = Inf, hjust=1, vjust=1,
+            inherit.aes = FALSE)+
+          theme_classic()+theme(legend.position = 'right', axis.title.x = element_blank(), axis.text.x = element_blank(), legend.title = element_blank(),  axis.text = element_text(size = 11))
+    }
+
+ 
+    tot_pl <- ggarrange(plotlist = list(pl1, pl2), ncol = 1, nrow = 2, align='v', common.legend = T, legend = 'right')
+    ggsave(filename = sprintf('%snPathways_class_and_Pdistribution_%s.png', fold, pheno), plot = tot_pl, width = width_pl, height = height_pl, dpi=500, device = 'png')
+    ggsave(filename = sprintf('%snPathways_class_and_Pdistribution_%s.pdf', fold, pheno), plot = tot_pl, width = width_pl, height = height_pl, device = 'pdf')
+    
+    return(list(pl = tot_pl, df = df_path))
+    
+}
+
+                                            
+# Venn diagram
+venn_plot_genes <- function(genes_known_file, tscore, pval_FDR, type_dat, type_mat, fold){
+  
+  genes_new <- unique(tscore$external_gene_name[tscore[, 10] <= pval_FDR])
+  genes_new_ensembl <- unique(tscore$ensembl_gene_id[tscore[, 10] <= pval_FDR])
+  
+  genes_old <- get(load(genes_known_file))
+  pl <- list()
+  for(i in 1:length(genes_old)){
+    
+    genes_tot <- genes_old[[i]]
+    genes_priler <- genes_new
+    if(length(intersect(genes_tot, genes_new)) == 0){
+      genes_priler <- genes_new_ensembl
+    }
+    x <- list(genes_tot, genes_priler)
+    names(x) <- c(paste('Previous' ,names(genes_old)[i], 'Genes'), 'PriLer Genes')
+    
+    file_name <-  sprintf('%sVennDiag_list_genes%s_%s_%s', fold, names(genes_old)[i], type_mat, type_dat)
+    
+    png(sprintf('%s.png',file_name), units = 'in',width = 4, height = 4, res = 500)
+    v0 <- venn.diagram( x, filename=NULL,fill = c("grey60", "cornflowerblue"),
+                        alpha = c(0.5, 0.5), cat.cex = 1.1, cex=1.3, cat.pos = 0, margin = 0.12)
+    overlaps <- calculate.overlap(x)
+    # extract indexes of overlaps from list names
+    indx <- as.numeric(substr(names(overlaps),2,2))
+    # v0[[7]]$label  <- paste(overlaps[[3]], collapse="\n")  
+    grid.newpage()
+    grid.draw(v0)
+    dev.off()
+    
+    pdf(sprintf('%s.pdf',file_name),width = 4, height = 4)
+    v0 <- venn.diagram( x, filename=NULL,fill = c("grey60", "cornflowerblue"),
+                        alpha = c(0.5, 0.5), cat.cex = 1.1, cex=1.3, cat.pos = 0, margin = 0.12)
+    overlaps <- calculate.overlap(x)
+    # extract indexes of overlaps from list names
+    indx <- as.numeric(substr(names(overlaps),2,2))
+    # v0[[7]]$label  <- paste(overlaps[[3]], collapse="\n")  
+    grid.newpage()
+    grid.draw(v0)
+    dev.off()
+    
+    pl[[i]] <- v0
+      
+  }
+  return(pl)  
+}
+
+# plot incremental significance
+plot_increment <- function(gene_order, path_res, gene_res, fold, title_plot, width_pl = 6, heigth_pl = 3.5){
+  
+  myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
+  gene_res <- gene_res[match(gene_order,gene_res$external_gene_name), ]
+  
+  df <- data.frame(gene = gene_order, ngenes = path_res$ngenes_tscore, 
+                   zstat = path_res[, 12], pvalue = path_res[, 13], 
+                   zstat_gene = gene_res[,7], pvalue_gene = gene_res[,8], 
+                   stringsAsFactors = F)
+  df$sign_gene <- 'blue'
+  df$sign_gene[sign(df$zstat_gene) == 1] <- 'red'
+  df$sign_gene <- factor(df$sign_gene, levels = c('blue', 'red'))
+  
+  pl <- ggplot(df, aes(x = ngenes, y = zstat, fill = pvalue_gene, label = gene))+
+    geom_point(size = 3, shape = 21, colour="black")+
+    ylab('Z-statistic\ngene-set') + xlab('n. genes in De novos:SCZ LoF')+
+    theme_bw()+ 
+    geom_text_repel(alpha = 0.8, size = 2.7, min.segment.length = unit(0, 'lines'), 
+                    nudge_y = .6, color = df$sign_gene, force = 20, segment.size = 0.5)+
+    theme(legend.position = 'right', legend.key.size = unit(0.5, "cm"), 
+          legend.text = element_text(size = 10), legend.title = element_text(size = 10), axis.text = element_text(size = 10), axis.title = element_text(size = 11))+
+    scale_fill_gradientn(trans = 'log10', colours = myPalette(100))+
+    labs(fill = 'p-value\nsingle gene')
+  
+  #scale_fill_manual(values = coul)+
+  # scale_fill_d3()+
+  ggsave(filename = sprintf('%s%s.png', fold, title_plot), plot = pl, width = width_pl, height = heigth_pl, dpi = 500)
+  ggsave(filename = sprintf('%s%s.pdf', fold, title_plot), plot = pl, width = width_pl, height = heigth_pl, compress = F)
+  
+  return(pl)
+    
+}
+
+                                            
