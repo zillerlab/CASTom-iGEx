@@ -208,8 +208,9 @@ pl <- ggplot(df_tot, aes(x = new_id, y = percentage, color = gr, group = gr))+
   theme(legend.position = 'right', axis.title.x = element_blank())+
   scale_color_manual(values = gr_color)
 # scale_shape_manual(values=c(1, 19))+
-ggsave(filename = sprintf('%s%s_%s_cluster%s_percentageGropus_prediction_model%s.png', outFold, type_data, type_input, type_cluster, model_name), width = 5, height = 3.5, plot = pl, device = 'png')
-ggsave(filename = sprintf('%s%s_%s_cluster%s_percentageGropus_prediction_model%s.pdf', outFold, type_data, type_input, type_cluster, model_name), width = 5, height = 3.5, plot = pl, device = 'pdf')
+w=ifelse(length(cohort_name)==1, 3, 1+length(cohort_name))
+ggsave(filename = sprintf('%s%s_%s_cluster%s_percentageGropus_prediction_model%s.png', outFold, type_data, type_input, type_cluster, model_name), width = w, height = 3.5, plot = pl, device = 'png')
+ggsave(filename = sprintf('%s%s_%s_cluster%s_percentageGropus_prediction_model%s.pdf', outFold, type_data, type_input, type_cluster, model_name), width = w, height = 3.5, plot = pl, device = 'pdf')
 
 ###
 df_corr_tot$dataset <-factor(df_corr_tot$dataset, levels = cohort_name)
@@ -224,8 +225,8 @@ pl <- ggplot(df_corr_tot, aes(x = dataset, y = corr, fill = gr, group = gr))+
   theme(legend.position = 'right', axis.title.x = element_blank())+
   scale_fill_manual(values = gr_color)
 # scale_shape_manual(values=c(1, 19))+
-ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationMeanGroups_prediction_model%s.png', outFold, type_data, type_input, type_cluster, model_name), width = 6, height = 3.5, plot = pl, device = 'png')
-ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationMeanGroups_prediction_model%s.pdf', outFold, type_data, type_input, type_cluster, model_name), width = 6, height = 3.5, plot = pl, device = 'pdf')
+ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationMeanGroups_prediction_model%s.png', outFold, type_data, type_input, type_cluster, model_name), width = w, height = 3.5, plot = pl, device = 'png')
+ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationMeanGroups_prediction_model%s.pdf', outFold, type_data, type_input, type_cluster, model_name), width = w, height = 3.5, plot = pl, device = 'pdf')
 
 ###
 if(!is.null(featRel_model)){
@@ -242,8 +243,8 @@ if(!is.null(featRel_model)){
     theme(legend.position = 'right', axis.title.x = element_blank())+
     scale_fill_manual(values = gr_color)
   # scale_shape_manual(values=c(1, 19))+
-  ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationSpear_WMWestSign_Groups_prediction_model%s.png', outFold, type_data, type_input, type_cluster, model_name), width = 6, height = 3.5, plot = pl, device = 'png')
-  ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationSpear_WMWestSign_Groups_prediction_model%s.pdf', outFold, type_data, type_input, type_cluster, model_name), width = 6, height = 3.5, plot = pl, device = 'pdf')
+  ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationSpear_WMWestSign_Groups_prediction_model%s.png', outFold, type_data, type_input, type_cluster, model_name), width = w, height = 3.5, plot = pl, device = 'png')
+  ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationSpear_WMWestSign_Groups_prediction_model%s.pdf', outFold, type_data, type_input, type_cluster, model_name), width = w, height = 3.5, plot = pl, device = 'pdf')
   
 }
 
