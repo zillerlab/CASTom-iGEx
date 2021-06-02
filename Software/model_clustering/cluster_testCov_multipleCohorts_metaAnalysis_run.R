@@ -201,7 +201,7 @@ output <- list(meta_analysis = tot_meta_res, single_cohorts = res_cohort,
                covDat = covDat, cl = cl, sampleAnn = sampleAnn)
 # save
 write.table(x = tot_meta_res, sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_covTest_metaAnalysis.txt', outFold, type_data, type_input, type_cluster, type_sim), col.names = T, row.names = F, sep = '\t', quote = F)
-write.table(x = tot_meta_res, sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_cohortTest.txt', outFold, type_data, type_input, type_cluster, type_sim), col.names = T, row.names = F, sep = '\t', quote = F)
+write.table(x = test_cohort, sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_cohortTest.txt', outFold, type_data, type_input, type_cluster, type_sim), col.names = T, row.names = F, sep = '\t', quote = F)
 save(output, file = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_covTest_total.RData', outFold, type_data, type_input, type_cluster, type_sim))
 
 
