@@ -1,0 +1,85 @@
+macro	gr	n	OR	fisher_pvalue
+Autophagy	gr1	0	NA	NA
+Cell Cycle	gr1	0	0	1
+Cell-Cell communication	gr1	0	0	1
+Cellular responses to external stimuli	gr1	0	0	1
+Chromatin organization	gr1	0	NA	NA
+Circadian Clock	gr1	0	NA	NA
+DNA Repair	gr1	0	0	1
+DNA Replication	gr1	0	0	1
+Developmental Biology	gr1	2	6.74983578974015	0.138186047894892
+Digestion and absorption	gr1	1	Inf	0.235772357723578
+Disease	gr1	2	3.36504768515528	0.235922490507929
+Extracellular matrix organization	gr1	0	NA	NA
+Gene expression (Transcription)	gr1	1	0.302207048305571	0.955199216176966
+Hemostasis	gr1	1	1.6354448816775	0.55705651623648
+Immune System	gr1	0	0	1
+Metabolism	gr1	13	3.17211983078064	0.00979347135094781
+Metabolism of RNA	gr1	0	0	1
+Metabolism of proteins	gr1	2	0.797706508818205	0.734112995167916
+Muscle contraction	gr1	0	NA	NA
+Neuronal System	gr1	1	Inf	0.235772357723578
+Organelle biogenesis and maintenance	gr1	0	0	1
+Programmed Cell Death	gr1	0	NA	NA
+Protein localization	gr1	1	Inf	0.235772357723578
+Reproduction	gr1	0	NA	NA
+Sensory Perception	gr1	0	NA	NA
+Signal Transduction	gr1	3	0.720717960836703	0.783863567449248
+Transport of small molecules	gr1	1	0.302207048305571	0.955199216176966
+Vesicle-mediated transport	gr1	0	0	1
+Autophagy	gr2	0	NA	NA
+Cell Cycle	gr2	0	0	1
+Cell-Cell communication	gr2	2	Inf	0.046781287485006
+Cellular responses to external stimuli	gr2	0	0	1
+Chromatin organization	gr2	0	NA	NA
+Circadian Clock	gr2	0	NA	NA
+DNA Repair	gr2	0	0	1
+DNA Replication	gr2	0	0	1
+Developmental Biology	gr2	0	0	1
+Digestion and absorption	gr2	0	0	1
+Disease	gr2	0	0	1
+Extracellular matrix organization	gr2	0	NA	NA
+Gene expression (Transcription)	gr2	4	2.19443278070889	0.198173961456613
+Hemostasis	gr2	0	0	1
+Immune System	gr2	0	0	1
+Metabolism	gr2	5	0.58318838878979	0.897935450309827
+Metabolism of RNA	gr2	2	Inf	0.046781287485006
+Metabolism of proteins	gr2	5	4.07434211413041	0.0403640458108081
+Muscle contraction	gr2	0	NA	NA
+Neuronal System	gr2	0	0	1
+Organelle biogenesis and maintenance	gr2	2	2.45776098283581	0.302003929312364
+Programmed Cell Death	gr2	0	NA	NA
+Protein localization	gr2	0	0	1
+Reproduction	gr2	0	NA	NA
+Sensory Perception	gr2	0	NA	NA
+Signal Transduction	gr2	3	0.799485519506444	0.733928361131065
+Transport of small molecules	gr2	2	0.774865056413326	0.745151218385601
+Vesicle-mediated transport	gr2	0	0	1
+Autophagy	gr3	0	NA	NA
+Cell Cycle	gr3	3	Inf	0.214208531463448
+Cell-Cell communication	gr3	0	0	1
+Cellular responses to external stimuli	gr3	1	Inf	0.601626016260163
+Chromatin organization	gr3	0	NA	NA
+Circadian Clock	gr3	0	NA	NA
+DNA Repair	gr3	3	Inf	0.214208531463448
+DNA Replication	gr3	1	Inf	0.601626016260163
+Developmental Biology	gr3	1	0.324952969118662	0.939118567449053
+Digestion and absorption	gr3	1	Inf	0.601626016260163
+Disease	gr3	3	2.01761493515733	0.476613982506171
+Extracellular matrix organization	gr3	0	NA	NA
+Gene expression (Transcription)	gr3	6	0.778110447259762	0.766710254113148
+Hemostasis	gr3	2	1.33032051120696	0.651550949867987
+Immune System	gr3	7	Inf	0.0253369934723895
+Metabolism	gr3	17	0.678247111996726	0.87568881576464
+Metabolism of RNA	gr3	0	0	1
+Metabolism of proteins	gr3	5	0.640109223140409	0.846439322546002
+Muscle contraction	gr3	0	NA	NA
+Neuronal System	gr3	0	0	1
+Organelle biogenesis and maintenance	gr3	3	0.993013885129977	0.68830241359946
+Programmed Cell Death	gr3	0	NA	NA
+Protein localization	gr3	0	0	1
+Reproduction	gr3	0	NA	NA
+Sensory Perception	gr3	0	NA	NA
+Signal Transduction	gr3	10	1.11873758165331	0.532974899431886
+Transport of small molecules	gr3	8	1.84984277279191	0.290075962073091
+Vesicle-mediated transport	gr3	1	Inf	0.601626016260163
