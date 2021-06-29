@@ -669,11 +669,11 @@ plot_classPath <- function(path_sign,gene_tot,id_pval,id_pval_gene,pval_FDR, fol
     df_path$class <- NA
     df_path$class_effect <- NA
     df_path$class[df_path$impr == 0] <- 'genes P < pathway P'
-    df_path$class[df_path$impr == 1 & df_path$no_sign_genes] <- 'pathway P < genes P\ngenes FDR > 0.05'
-    df_path$class[df_path$impr == 1 & !df_path$no_sign_genes] <- 'pathway P < genes P\ngenes FDR < 0.05'
+    df_path$class[df_path$impr == 1 & df_path$no_sign_genes] <- 'pathway P < genes P & genes FDR > 0.05'
+    df_path$class[df_path$impr == 1 & !df_path$no_sign_genes] <- 'pathway P < genes P & genes FDR < 0.05'
     table(df_path$class)
     table(df_path$class)/nrow(df_path)
-    df_path$class <- factor(df_path$class, levels = c('genes P < pathway P', 'pathway P < genes P\ngenes FDR < 0.05', 'pathway P < genes P\ngenes FDR > 0.05'))
+    df_path$class <- factor(df_path$class, levels = c('genes P < pathway P', 'pathway P < genes P & genes FDR < 0.05', 'pathway P < genes P & genes FDR > 0.05'))
     if(tissue_type == 'all'){
         df_path$tissue_tot = 'Combined tissues'
         df_path$tissue_tot = factor(df_path$tissue_tot)
@@ -815,5 +815,7 @@ plot_increment <- function(gene_order, path_res, gene_res, fold, title_plot, wid
   return(pl)
     
 }
+                                            
+
 
                                             
