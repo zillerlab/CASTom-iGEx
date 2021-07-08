@@ -30,24 +30,78 @@ for(i in 1:length(group_class)){
   Reactome_macro[[i]]$subclasses$shortestPath <- distMatrix_original[i,match(Reactome_macro[[i]]$subclasses$V1,colnames(distMatrix_original))]
 }
 save(Reactome_macro, file = 'ReactomePathways_macro_2021.RData')
+# remove macro with less than 10 elements:
+len_macro <- sapply(Reactome_macro, function(x) nrow(x[[2]]))
+Reactome_macro_red <- Reactome_macro[-which(len_macro<10)]
+save(Reactome_macro_red, file = 'ReactomePathways_macro_filtN10_2021.RData')
 
-### class of 'Immune system' ###
-class_names_immune <- df_R$Child[df_R$Parent == 'R-HSA-168256']
-class_names_immune <- list_path[list_path$V1 %in% class_names_immune, ]
-distMatrix_immune <- shortest.paths(gr_R, v=class_names_immune$V1, to=Reactome_macro[[15]]$subclasses$V1, mode = 'out')
-distMatrix_immune_original <- distMatrix_immune
-for(j in 1:ncol(distMatrix_immune)){
-  if(sum(distMatrix_immune[, j] != Inf)>1){
-    distMatrix_immune[distMatrix_immune[, j]!=min(distMatrix_immune[, j]), j] <- Inf
+# extract class
+extract_class <- function(code_macro, df_parent_child, Reactome_macro, graph_reactome){
+  
+  ### class of 'xx' ###
+  class_names_sub <- df_parent_child$Child[df_parent_child$Parent == code_macro]
+  id <- which(sapply(Reactome_macro, function(x) x$macro$V1) == code_macro)
+  class_names_sub <- list_path[list_path$V1 %in% class_names_sub, ]
+  distMatrix_sub <- shortest.paths(graph_reactome, v=class_names_sub$V1, to=Reactome_macro[[id]]$subclasses$V1, mode = 'out')
+  distMatrix_sub_original <- distMatrix_sub
+  for(j in 1:ncol(distMatrix_sub)){
+    if(sum(distMatrix_sub[, j] != Inf)>1){
+      distMatrix_sub[distMatrix_sub[, j]!=min(distMatrix_sub[, j]), j] <- Inf
+    }
   }
+  group_class <- apply(distMatrix_sub, 1, function(x) names(which(x!=Inf)))
+  Reactome_macro_sub <- list()
+  for(i in 1:length(group_class)){
+    Reactome_macro_sub[[i]] <- list(macro = class_names_sub[i, 1:2], 
+                                       subclasses = list_path[list_path$V1 %in% group_class[[i]], 1:2])
+    Reactome_macro_sub[[i]]$subclasses$shortestPath <- distMatrix_sub_original[i,match(Reactome_macro_sub[[i]]$subclasses$V1,colnames(distMatrix_sub_original))]
+  }
+  return(Reactome_macro_sub)
 }
-group_class <- apply(distMatrix_immune, 1, function(x) names(which(x!=Inf)))
-Reactome_macro_immune <- list()
-for(i in 1:length(group_class)){
-  Reactome_macro_immune[[i]] <- list(macro = class_names_immune[i, 1:2], 
-                              subclasses = list_path[list_path$V1 %in% group_class[[i]], 1:2])
-  Reactome_macro_immune[[i]]$subclasses$shortestPath <- distMatrix_immune_original[i,match(Reactome_macro_immune[[i]]$subclasses$V1,colnames(distMatrix_immune_original))]
-}
-save(Reactome_macro_immune, file = 'ReactomePathways_macro_Immune_2021.RData')
+
+### class of 'Immune System' ###
+Reactome_macro_sub <- extract_class(code_macro = 'R-HSA-168256',
+                                       graph_reactome = gr_R, 
+                                       df_parent_child = df_R, 
+                                       Reactome_macro = Reactome_macro)
+save(Reactome_macro_sub, file = 'ReactomePathways_macro_Immune_2021.RData')
+
+
+### class of 'Neuronal System' ###
+Reactome_macro_sub <- extract_class(code_macro = 'R-HSA-112316',
+                                       graph_reactome = gr_R, 
+                                       df_parent_child = df_R, 
+                                       Reactome_macro = Reactome_macro)
+save(Reactome_macro_sub, file = 'ReactomePathways_macro_NeuronalSystem_2021.RData')
+
+### class of 'Cell Cycle System' ###
+Reactome_macro_sub <- extract_class(code_macro = 'R-HSA-1640170',
+                                       graph_reactome = gr_R, 
+                                       df_parent_child = df_R, 
+                                       Reactome_macro = Reactome_macro)
+save(Reactome_macro_sub, file = 'ReactomePathways_macro_CellCycle_2021.RData')
+
+### class of 'Gene Expression Transcription' ###
+Reactome_macro_sub <- extract_class(code_macro = 'R-HSA-74160',
+                                       graph_reactome = gr_R, 
+                                       df_parent_child = df_R, 
+                                       Reactome_macro = Reactome_macro)
+save(Reactome_macro_sub, file = 'ReactomePathways_macro_GeneExpr_2021.RData')
+
+### class of 'Programmed Cell Death' ###
+Reactome_macro_sub <- extract_class(code_macro = 'R-HSA-5357801',
+                                    graph_reactome = gr_R, 
+                                    df_parent_child = df_R, 
+                                    Reactome_macro = Reactome_macro)
+save(Reactome_macro_sub, file = 'ReactomePathways_macro_ProgramCellDeath_2021.RData')
+
+
+### class of 'Metabolism of Protein' ###
+Reactome_macro_sub <- extract_class(code_macro = 'R-HSA-8953854',
+                                    graph_reactome = gr_R, 
+                                    df_parent_child = df_R, 
+                                    Reactome_macro = Reactome_macro)
+save(Reactome_macro_sub, file = 'ReactomePathways_macro_MetabolismProtein_2021.RData')
+
 
 
