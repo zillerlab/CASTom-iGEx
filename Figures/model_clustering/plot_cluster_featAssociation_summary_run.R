@@ -104,7 +104,8 @@ for(i in 1:length(tissues)){
     tmp_info_noMHC <- tmp_info[!tmp_info$new_id %in% MHC_loci$new_id, ] 
     tmp_loci <- data.frame(chrom = 'chr6', start = min(MHC_loci$TSS_start - cis_size), end = max(MHC_loci$TSS_start + cis_size), 
                            ngenes = nrow(MHC_loci), gene = paste0(MHC_loci$external_gene_name, collapse = ','), mean_Zstat = mean(MHC_loci$Zstat), 
-                           sd_Zstat = sd(MHC_loci$Zstat), highest_Zstat = MHC_loci$Zstat[which.max(abs(MHC_loci$Zstat))],tissue = tissues[i]) 
+                           sd_Zstat = sd(MHC_loci$Zstat), highest_Zstat = MHC_loci$Zstat[which.max(abs(MHC_loci$Zstat))],
+                           WMW_est_best = , tissue = tissues[i]) 
   }else{
     tmp_info_noMHC <- tmp_info  
     tmp_loci <- data.frame(chrom = c(), start = c(), end = c(), ngenes = c(), gene = c(),  mean_Zstat = c(), sd_Zstat = c(), highest_Zstat = c(), tissue = c())
@@ -188,13 +189,20 @@ for(i in 1:length(tissues)){
   tissue_spec_loci[[i]] <- tmp_loci
   
   tissue_spec_loci[[i]]$comp_sign <- NA
+  tissue_spec_loci[[i]]$best_WMW_gene <- NA
+  tissue_spec_loci[[i]]$best_WMW_est <- NA
+  tissue_spec_loci[[i]]$best_WMW_pvalue <- NA
   # for each loci, find groups that are significantly different
   for(l in 1:nrow(tissue_spec_loci[[i]])){
     genes <- strsplit(tissue_spec_loci[[i]]$gene[l], split = ',')[[1]]
     tmp_gr <- sapply(unique(tmp_feat$comp[tmp_feat$feat %in% genes & tmp_feat$pval_corr <= 0.05]), function(x) strsplit(x, split = '_vs_all')[[1]][1])
+    tmp_gr <- sort(tmp_gr)
     tissue_spec_loci[[i]]$comp_sign[l] <-  paste0(tmp_gr, collapse = ',') 
+    tmp_WMW <- lapply(names(tmp_gr), function(x) tmp_feat[tmp_feat$comp == x & tmp_feat$feat %in% genes & tmp_feat$pval_corr <= 0.05,])
+    tissue_spec_loci[[i]]$best_WMW_gene[l] <- paste0(sapply(tmp_WMW, function(x) x$feat[which.max(abs(x$estimates))]), collapse = ',')
+    tissue_spec_loci[[i]]$best_WMW_est[l] <-  paste0(round(sapply(tmp_WMW, function(x) x$estimates[which.max(abs(x$estimates))]),digits = 5), collapse = ',') 
+    tissue_spec_loci[[i]]$best_WMW_pvalue[l] <-  paste0(sapply(tmp_WMW, function(x) x$pval[which.min(x$pval)]), collapse = ',')
   }
-  
   
 }
 
@@ -430,34 +438,6 @@ tot_pl <- ggarrange(plotlist = list(pl1, pl2), ncol=2, nrow=1, align = 'h')
 ggsave(filename =  sprintf('%scluster_ngenes_nloci_alltissues_%s_%s.png', outFold, type_data, type_input), plot = tot_pl, width = 4, height = 5, dpi = 500)
 ggsave(filename = sprintf('%scluster_ngenes_nloci_alltissues_%s_%s.pdf', outFold, type_data, type_input), plot = tot_pl, width = 4, height = 5, dpi = 500, compress = F)
 
-# # tot_pl <- ggarrange(plotlist = list(pl, pl_side), ncol=2, nrow=1, widths=c(1, 0.3), align = 'h', common.legend = TRUE)
-# tot_pl <- pl
-# ggsave(filename =  sprintf('%scluster_nloci_pertissues_%s_%s.png', outFold, type_data, type_input), plot = tot_pl, width = 10, height = 4, dpi = 500)
-# ggsave(filename = sprintf('%scluster_nloci_pertissues_%s_%s.pdf', outFold, type_data, type_input), plot = tot_pl, width = 10, height = 4, dpi = 500, compress = F)
-
-# # heatmap version
-# save_pheatmap_png <- function(x, filename, width=10, height=10, res = 200) {
-#   png(filename, width = width, height = height, res = res, units = 'in')
-#   grid::grid.newpage()
-#   grid::grid.draw(x$gtable)
-#   dev.off()
-# }
-# save_pheatmap_pdf <- function(x, filename, width=10, height=10) {
-#   pdf(filename, width = width, height = height)
-#   grid::grid.newpage()
-#   grid::grid.draw(x$gtable)
-#   dev.off()
-# }
-# 
-# mat_loci <- t(table(df$comp, df$tissue))
-# coul <- colorRampPalette(brewer.pal(9, "Blues"))(100)
-# hm_pl <- pheatmap(mat=mat_loci, show_colnames = T, color=coul, show_rownames = T, 
-#                   cluster_rows=F, cluster_cols=F, border_color = 'darkgrey', display_numbers = T, 
-#                   drop_levels = TRUE, fontsize_row = 10, fontsize_col = 10, fontsize = 12, 
-#                   main = sprintf(''), treeheight_row = 0, treeheight_col = 0, cellwidth = 25)
-# save_pheatmap_png(hm_pl,sprintf('%scluster_nloci_pertissues_heatmap_%s_%s.png', outFold, type_data, type_input), height = 5, width =7, res = 200)
-# save_pheatmap_pdf(hm_pl, sprintf('%scluster_nloci_pertissues_heatmap_%s_%s.pdf', outFold, type_data, type_input), height = 5, width =7)
-
 #################################################################################################################################################
 ## find pathways differences
 tissue_spec_pathR <- list()
@@ -524,11 +504,19 @@ for(i in 1:length(tissues)){
   tissue_spec_pathR[[i]] <- tmp_path
   
   tissue_spec_pathR[[i]]$comp_sign <- NA
+  tissue_spec_pathR[[i]]$best_WMW_path <- NA
+  tissue_spec_pathR[[i]]$best_WMW_est <- NA
+  tissue_spec_pathR[[i]]$best_WMW_pvalue <- NA
   # for each loci, find groups that are significantly different
   for(l in 1:nrow(tissue_spec_pathR[[i]])){
     paths <- strsplit(tissue_spec_pathR[[i]]$path[l], split = '-and-')[[1]]
     tmp_gr <- sapply(unique(tmp_feat$comp[tmp_feat$feat %in% paths & tmp_feat$pval_corr <= 0.05]), function(x) strsplit(x, split = '_vs_all')[[1]][1])
+    tmp_gr <- sort(tmp_gr)
     tissue_spec_pathR[[i]]$comp_sign[l] <-  paste0(tmp_gr, collapse = ',') 
+    tmp_WMW <- lapply(names(tmp_gr), function(x) tmp_feat[tmp_feat$comp == x & tmp_feat$feat %in% paths & tmp_feat$pval_corr <= 0.05,])
+    tissue_spec_pathR[[i]]$best_WMW_path[l] <- paste0(sapply(tmp_WMW, function(x) x$feat[which.max(abs(x$estimates))]), collapse = ',,')
+    tissue_spec_pathR[[i]]$best_WMW_est[l] <-  paste0(round(sapply(tmp_WMW, function(x) x$estimates[which.max(abs(x$estimates))]),digits = 5), collapse = ',') 
+    tissue_spec_pathR[[i]]$best_WMW_pvalue[l] <-  paste0(sapply(tmp_WMW, function(x) x$pval[which.min(x$pval)]), collapse = ',')
   }
 }
 
@@ -536,80 +524,6 @@ tissue_spec_pathR <- do.call(rbind, tissue_spec_pathR)
 # save
 write.table(x = tissue_spec_pathR, file = sprintf('%s%s_%s_cluster%s_summary_path_Reactome_tissueSpec.txt',outFold, type_data, type_input, type_cluster), 
             col.names = T, row.names = F, sep = '\t', quote = F)
-
-# ###### all tissues ######### # not reasonable to pull tissues together, genes are regulated differently
-# tmp_info <- pathR_info
-# tmp_feat <- pathR_feat
-# 
-# # consider only significant differences
-# tmp_feat <- tmp_feat[tmp_feat$pval_corr <= 0.05,]
-# tmp_info <- tmp_info[tmp_info$new_id %in% tmp_feat$new_id,]
-#   
-# # combine in group, any pathways sharing a gene
-# gene_names <- lapply(tmp_info$genes_id, function(x) strsplit(x, split = ',')[[1]])
-# merg_cond <- sapply(gene_names, function(x) sapply(gene_names, function(y) length(intersect(x,y))/length(union(x,y)) >= 0.3))
-# 
-# merge_pos <- lapply(1:nrow(merg_cond), function(x) which(merg_cond[x,]))
-# merge_pos_vect <- sapply(merge_pos, function(x) paste0(x, collapse = ','))
-# merge_pos_vect <- merge_pos_vect[!duplicated(merge_pos_vect)]
-# merge_pos <- lapply( merge_pos_vect, function(x) as.numeric(strsplit(x, split = ',')[[1]]))
-# new_merge_pos <- list()
-# all_merg <- F
-# it <- 0
-# 
-# if(length(merge_pos)>1){
-#   while(!all_merg){
-#     
-#     it <- it+1
-#     print(it)
-#     
-#     for(l in 1:(length(merge_pos))){
-#       
-#       if(!length(which(sapply(merge_pos, function(x) all(merge_pos[[l]] %in% x)))) >1){
-#         id <- sapply(merge_pos, function(x) any(merge_pos[[l]] %in% x))
-#         new_merge_pos <- list.append(new_merge_pos, sort(unique(unlist(merge_pos[which(id)]))))
-#       }else{
-#         id_b <- which(sapply(merge_pos, function(x) all(merge_pos[[l]] %in% x)))
-#         id_b <- id_b[which.max(sapply(merge_pos[id_b], length))]
-#         new_merge_pos <- list.append(new_merge_pos, sort(merge_pos[[id_b]]))
-#       }
-#       
-#     }
-#     
-#     all_merg <- all(!duplicated(unlist(new_merge_pos)))
-#     merge_pos <- new_merge_pos
-#     merge_pos_vect <- sapply(merge_pos, function(x) paste0(x, collapse = ','))
-#     merge_pos_vect <- merge_pos_vect[!duplicated(merge_pos_vect)]
-#     merge_pos <- lapply( merge_pos_vect, function(x) as.numeric(strsplit(x, split = ',')[[1]]))
-#     print(length(merge_pos))
-#     new_merge_pos <- list() 
-#     
-#   }
-# }
-# 
-# tmp <-  lapply(merge_pos, function(x) data.frame(npath_withrep = length(x), npath_unique = length(unique(tmp_info$path[x])), 
-#                                                  ntissues = length(unique(tmp_info$tissue[x])),
-#                                                  path = paste0(unique(tmp_info$path[x]), collapse = '-and-'), tissues_path = paste0(unique(tmp_info$tissue[x]), collapse = '-and-'), 
-#                                                  mean_Zstat = mean(tmp_info$Zstat[x]), sd_Zstat = sd(tmp_info$Zstat[x]), 
-#                                                  highest_Zstat = tmp_info$Zstat[x][which.max(abs(tmp_info$Zstat[x]))], 
-#                                                  mean_ngenes = mean(tmp_info$ngenes_tscore[x]), sd_ngenes = sd(tmp_info$ngenes_tscore[x]), 
-#                                                  tissue = 'AllTissues'))
-# 
-# tmp_path <-  do.call(rbind, tmp)
-# alltissues_pathR <- tmp_path
-# 
-# alltissues_pathR$comp_sign <- NA
-# # for each loci, find groups that are significantly different
-# for(l in 1:nrow(alltissues_pathR)){
-#   paths <- strsplit(alltissues_pathR$path[l], split = '-and-')[[1]]
-#   tmp_gr <- sapply(unique(tmp_feat$comp[tmp_feat$feat %in% paths & tmp_feat$pval_corr <= 0.05]), function(x) strsplit(x, split = '_vs_all')[[1]][1])
-#   alltissues_pathR$comp_sign[l] <-  paste0(tmp_gr, collapse = ',') 
-# }
-# 
-# # save
-# write.table(x = alltissues_pathR, file = sprintf('%s%s_%s_cluster%s_summary_path_Reactome_allTissues.txt',outFold, type_data, type_input, type_cluster), 
-#             col.names = T, row.names = F, sep = '\t', quote = F)
-
 
 ### plot distributions ###
 # some pathway may be repeated, put together
@@ -693,36 +607,6 @@ tot_pl <- ggarrange(plotlist = list(pl1, pl2), ncol=2, nrow=1, align = 'h', comm
 ggsave(filename =  sprintf('%scluster_npath_npathgroup_path_Reactome_pertissues_%s_%s.png', outFold, type_data, type_input), plot = tot_pl, width = 7, height = 4.5, dpi = 500)
 ggsave(filename = sprintf('%scluster_npath_npathgroup_path_Reactome_pertissues_%s_%s.pdf', outFold, type_data, type_input), plot = tot_pl, width = 7, height = 4.5, dpi = 500, compress = F)
 
-
-# pl1 <- ggplot(data = subset(df, tissue == 'All'), aes(x = comp, y = npath, fill = path_group_name))+
-#   geom_bar(alpha = 0.9, width = 0.8, stat = 'identity')+
-#   ylab('n. pathways cluster relevant')+ 
-#   theme_bw()+ 
-#   # ggtitle('All tissues combined')+
-#   theme(legend.position = 'none', legend.key.size = unit(0.2, "cm"), plot.title = element_text(hjust = 0.5),
-#         legend.text = element_text(size = 6), legend.title = element_blank(), 
-#         axis.title.x = element_blank(), axis.text.x = element_text(colour = color_gr))+
-#   scale_fill_manual(values = coul)+
-#   guides(fill=guide_legend(ncol=2))
-# # scale_fill_d3()+
-# 
-# pl2 <- ggplot(data = subset(df_pathgroup, tissue == 'All'), aes(x = comp, y = ngroup))+
-#   geom_bar(alpha = 0.9, width = 0.5, stat = 'identity', fill = 'darkgrey')+
-#   # facet_wrap(.~comp, ncol = length(gr_tot), scales = 'free_x')+
-#   ylab('n. pathway classes cluster relevant')+ 
-#   theme_bw()+ 
-#   theme(legend.position = 'none', legend.key.size = unit(0.5, "cm"), 
-#         legend.text = element_text(size = 6), legend.title = element_blank(), 
-#         axis.title.x = element_blank(), axis.text.x = element_text(colour = color_gr))+
-#   # guides(fill=guide_legend(ncol=2))+
-#   scale_fill_d3()
-# 
-# tot_pl <- ggarrange(plotlist = list(pl1, pl2), ncol=2, nrow=1, align = 'h')
-# ggsave(filename =  sprintf('%scluster_npath_npathgroup_path_Reactome_alltissues_%s_%s.png', outFold, type_data, type_input), plot = tot_pl, width = 4, height = 5, dpi = 500)
-# ggsave(filename = sprintf('%scluster_npath_npathgroup_path_Reactome_alltissues_%s_%s.pdf', outFold, type_data, type_input), plot = tot_pl, width = 4, height = 5, dpi = 500, compress = F)
-
-
-
 #################################################################################################################################################
 ## find pathways differences GO
 tissue_spec_pathGO <- list()
@@ -789,12 +673,21 @@ for(i in 1:length(tissues)){
   tissue_spec_pathGO[[i]] <- tmp_path
   
   tissue_spec_pathGO[[i]]$comp_sign <- NA
+  tissue_spec_pathGO[[i]]$best_WMW_path <- NA
+  tissue_spec_pathGO[[i]]$best_WMW_est <- NA
+  tissue_spec_pathGO[[i]]$best_WMW_pvalue <- NA
   # for each loci, find groups that are significantly different
   for(l in 1:nrow(tissue_spec_pathGO[[i]])){
     paths <- strsplit(tissue_spec_pathGO[[i]]$path[l], split = '-and-')[[1]]
     tmp_gr <- sapply(unique(tmp_feat$comp[tmp_feat$feat %in% paths & tmp_feat$pval_corr <= 0.05]), function(x) strsplit(x, split = '_vs_all')[[1]][1])
-    tissue_spec_pathGO[[i]]$comp_sign[l] <-  paste0(tmp_gr, collapse = ',') 
+    tmp_gr <- sort(tmp_gr)
+    tissue_spec_pathGO[[i]]$comp_sign[l] <-  paste0(tmp_gr, collapse = ',')
+    tmp_WMW <- lapply(names(tmp_gr), function(x) tmp_feat[tmp_feat$comp == x & tmp_feat$feat %in% paths & tmp_feat$pval_corr <= 0.05,])
+    tissue_spec_pathGO[[i]]$best_WMW_path[l] <- paste0(sapply(tmp_WMW, function(x) x$feat[which.max(abs(x$estimates))]), collapse = ',,')
+    tissue_spec_pathGO[[i]]$best_WMW_est[l] <-  paste0(round(sapply(tmp_WMW, function(x) x$estimates[which.max(abs(x$estimates))]),digits = 5), collapse = ',') 
+    tissue_spec_pathGO[[i]]$best_WMW_pvalue[l] <-  paste0(sapply(tmp_WMW, function(x) x$pval[which.min(x$pval)]), collapse = ',')
   }
+
 }
 
 tissue_spec_pathGO <- do.call(rbind, tissue_spec_pathGO)
@@ -883,6 +776,7 @@ tot_pl <- ggarrange(plotlist = list(pl1, pl2), ncol=2, nrow=1, align = 'h', comm
 # tot_pl <- ggarrange(plotlist = list(pl1, pl2), ncol=1, nrow=2, align = 'v')
 ggsave(filename =  sprintf('%scluster_npath_npathgroup_path_GO_pertissues_%s_%s.png', outFold, type_data, type_input), plot = tot_pl, width = 7, height = 4.5, dpi = 500)
 ggsave(filename = sprintf('%scluster_npath_npathgroup_path_GO_pertissues_%s_%s.pdf', outFold, type_data, type_input), plot = tot_pl, width = 7, height = 4.5, dpi = 500, compress = F)
+
 
 
 
