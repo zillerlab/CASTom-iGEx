@@ -61,7 +61,7 @@ outFold <- args$outFold
 # pathGO_feat_file  <- 'Meta_Analysis_SCZ/OUTPUT_all/SCZ_clustering/matchUKBB_clDLPC_CMC_path_GOOriginal_tscoreClusterCases_featAssociation.txt'
 # outFold <- 'Meta_Analysis_SCZ/OUTPUT_all/SCZ_clustering/matchUKBB_clDLPC_CMC_'
 # cis_size <- 200000
-########################################################################################################################
+# #######################################################################################################################
 
 # load results
 gene_loc = read.delim(gene_info_file, h=T, stringsAsFactors = F, sep = '\t')
@@ -199,9 +199,20 @@ for(i in 1:length(tissues)){
     tmp_gr <- sort(tmp_gr)
     tissue_spec_loci[[i]]$comp_sign[l] <-  paste0(tmp_gr, collapse = ',') 
     tmp_WMW <- lapply(names(tmp_gr), function(x) tmp_feat[tmp_feat$comp == x & tmp_feat$feat %in% genes & tmp_feat$pval_corr <= 0.05,])
-    tissue_spec_loci[[i]]$best_WMW_gene[l] <- paste0(sapply(tmp_WMW, function(x) x$feat[which.max(abs(x$estimates))]), collapse = ',')
-    tissue_spec_loci[[i]]$best_WMW_est[l] <-  paste0(round(sapply(tmp_WMW, function(x) x$estimates[which.max(abs(x$estimates))]),digits = 5), collapse = ',') 
-    tissue_spec_loci[[i]]$best_WMW_pvalue[l] <-  paste0(sapply(tmp_WMW, function(x) x$pval[which.min(x$pval)]), collapse = ',')
+    # find common genes in all the groups
+    genes_update <- names(which(table(unlist(lapply(tmp_WMW, function(x) x$feat))) == length(tmp_gr)))
+    if(length(genes_update)>0){
+      tmp_WMW <- lapply(tmp_WMW, function(x) x[x$feat %in% genes_update, ])
+      tmp_WMW_all <- do.call(rbind, tmp_WMW)
+      tissue_spec_loci[[i]]$best_WMW_gene[l] <- tmp_WMW_all$feat[which.max(abs(tmp_WMW_all$estimates))]
+      tissue_spec_loci[[i]]$best_WMW_est[l] <-  paste0(round(sapply(tmp_WMW, function(x) x$estimates[x$feat == tissue_spec_loci[[i]]$best_WMW_gene[l]]),digits = 5), collapse = ',') 
+      tissue_spec_loci[[i]]$best_WMW_pvalue[l] <-  paste0(sapply(tmp_WMW, function(x) x$pval[x$feat == tissue_spec_loci[[i]]$best_WMW_gene[l]]), collapse = ',')
+    }else{
+      tmp_WMW <- lapply(names(tmp_gr), function(x) tmp_feat[tmp_feat$comp == x & tmp_feat$feat %in% genes & tmp_feat$pval_corr <= 0.05,])
+      tissue_spec_loci[[i]]$best_WMW_gene[l] <- paste0(sapply(tmp_WMW, function(x) x$feat[which.max(abs(x$estimates))]), collapse = ',')
+      tissue_spec_loci[[i]]$best_WMW_est[l] <-  paste0(round(sapply(tmp_WMW, function(x) x$estimates[which.max(abs(x$estimates))]),digits = 5), collapse = ',') 
+      tissue_spec_loci[[i]]$best_WMW_pvalue[l] <-  paste0(sapply(tmp_WMW, function(x) x$pval[which.min(x$pval)]), collapse = ',')
+    }
   }
   
 }
@@ -514,9 +525,21 @@ for(i in 1:length(tissues)){
     tmp_gr <- sort(tmp_gr)
     tissue_spec_pathR[[i]]$comp_sign[l] <-  paste0(tmp_gr, collapse = ',') 
     tmp_WMW <- lapply(names(tmp_gr), function(x) tmp_feat[tmp_feat$comp == x & tmp_feat$feat %in% paths & tmp_feat$pval_corr <= 0.05,])
-    tissue_spec_pathR[[i]]$best_WMW_path[l] <- paste0(sapply(tmp_WMW, function(x) x$feat[which.max(abs(x$estimates))]), collapse = ',,')
-    tissue_spec_pathR[[i]]$best_WMW_est[l] <-  paste0(round(sapply(tmp_WMW, function(x) x$estimates[which.max(abs(x$estimates))]),digits = 5), collapse = ',') 
-    tissue_spec_pathR[[i]]$best_WMW_pvalue[l] <-  paste0(sapply(tmp_WMW, function(x) x$pval[which.min(x$pval)]), collapse = ',')
+    # find common genes in all the groups
+    paths_update <- names(which(table(unlist(lapply(tmp_WMW, function(x) x$feat))) == length(tmp_gr)))
+    if(length(paths_update)>0){
+      tmp_WMW <- lapply(tmp_WMW, function(x) x[x$feat %in% paths_update, ])
+      tmp_WMW_all <- do.call(rbind, tmp_WMW)
+      tissue_spec_pathR[[i]]$best_WMW_path[l] <- tmp_WMW_all$feat[which.max(abs(tmp_WMW_all$estimates))]
+      tissue_spec_pathR[[i]]$best_WMW_est[l] <-  paste0(round(sapply(tmp_WMW, function(x) x$estimates[x$feat == tissue_spec_pathR[[i]]$best_WMW_path[l]]),digits = 5), collapse = ',') 
+      tissue_spec_pathR[[i]]$best_WMW_pvalue[l] <-  paste0(sapply(tmp_WMW, function(x) x$pval[x$feat == tissue_spec_pathR[[i]]$best_WMW_path[l]]), collapse = ',')
+    }else{
+      tmp_WMW <- lapply(names(tmp_gr), function(x) tmp_feat[tmp_feat$comp == x & tmp_feat$feat %in% paths & tmp_feat$pval_corr <= 0.05,])
+      tissue_spec_pathR[[i]]$best_WMW_path[l] <- paste0(sapply(tmp_WMW, function(x) x$feat[which.max(abs(x$estimates))]), collapse = ',,')
+      tissue_spec_pathR[[i]]$best_WMW_est[l] <-  paste0(round(sapply(tmp_WMW, function(x) x$estimates[which.max(abs(x$estimates))]),digits = 5), collapse = ',') 
+      tissue_spec_pathR[[i]]$best_WMW_pvalue[l] <-  paste0(sapply(tmp_WMW, function(x) x$pval[which.min(x$pval)]), collapse = ',')
+    }
+    
   }
 }
 
@@ -676,16 +699,28 @@ for(i in 1:length(tissues)){
   tissue_spec_pathGO[[i]]$best_WMW_path <- NA
   tissue_spec_pathGO[[i]]$best_WMW_est <- NA
   tissue_spec_pathGO[[i]]$best_WMW_pvalue <- NA
+  
   # for each loci, find groups that are significantly different
   for(l in 1:nrow(tissue_spec_pathGO[[i]])){
     paths <- strsplit(tissue_spec_pathGO[[i]]$path[l], split = '-and-')[[1]]
     tmp_gr <- sapply(unique(tmp_feat$comp[tmp_feat$feat %in% paths & tmp_feat$pval_corr <= 0.05]), function(x) strsplit(x, split = '_vs_all')[[1]][1])
     tmp_gr <- sort(tmp_gr)
-    tissue_spec_pathGO[[i]]$comp_sign[l] <-  paste0(tmp_gr, collapse = ',')
+    tissue_spec_pathGO[[i]]$comp_sign[l] <-  paste0(tmp_gr, collapse = ',') 
     tmp_WMW <- lapply(names(tmp_gr), function(x) tmp_feat[tmp_feat$comp == x & tmp_feat$feat %in% paths & tmp_feat$pval_corr <= 0.05,])
-    tissue_spec_pathGO[[i]]$best_WMW_path[l] <- paste0(sapply(tmp_WMW, function(x) x$feat[which.max(abs(x$estimates))]), collapse = ',,')
-    tissue_spec_pathGO[[i]]$best_WMW_est[l] <-  paste0(round(sapply(tmp_WMW, function(x) x$estimates[which.max(abs(x$estimates))]),digits = 5), collapse = ',') 
-    tissue_spec_pathGO[[i]]$best_WMW_pvalue[l] <-  paste0(sapply(tmp_WMW, function(x) x$pval[which.min(x$pval)]), collapse = ',')
+    # find common path in all the groups
+    paths_update <- names(which(table(unlist(lapply(tmp_WMW, function(x) x$feat))) == length(tmp_gr)))
+    if(length(paths_update)>0){
+      tmp_WMW <- lapply(tmp_WMW, function(x) x[x$feat %in% paths_update, ])
+      tmp_WMW_all <- do.call(rbind, tmp_WMW)
+      tissue_spec_pathGO[[i]]$best_WMW_path[l] <- tmp_WMW_all$feat[which.max(abs(tmp_WMW_all$estimates))]
+      tissue_spec_pathGO[[i]]$best_WMW_est[l] <-  paste0(round(sapply(tmp_WMW, function(x) x$estimates[x$feat == tissue_spec_pathGO[[i]]$best_WMW_path[l]]),digits = 5), collapse = ',') 
+      tissue_spec_pathGO[[i]]$best_WMW_pvalue[l] <-  paste0(sapply(tmp_WMW, function(x) x$pval[x$feat == tissue_spec_pathGO[[i]]$best_WMW_path[l]]), collapse = ',')
+    }else{
+      tmp_WMW <- lapply(names(tmp_gr), function(x) tmp_feat[tmp_feat$comp == x & tmp_feat$feat %in% paths & tmp_feat$pval_corr <= 0.05,])
+      tissue_spec_pathGO[[i]]$best_WMW_path[l] <- paste0(sapply(tmp_WMW, function(x) x$feat[which.max(abs(x$estimates))]), collapse = ',,')
+      tissue_spec_pathGO[[i]]$best_WMW_est[l] <-  paste0(round(sapply(tmp_WMW, function(x) x$estimates[which.max(abs(x$estimates))]),digits = 5), collapse = ',') 
+      tissue_spec_pathGO[[i]]$best_WMW_pvalue[l] <-  paste0(sapply(tmp_WMW, function(x) x$pval[which.min(x$pval)]), collapse = ',')
+    }
   }
 
 }
