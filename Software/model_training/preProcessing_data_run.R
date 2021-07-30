@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 #### code written by Lucia Trastulla, e-mail: lucia_trastulla@psych.mpg.de ####
 
 options(stringsAsFactors=F)
@@ -10,13 +11,13 @@ suppressPackageStartupMessages(library(biomaRt))
 parser <- ArgumentParser(description="preProcessing of input data")
 
 parser$add_argument("--geneExp_file", type = "character", help = "gene expression, complete path")
-parser$add_argument("--geneList_file", type = "character", default = NULL, help = "file with name genes heritable, complete path")
+parser$add_argument("--geneList_file", type = "character", help = "file with name genes heritable, complete path, if NULL all genes not heritable")
 parser$add_argument("--VarInfo_file", type = "character", help = "snp annotation info, complete path")
-parser$add_argument("--cis_thres", type = "integer", default = 200000, help = "window (in bp) to compute distance from gene and snps")
-parser$add_argument("--biomartGenePos_file", type = "character", default = NULL, help = "gene position info file, complete path, if NA recomputed from biomart")
-parser$add_argument("--biomartTSS_file", type = "character", default = NULL, help = "TSS info file, complete path, if NA recomputed from biomart")
+parser$add_argument("--cis_thres", type = "integer", default = 200000, help = "window (in bp) to compute distance from gene and snps [default %(default)s]")
+parser$add_argument("--biomartGenePos_file", type = "character",  help = "gene position info file, complete path, if NULL recomputed from biomart")
+parser$add_argument("--biomartTSS_file", type = "character",  help = "TSS info file, complete path, if NULL recomputed from biomart")
 parser$add_argument("--outFold_geneExp", type = "character", help = "output folder (only for gene expression)")
-parser$add_argument("--outFold_snps", type = "character", default = NULL, help = "output folder for SNP info, if NA set as outFold")
+parser$add_argument("--outFold_snps", type = "character", help = "output folder for SNP info, if NULL set as outFold")
 parser$add_argument("--outFold", type = "character", help = "output folder")
 
 args <- parser$parse_args()
