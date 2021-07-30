@@ -10,13 +10,13 @@ suppressPackageStartupMessages(library(biomaRt))
 parser <- ArgumentParser(description="preProcessing of input data")
 
 parser$add_argument("--geneExp_file", type = "character", help = "gene expression, complete path")
-parser$add_argument("--geneList_file", type = "character", help = "file with name genes heritable, complete path")
+parser$add_argument("--geneList_file", type = "character", default = NULL, help = "file with name genes heritable, complete path")
 parser$add_argument("--VarInfo_file", type = "character", help = "snp annotation info, complete path")
 parser$add_argument("--cis_thres", type = "integer", default = 200000, help = "window (in bp) to compute distance from gene and snps")
-parser$add_argument("--biomartGenePos_file", type = "character", default = 'NA', help = "gene position info file, complete path, if NA recomputed from biomart")
-parser$add_argument("--biomartTSS_file", type = "character", default = 'NA', help = "TSS info file, complete path, if NA recomputed from biomart")
+parser$add_argument("--biomartGenePos_file", type = "character", default = NULL, help = "gene position info file, complete path, if NA recomputed from biomart")
+parser$add_argument("--biomartTSS_file", type = "character", default = NULL, help = "TSS info file, complete path, if NA recomputed from biomart")
 parser$add_argument("--outFold_geneExp", type = "character", help = "output folder (only for gene expression)")
-parser$add_argument("--outFold_snps", type = "character", default = 'NA',help = "output folder for SNP info, if NA set as outFold")
+parser$add_argument("--outFold_snps", type = "character", default = NULL, help = "output folder for SNP info, if NA set as outFold")
 parser$add_argument("--outFold", type = "character", help = "output folder")
 
 args <- parser$parse_args()
@@ -40,13 +40,14 @@ outFold_geneExp <- args$outFold_geneExp
 # outFold <- '/ziller/lucia/eQTL_PROJECT_CMC/OUTPUT_CMC_SCRIPTS_v1/'
 # outFold_geneExp <- '/ziller/lucia/eQTL_PROJECT_CMC/INPUT_DATA_SCRIPTS_v1/RNAseq_data/'
 ##############################################################################################################
-if(outFold_snps == "NA"){outFold_snps <- outFold}
+
+if(is.null(outFold_snps)){outFold_snps <- outFold}
 print(outFold_snps)
 print(outFold)
 
 
 # compute TSS for all genes
-if(biomartGenePos_file == 'NA'){
+if(is.null(biomartGenePos_file)){
   
   ensembl = useEnsembl(biomart="ensembl", dataset="hsapiens_gene_ensembl", GRCh=37)
   
@@ -66,8 +67,8 @@ if(biomartGenePos_file == 'NA'){
   names(biomart_annTSS)[c(1:4)]=c("chrom","chromstart","chromend","name")
   biomart_annTSS[,4]=seq(1,nrow(biomart_annTSS))
   
-  write.table(biomart_ann,sprintf("%s/hg19.ENSEMBL_genes_biomart.txt", outFold),sep="\t",quote=F,row.names=F)
-  write.table(biomart_annTSS,sprintf("%s/hg19.ENSEMBL_geneTSS_biomart_correct.txt", outFold),sep="\t",quote=F,row.names=F)
+  write.table(biomart_ann,sprintf("%shg19.ENSEMBL_genes_biomart.txt", outFold),sep="\t",quote=F,row.names=F)
+  write.table(biomart_annTSS,sprintf("%shg19.ENSEMBL_geneTSS_biomart_correct.txt", outFold),sep="\t",quote=F,row.names=F)
   
 }else{
   
@@ -117,22 +118,20 @@ expData_filt <- expData[id, ]
 expData_filt <- cbind(expInfo_tot, expData_filt[,-1])
 
 #### load heritable genes list
-geneList <- read.table(geneList_file, stringsAsFactors = F, header = T, sep = '\t')
-
 # match with expData_filt and add a column indicating if belongs to the list
 expData_filt <- cbind(data.frame(type = rep('not_heritable', nrow(expData_filt))), expData_filt)
-if(any(expData_filt$ensembl_gene_id %in% geneList[, 1])){
-  
-  expData_filt$type[expData_filt$ensembl_gene_id %in% geneList[, 1]] <- 'heritable'
 
-}else{
-  
-  expData_filt$type[expData_filt$external_gene_name %in% geneList[, 1]] <- 'heritable'
-
+if(!is.null(geneList_file)){
+  geneList <- read.table(geneList_file, stringsAsFactors = F, header = T, sep = '\t')
+  if(any(expData_filt$ensembl_gene_id %in% geneList[, 1])){
+    expData_filt$type[expData_filt$ensembl_gene_id %in% geneList[, 1]] <- 'heritable'
+  }else{
+    expData_filt$type[expData_filt$external_gene_name %in% geneList[, 1]] <- 'heritable'
+  }
 }
 
 # save results
-write.table(expData_filt, file = sprintf('%s/RNAseq_filt.txt', outFold_geneExp), col.names = T, row.names = F, quote = F, sep = '\t')
+write.table(expData_filt, file = sprintf('%sRNAseq_filt.txt', outFold_geneExp), col.names = T, row.names = F, quote = F, sep = '\t')
 
 
 ############################################################################
@@ -153,7 +152,7 @@ for(i in 1:22){
   curSnps <- tmp
   
   curProm <- expData_filt[expData_filt$chrom==curChrom,]
-
+  
   dVals <- t(sapply(1:nrow(curProm),function(X){
     
     v <- which(abs(curSnps$position-curProm$TSS_start[X])<=cis_thres)
@@ -177,12 +176,11 @@ for(i in 1:22){
   
   # save
   curProm <- curProm[, colnames(curProm) %in% c('type',	'chrom', 'TSS_start','TSS_end','name','start_position','end_position','ensembl_gene_id','external_gene_name')]
-  write.table(curProm,paste0(outFold, "/hg19_ENSEMBL_TSS_",curChrom,"_matched.txt"),sep="\t", quote=F, row.names=F, col.names = T)
-  write.table(curSnps,paste0(outFold_snps, "/hg19_SNPs_", curChrom, "_matched.txt"),sep="\t",quote=F,row.names=F, col.names = T)
+  write.table(curProm,paste0(outFold, "hg19_ENSEMBL_TSS_",curChrom,"_matched.txt"),sep="\t", quote=F, row.names=F, col.names = T)
+  write.table(curSnps,paste0(outFold_snps, "hg19_SNPs_", curChrom, "_matched.txt"),sep="\t",quote=F,row.names=F, col.names = T)
   writeMM(resMat,paste0(outFold, "ENSEMBL_gene_SNP_", cis_thres, "_", curChrom,"_matrix.mtx"))
   
 }
-
 
 
 
