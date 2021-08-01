@@ -31,30 +31,31 @@ To run PriLer the following R packages are required:
 ## Workflow
 ### Pre-processing:
 Prepare files needed for the regression model analysis: 
-annotate genes file using bioMart (possibility of recomputing or use the fixed version), compute snp-gene distance sparse matrix. *NOTE consider only chromosomes 1-22*
+annotate genes file using bioMart (possibility of recomputing or use the fixed version), compute snp-gene distance sparse matrix. If list of heritable genes not provided, all genes are annotated as not heritable
+*NOTE consider only chromosomes 1-22*
 #### Usage
->preProcessing_data_run.R \
---geneExp_file --geneList_file --VarInfo_file --cis_thres (default 200000) --biomartGenePos_file (default NA) --biomartTSS_file (default NA) --outFold --outFold_snps (default NA)
+>./preProcessing_data_run.R --geneExp_file --geneList_file (default NULL) --VarInfo_file --cis_thres (default 200000) --biomartGenePos_file (default NULL) --biomartTSS_file (default NULL) --outFold --outFold_snps (default NULL)
 
 The output includes:
--   RNAseq_filt.txt:  n.genes x n.samples gene expression + annotation table
+-   RNAseq_filt.txt: gene expression + annotation table (genes x samples)
 -   hg19_ENSEMBL_TSS_chr<>_matched.txt: gene annotation include column with heritable info
 -   hg19_SNPs_chr<>_matched.txt: snp annotation, containts position and ID
--   ENSEMBL_gene_SNP_2e+5_chr<>_matrix.mtx: sparse matrix n.variants x n.genes, indicates the distance from the gene in bp with a default threshold of 200 kb 
+-   ENSEMBL_gene_SNP_2e+5_chr<>_matrix.mtx: sparse matrix (variants x genes) indicates the distance from the gene in bp with a default threshold of 200 kb 
 
 ### Step 1:
 Considering only heritable genes, compute elastic-net regression in a nested cross validation setting without prior information. The aim is to find the optimal alpha-lambda couple parameter for the outer loop. In addition, regression without prior is evaluated. 
-*NOTE: script is specific fro a chromosome*
+*NOTE: script is specific for a chromosome and can be used if no genes are heritable such that e-net is computed for all genes*
 #### Usage
->Rscript ElNet_withPrior_part1_run.R --curChrom --covDat_file --genoDat_file --geneExp_file --ncores (default 20) --outFold --InfoFold --functR ElNet_withPrior_functions_run.R --seed_out (default 1234) --seed_in (default 42) --nfolds_in (default 5) --nfolds_out (default 5) --cis_thres (default 200000) --Dx (default F)
+>./PriLer_part1_run.R --curChrom --covDat_file --genoDat_file --geneExp_file --ncores (default 20) --outFold --InfoFold --functR Priler_functions.R --seed_out (default 1234) --seed_in (default 42) --nfolds_in (default 5) --nfolds_out (default 5) --cis_thres (default 200000) --Dx (default F)
 
 The ouput includes:
--   optim_lambda_chr<>.txt/optim_alpha_chr<>.txt: n.genes x n. outer folds optimal lambda/alpha parameter for each outer fold and gene
--   resNoPrior_NestedCV_HeritableGenes_chr<>.RData: R object containing    
-	- geneAnn: gene annotation
-	-   train: evaluation on train set for each outer folder
+-   optim_lambda_chr<>.txt/optim_alpha_chr<>.txt: optimal lambda/alpha parameter for each outer fold and gene (genes x outer folds)
+-   resNoPrior_NestedCV_HeritableGenes_chr<>.RData/resNoPrior_NestedCV_AllGenes_chr<>.RData: R object containing    
+	-	geneAnn: gene annotation
+	-  	train: evaluation on train set for each outer folder
 	-   test: evaluation on test set for each outer folder
-	-   cor_comb_test: correlation true vs predicted expression combing outer test folders    
+	-   cor_comb_test: correlation original (cov.adjusted) vs predicted expression combing outer test folders 
+	-	cor_comb_noadj_test: correlation original (not adjusted) vs predicted expression combing outer test folders
 	-   beta_snps: regression coefficient for variants in each outer folder
 	-   beta_cov: regression coefficient for covariates in each outer folders
 	-   seed: seed to generate inner and outer partitions
