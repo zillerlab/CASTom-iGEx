@@ -1,4 +1,4 @@
-#!/usr/bin/env Rscript
+.#!/usr/bin/env Rscript
 
 #### code written by Lucia Trastulla, e-mail: lucia_trastulla@psych.mpg.de ####
 options(stringsAsFactors=F)
@@ -77,11 +77,16 @@ expDat <- expDat[expDat$chrom == curChrom, !colnames(expDat) %in% c('type',	'chr
 # order based on sample ann
 id <- match(sampleAnn$RNASample_ID, colnames(expDat))
 expDat <- expDat[, id]
+
 # consider only heritable genes if any, otherwise compute enet for all
 id_her <- which(gene_ann$type == 'heritable')
+output_file <- sprintf('%sresNoPrior_NestedCV_HeritableGenes_%s.RData', outFold, curChrom)
+
 if(length(id_her)==0){
   id_her <- 1:nrow(gene_ann)
+  output_file <- sprintf('%sresNoPrior_NestedCV_AllGenes_%s.RData', outFold, curChrom)
 }
+
 expDat <- expDat[id_her, ]
 gene_ann <- gene_ann[id_her,]
   
@@ -205,10 +210,6 @@ colnames(alphaMat) <- c('ensembl_gene_id', sapply(1:nfolds_out, function(x)paste
 write.table(x = lambdaMat, file = sprintf('%soptim_lambda_%s.txt', outFold,  curChrom), col.names = T, row.names = F, sep = '\t', quote = F)
 write.table(x = alphaMat, file = sprintf('%soptim_alpha_%s.txt', outFold,  curChrom), col.names = T, row.names = F, sep = '\t', quote = F)
 
-if(length(id_her)==0){
-  save(res_tot, file = sprintf('%sresNoPrior_NestedCV_AllGenes_%s.RData', outFold, curChrom))
-}else{
-  save(res_tot, file = sprintf('%sresNoPrior_NestedCV_HeritableGenes_%s.RData', outFold, curChrom))
-}
+save(res_tot, file = output_file)
 
 
