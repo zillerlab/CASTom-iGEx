@@ -1,6 +1,6 @@
-﻿# Training prediction model with PriLer
+# Training prediction model with PriLer
 
-PriLer is a command-line tool that create model for predicting gene expression from genotype data using prior features on variants whose relevance is automatically learned in a machine learning set up. 
+PriLer is a command-line tool that create model for predicting gene expression from genotype data integrating prior features on variants whose relevance is automatically learned in a machine learning set up. 
 
 ## Requirements
 To run PriLer the following R packages are required:
@@ -20,20 +20,21 @@ To run PriLer the following R packages are required:
 - ggExtra
 
 ## Input Files
-- **Gene expression matrix**:  preprocessed gene expression. Genes on the rows, samples on the columns. First column refers to gene names (ensembl annotation or HUGO nomenclature)
-- **Genotype matrix**: dosages for each chromosome (compressed txt) without variants name/position. Variants on the rows, samples on the columns.  *NOTE: the file must end with chr<>_matrix.txt.gz*
+- **Gene expression matrix**: preprocessed gene expression (genes x samples). First column refers to gene names (ensembl annotation or HUGO nomenclature)
+- **Genotype matrix**: dosages for each chromosome (compressed txt) without variants name/position (variants x samples). *NOTE: the file must end with chr<>_matrix.txt.gz*
 - **Genotype info matrix**: contains variants position, name and other info, must contain columns CHR and POS and match with Genotype matrix). *NOTE: the file must end with  chr<>.txt*
-- **Covariate matrix**: columns must contain Individual_ID, genoSample_ID and RNASample_ID to match genotype and gene expression plus covariates to be used in the regression model. Column Dx (0 control 1 case) is optional as well as it's usage. *Note: samples in genotype and gene expression matrix are filtered based on covariate matrix*
-- **Prior matrix**: prior information for variants. Variants on the rows, features on the columns. It doesn't include variant name and MUST match genotype matrix. The columns can be binary (only 2 values 0 no prior and 1 prior) or continuous. 
+- **Covariate matrix**: columns must contain Individual_ID, genoSample_ID and RNASample_ID to match genotype and gene expression plus covariates to be used in the regression model. Column Dx (0 control 1 case) is optional as well as it's usage. *Note: Samples in genotype and gene expression matrix are filtered based on covariate matrix*
+- **Prior matrix**: prior information for variants (variants x prior features). It doesn't include variant name and MUST match genotype matrix. The columns can be binary (one-hot encoding for intersection) or continuous. 
 - **List heritable genes**: usually obtained from TWAS heritable analysis: list of genes, match external_gene_name or ensembl_gene_id. Reliable set of genes being regulated by cis-variants.
-- **Gene annotation files of TSS and position** obtained using *PrepareData_biomart_TSS.R* script. Possibility of recomputing or use a fixed version
+- **Gene annotation files of TSS and position** obtained using *PrepareData_biomart_TSS.R* script. Possibility of recomputing or use provided fixed version
 
 ## Workflow
 ### Pre-processing:
 Prepare files needed for the regression model analysis: 
 annotate genes file using bioMart (possibility of recomputing or use the fixed version), compute snp-gene distance sparse matrix. *NOTE consider only chromosomes 1-22*
 #### Usage
->Rscript preProcessing_data_run.R --geneExp_file --geneList_file --VarInfo_file --cis_thres (default 200000) --biomartGenePos_file (default NA) --biomartTSS_file (default NA) --outFold --outFold_snps (default NA)
+>preProcessing_data_run.R \
+--geneExp_file --geneList_file --VarInfo_file --cis_thres (default 200000) --biomartGenePos_file (default NA) --biomartTSS_file (default NA) --outFold --outFold_snps (default NA)
 
 The output includes:
 -   RNAseq_filt.txt:  n.genes x n.samples gene expression + annotation table
