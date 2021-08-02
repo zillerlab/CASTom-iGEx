@@ -303,9 +303,7 @@ expPrediction_chr <- function(expDat_k, genDat_k, covDat_k, prior, d, lambda, al
   
 }
 
-### REVIEW FROM HERE ###
-
-#### used in ElNet_withPrior_part2_run.R and ElNet_withPrior_part3_run.R ####
+#### used in PriLer_part2_run.R and Priler_part3_run.R ####
 # objective function for the weight optimization
 getStepFunction_chr <- function(pWeight, modelMatrix, priorMat, lambdas, alphas, E_h){
   
@@ -330,7 +328,7 @@ getStepFunction_chr <- function(pWeight, modelMatrix, priorMat, lambdas, alphas,
   return(obj)
 }
 
-#### used in ElNet_withPrior_part2_run.R and ElNet_withPrior_part3_run.R ####
+#### used in PriLer_part2_run.R and PriLer_part3_run.R ####
 # gradient function for the weight optimization
 getGradient_chr <- function(pWeight, modelMatrix, priorMat, lambdas, alphas, E_h){
   
@@ -364,7 +362,7 @@ getGradient_chr <- function(pWeight, modelMatrix, priorMat, lambdas, alphas, E_h
 }
 
 
-#### used in ElNet_withPrior_part2_run.R and ElNet_withPrior_part3_run.R ####
+#### used in PriLer_part2_run.R and PriLer_part3_run.R ####
 # obtain the Error componenets, can be used on both train and test set
 getErrorComponents_chr <- function(lambdas, genDat, expDat, covDat, modelMatrix, pWeight, priorMat, alphas, E_h, fold, all_Chroms, gene_ann){
   
@@ -400,6 +398,8 @@ getErrorComponents_chr <- function(lambdas, genDat, expDat, covDat, modelMatrix,
   return(c(obj, pen, pen_par))
   
 }
+
+### REVIEW FROM HERE ###
 
 #### used in ElNet_withPrior_part3_run.R ####
 # find optimal lambda and alpha for each gene via CV, use all the samples, no prior weights
@@ -654,5 +654,4 @@ expPrediction_Prior_fold <- function(X, prior, lambda, alpha, fold){
   }
   
 }
-
 
