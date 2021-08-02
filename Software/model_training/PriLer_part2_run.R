@@ -566,7 +566,7 @@ test_res_opt <- lapply(1:nfolds_out, function(x) data.frame(dev = dev_test[[id_o
                                                             cor_noadj = cor_noadj_test[[id_opt]][,x], cor_noadj_pval = cor_noadj_pval_test[[id_opt]][,x]))
 
 res_tot_opt <- list(geneAnn = gene_ann, train_opt = train_res_opt, test_opt = test_res_opt, 
-                    cor_comb_test_opt = cor_test_comb[[id_opt]], cor_comb_test_noadj_opt, cor_test_noadj_comb[[id_opt]],
+                    cor_comb_test_opt = cor_test_comb[[id_opt]], cor_comb_test_noadj_opt = cor_test_noadj_comb[[id_opt]],
                     beta_snps_opt = betaSnpsMatrix[[id_opt]], beta_cov_opt = betaCovMatrix[[id_opt]], weights_opt = weights_opt) 
 
 save(res_tot_opt, file = sprintf('%sresPrior_EOpt_NestedCV_HeritableGenes_allchr.RData', outFold))
