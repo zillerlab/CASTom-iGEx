@@ -61,20 +61,21 @@ The ouput includes:
 	-   seed: seed to generate inner and outer partitions
 
 ### Step 2:
-Considering only heritable genes, compute elastic-net regression in a nested cross-validation setting using prior information in order to find optimal E (scale for prior weights) parameter, alpha and lambda are obtained from the previous step. *NOTE: Possible values for E cannot be chosen a prior but depends on the data*.
+Considering only heritable genes, compute elastic-net regression in a nested cross-validation setting using prior information in order to find optimal E (scale for prior weights) parameter, alpha and lambda are obtained from the previous step. *NOTE: The script is parallelized over given possible values of E parameter. Possible values for E cannot be chosen a prior but depends on the data*.
 #### Usage
-> Rscript ElNet_withPrior_part2_run.R --covDat_file --genoDat_file --geneExp_file --InfoFold --part1Res_fold --priorDat_file --priorInf (default 0)  --ncores (default 10) --functR ElNet_withPrior_functions_run.R --cis_thres (default 200000)  --Dx (default F)  --maxIter 20 --dThres  0.001  --convert_par (default 0.25) --E_set --outFold
+>./ElNet_withPrior_part2_run.R --covDat_file --genoDat_file --geneExp_file --InfoFold --part1Res_fold --priorDat_file --priorInf (default 0)  --ncores (default 10) --functR Priler_functions.R --cis_thres (default 200000)  --Dx (default F)  --maxIter (default 20) --dThres  (default 0.001)  --convert_par (default 0.25) --E_set --outFold
 
 The output includes:
- -   resE_allchr.RData:  R object with info of E parameter search for each E parameter, folder and interation. (not further use, only kept to check/specific plots)
--   cv_train_Epar_allchr.txt/cv_test_Epar_allchr.txt: n.folds x n. Epar tested, sum of mean squared error (MSE) on train/test set for all the genes in the final iteration
--   obj_Epar_cvtrain_allchr.RData/obj_Epar_cvtest_allchr.RData:  list for each E parameter and each folder of objective function on train/test sets (all iterations) 
--   evalf_Epar_cvtrain_allchr.RData/evalf_Epar_cvtest_allchr.RData  list for each E parameter and each folder of evaluation function (sum of MSE) on train/test set (all iterations) 
+ -   resE_allchr.RData:  R object with info of E parameter search for each E parameter, folder and interation (not further use, only kept to check/specific plots).
+-   cv_train_Epar_allchr.txt/cv_test_Epar_allchr.txt: n.folds x n.Epar tested, sum of mean squared error (MSE) on train/test set for all the genes in the final iteration.
+-   obj_Epar_cvtrain_allchr.RData/obj_Epar_cvtest_allchr.RData:  list for each E parameter and each folder of objective function on train/test sets (all iterations). 
+-   evalf_Epar_cvtrain_allchr.RData/evalf_Epar_cvtest_allchr.RData  list for each E parameter and each folder of evaluation function (sum of MSE) on train/test set (all iterations). 
 -   resPrior_EOpt_NestedCV_HeritableGenes_allchr.RData  R object containing results for the optimal E parameter and the corresponding latest iteration
 	-   geneAnn: gene annotation
 	-   train_opt: evaluation on train set for each outer folder
 	-   test_opt: evaluation on test set for each outer folder
-	-   cor_comb_test_opt: correlation true vs predicted expression combing outer test folder    
+	-   cor_comb_test_opt: correlation original vs predicted expression combing outer test folder
+	-	cor_comb_test_noadj_opt: correlation original (not adjusted) vs predicted expression combining outer test folder    
 	-   beta_snps_opt: regression coefficient for SNPs in each outer folder (divided by chr)
 	-   beta_cov_opt: regression coefficient for covariates in each outer folder (divided by chr)
 	-   weights_opt: n.prior features x n.outer folds, weights associated to each prior feature
