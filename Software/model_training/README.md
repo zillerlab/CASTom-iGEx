@@ -34,7 +34,15 @@ Prepare files needed for the regression model analysis:
 annotate genes file using bioMart (possibility of recomputing or use the fixed version), compute snp-gene distance sparse matrix. If list of heritable genes not provided, all genes are annotated as not heritable
 *NOTE consider only chromosomes 1-22*
 #### Usage
->./preProcessing_data_run.R --geneExp_file --geneList_file (default NULL) --VarInfo_file --cis_thres (default 200000) --biomartGenePos_file (default NULL) --biomartTSS_file (default NULL) --outFold --outFold_snps (default NULL)
+>./preProcessing_data_run.R \
+	--geneExp_file \
+	--geneList_file (default NULL) \
+	--VarInfo_file \
+	--cis_thres (default 200000) \
+	--biomartGenePos_file (default NULL) \
+	--biomartTSS_file (default NULL) \
+	--outFold \
+	--outFold_snps (default NULL)
 
 The output includes:
 -   RNAseq_filt.txt: gene expression + annotation table (genes x samples)
@@ -63,7 +71,7 @@ The ouput includes:
 ### Step 2:
 Considering only heritable genes, compute elastic-net regression in a nested cross-validation setting using prior information in order to find optimal E (scale for prior weights) parameter, alpha and lambda are obtained from the previous step. *NOTE: The script is parallelized over given possible values of E parameter. Possible values for E cannot be chosen a prior but depends on the data*.
 #### Usage
->./ElNet_withPrior_part2_run.R --covDat_file --genoDat_file --geneExp_file --InfoFold --part1Res_fold --priorDat_file --priorInf (default 0)  --ncores (default 10) --functR Priler_functions.R --cis_thres (default 200000)  --Dx (default F)  --maxIter (default 20) --dThres  (default 0.001)  --convert_par (default 0.25) --E_set --outFold
+>./ElNet_withPrior_part2_run.R --covDat_file --genoDat_file --geneExp_file --InfoFold --part1Res_fold --priorDat_file --priorInf (default 0)  --ncores (default 10) --functR ./Priler_functions.R --cis_thres (default 200000)  --Dx (default F)  --maxIter (default 20) --dThres  (default 0.001)  --convert_par (default 0.25) --E_set --outFold
 
 The output includes:
  -   resE_allchr.RData:  R object with info of E parameter search for each E parameter, folder and interation (not further use, only kept to check/specific plots).
@@ -81,10 +89,10 @@ The output includes:
 	-   weights_opt: n.prior features x n.outer folds, weights associated to each prior feature
 
 ### Step 3:
-Considering only heritable genes, first find optimal alpha and lambda parameter on the entire set (single cross validation) and evaluate total results without prior. Second, use alpha-lambda pairs found and the optimal E parameter in the elastic-net with prior information setting and evaluate the results. 
+Considering only heritable genes, first find optimal alpha and lambda parameter on the entire set (single cross validation) and evaluate total results without prior. Second, use alpha-lambda pairs found and the optimal E parameter (step 2) in the elastic-net with prior information setting and evaluate the results.
 
 #### Usage
-> Rscript ElNet_withPrior_part3_run.R --covDat_file --genoDat_file --geneExp_file --InfoFold --part2Res_fold --priorDat_file --priorInf (default 0)  --ncores (default 10) --functR ElNet_withPrior_functions_run.R  --cis_thres (default 200000)  --Dx (default F)  --maxIter 20 --dThres  0.001  --convert_par (default 0.25) --outFold --seed (default 4321) --nfolds (default 5)
+> ./ElNet_withPrior_part3_run.R --covDat_file --genoDat_file --geneExp_file --InfoFold --part2Res_fold --priorDat_file --priorInf (default 0)  --ncores (default 10) --functR ./Priler_functions.R  --cis_thres (default 200000)  --Dx (default F)  --maxIter 20 --dThres  0.001  --convert_par (default 0.25) --seed (default 4321) --nfolds (default 5) --outFold
 
 The output includes:
 -   resNoPrior_HeritableGenes_allchr.RData: results without prior information:
@@ -96,13 +104,14 @@ The output includes:
 -   resPrior_EOpt(orEFixed)_Iteration_HeritableGenes_allchr.RData: R iteration results for prior convergence
 	-   Eopt: optimal (or convergence) E parameter
 	-   pWeight: n.iterations x n.prior features, prior weights at each iteration
-	-   errComp: n.Iterations x 3, sum MSE - penalty for beta - penalty for weights at each iteration    
-	-   nCount: n.Iterations x n. genes, number of variants regulating a gene
-	-   dev/dev_geno/dev_cov/dev_genocov: n.Iterations x n. genes, total deviance (R2), deviance explained by only genotype, deviance explained by only covariates, deviance explained by the interaction covariance/genotype
-	- cor/cor_pval:  n.Iterations x n. genes, correlation true vs predicted expression and corresponding p-value
-	-   MSE: n.Iterations x n. genes, mean squared error 
+	-   errComp: n.iterations x 3, sum MSE - penalty for beta - penalty for weights at each iteration    
+	-   nCount: n.iterations x n. genes, number of variants regulating a gene
+	-   dev/dev_geno/dev_cov/dev_genocov: n.iterations x n. genes, total deviance (R2), deviance explained by only genotype, deviance explained by only covariates, deviance explained by the interaction covariance/genotype
+	-	cor/cor_pval:  n.iterations x n. genes, correlation original (cov.adjusted) vs predicted expression and corresponding p-value
+	-	cor_noadj/cor_noadj_pval:  n.iterations x n. genes, correlation original (not adjusted) vs predicted expression and corresponding p-value
+	-   MSE: n.iterations x n. genes, mean squared error 
 	-   beta: for each chr n.variables x n. genes, regression coefficient for both variants and covariates at each step
-	-  obj: objective function at each step
+	- 	obj: objective function at each step
 	- 
 -   resPrior_EOpt(orEFixed)_HeritableGenes_allchr.RData: results with prior information (final iteration)	    
 	-   geneAnn: gene annotation
