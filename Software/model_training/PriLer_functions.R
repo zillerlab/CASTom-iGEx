@@ -399,21 +399,18 @@ getErrorComponents_chr <- function(lambdas, genDat, expDat, covDat, modelMatrix,
   
 }
 
-### REVIEW FROM HERE ###
-
-#### used in ElNet_withPrior_part3_run.R ####
+#### used in PriLer_part3_run.R ####
 # find optimal lambda and alpha for each gene via CV, use all the samples, no prior weights
 expPrediction_cv_noPrior_chr <- function(X, alpha, chr, genDat, seed, nfolds){
   
-  ind_SNPs=geneSnpDist[[chr]][,X]!=0 
-  nSnp=sum(ind_SNPs)
+  ind_SNPs <- geneSnpDist[[chr]][,X]!=0 
+  nSnp <- sum(ind_SNPs)
   
-  
-  if (nSnp>2){
+  if(nSnp>2){
     
-    d=which(ind_SNPs)[1]-1
-    genotype=as.matrix(cbind(genDat[,ind_SNPs],covDat))
-    expressionValue=as.numeric(expDat[,which(gene_ann$chrom == all_Chroms[chr])][,X])
+    d <- which(ind_SNPs)[1]-1
+    genotype <- as.matrix(cbind(genDat[,ind_SNPs],covDat))
+    expressionValue <- as.numeric(expDat[,which(gene_ann$chrom == all_Chroms[chr])][,X])
     
     # compute deviance for the model using only covariates
     cov_mod <- cbind(expressionValue, covDat)
@@ -460,10 +457,10 @@ expPrediction_cv_noPrior_chr <- function(X, alpha, chr, genDat, seed, nfolds){
     selIntercept <- res$glmnet.fit$a0[ind]
     r <- as.numeric(which(betas!=0))
     selBeta <- as.numeric(betas)[r]
-    sInd=r>nSnp
-    v=r[sInd]-nSnp
-    r[r<=nSnp]=r[r<=nSnp]+d
-    r[sInd]=covIndex_chr[,chr][v]
+    sInd <- r>nSnp
+    v <- r[sInd]-nSnp
+    r[r<=nSnp] <- r[r<=nSnp]+d
+    r[sInd] <- covIndex_chr[,chr][v]
     r <- c(r, nrow(geneSnpDist[[chr]])+ncol(covDat)+1)
     r <- r[!is.na(r)]
     
@@ -485,37 +482,38 @@ expPrediction_cv_noPrior_chr <- function(X, alpha, chr, genDat, seed, nfolds){
     cor_est <- cor.test(expressionValue_geno,as.numeric(pred_geno))$estimate
     cor_pval <- cor.test(expressionValue_geno,as.numeric(pred_geno))$p.value
     
-    return(cbind(X,r,c(selBeta,as.numeric(selIntercept)),selLambda,selAlpha, res$glmnet.fit$dev.ratio[ind], dev_geno, dev_cov, dev_geno_cov, dev_lmgeno, cor_est, cor_pval))
+    # consider the original dataset
+    cor_est_noadj <- cor.test(expressionValue,as.numeric(pred_geno))$estimate
+    cor_pval_noadj <- cor.test(expressionValue,as.numeric(pred_geno))$p.value
+    
+    return(cbind(X,r,c(selBeta,as.numeric(selIntercept)),selLambda,selAlpha, res$glmnet.fit$dev.ratio[ind], dev_geno, dev_cov, dev_geno_cov, dev_lmgeno, cor_est, cor_pval, cor_est_noadj, cor_pval_noadj))
     
   }else{
     
-    return(c(X,NA,NA,NA,NA,NA,NA,NA,NA,NA, NA, NA))
+    return(c(X,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA))
     
   }
-  
-  # return(out)
 }
 
 
-#### used in ElNet_withPrior_part3_run.R ####
+#### used in PriLer_part3_run.R ####
 # compute the regression using all the samples, use optimal alpha and lambda previously found
 # all chr together
 expPrediction_fin_chr <- function(X, prior, id_chr, genDat){
   
-  gNam=colnames(expDat[,gene_ann$chrom == all_Chroms[id_chr]])[X]
-  ind_SNPs=geneSnpDist[[id_chr]][,X]!=0 #&pDat[,2]!=0
-  nSnp=sum(ind_SNPs)
+  gNam <- colnames(expDat[,gene_ann$chrom == all_Chroms[id_chr]])[X]
+  ind_SNPs <- geneSnpDist[[id_chr]][,X]!=0 #&pDat[,2]!=0
+  nSnp <- sum(ind_SNPs)
   
   # store results
   # out <- list()
-  
-  if (nSnp>2){
+  if(nSnp>2){
     
-    d=which(ind_SNPs)[1]-1
+    d <- which(ind_SNPs)[1]-1
     
     # genotype=as.matrix(cbind(genDat[[id_chr]][,ind_SNPs], covDat)) #  not parallelized version
-    genotype=as.matrix(cbind(genDat[,ind_SNPs], covDat))
-    expressionValue=as.numeric(expDat[, gene_ann$chrom == all_Chroms[id_chr]][,X])
+    genotype <- as.matrix(cbind(genDat[,ind_SNPs], covDat))
+    expressionValue <- as.numeric(expDat[, gene_ann$chrom == all_Chroms[id_chr]][,X])
     
     # compute deviance for the model using only covariates
     cov_mod <- cbind(expressionValue, covDat)
@@ -527,18 +525,16 @@ expPrediction_fin_chr <- function(X, prior, id_chr, genDat){
     
     res <- glmnet(new_genotype, expressionValue, alpha=alphaVec[[id_chr]][X], lambda=lambdaVec[[id_chr]][X], standardize=FALSE, intercept = TRUE, 
                   penalty.factor = c(rep(1,nSnp), rep(0, ncol(covDat)))) 
-    
     beta <- res$beta/new_prior
-    
     selLambda <- lambdaVec[[id_chr]][X]
     selAlpha <- alphaVec[[id_chr]][X]
     selIntercept <- res$a0
     r <- as.numeric(which(beta!=0))
     selBeta <- as.numeric(beta)[r]
-    sInd=r>nSnp
-    v=r[sInd]-nSnp
-    r[r<=nSnp]=r[r<=nSnp]+d
-    r[sInd]=covIndex_chr[,id_chr][v]
+    sInd <- r>nSnp
+    v <- r[sInd]-nSnp
+    r[r<=nSnp] <- r[r<=nSnp]+d
+    r[sInd] <- covIndex_chr[,id_chr][v]
     r <- c(r, nrow(geneSnpDist[[id_chr]])+ncol(covDat)+1)
     r <- r[!is.na(r)]
     
@@ -559,18 +555,24 @@ expPrediction_fin_chr <- function(X, prior, id_chr, genDat){
     
     cor_est <- cor.test(expressionValue_geno,as.numeric(pred_geno))$estimate
     cor_pval <- cor.test(expressionValue_geno,as.numeric(pred_geno))$p.value
+    # consider the original dataset
+    cor_est_noadj <- cor.test(expressionValue,as.numeric(pred_geno))$estimate
+    cor_pval_noadj <- cor.test(expressionValue,as.numeric(pred_geno))$p.value
     
     
-    return(cbind(X,r,c(selBeta,as.numeric(selIntercept)), selLambda, selAlpha, SquErr, res$dev.ratio, dev_geno, dev_cov, dev_geno_cov, dev_lmgeno, cor_est, cor_pval))
+    return(cbind(X,r,c(selBeta,as.numeric(selIntercept)), selLambda, selAlpha, SquErr, res$dev.ratio, dev_geno, dev_cov, dev_geno_cov, dev_lmgeno, cor_est, cor_pval, cor_est_noadj,cor_pval_noadj))
     
   }else{
     
-    return(c(X,NA,NA,NA,NA,NA,NA,NA,NA,NA, NA, NA, NA))
+    return(c(X,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA))
     
   }
   
 }
 
+###################################
+######## REVIEW FROM HERE #########
+###################################
 
 #### used in ElNet_withPrior_part4_run.R ####
 ## predict on new genes
