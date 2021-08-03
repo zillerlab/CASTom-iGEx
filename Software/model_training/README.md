@@ -31,8 +31,9 @@ To run PriLer the following R packages are required:
 ## Workflow
 ### Pre-processing:
 Prepare files needed for the regression model analysis: 
-annotate genes file using bioMart (possibility of recomputing or use the fixed version), compute snp-gene distance sparse matrix. If list of heritable genes not provided, all genes are annotated as not heritable
-*NOTE consider only chromosomes 1-22*
+annotate genes file using bioMart (possibility of recomputing or use the fixed version), compute snp-gene distance sparse matrix. If list of heritable genes not provided, all genes are annotated as not heritable.
+
+*NOTE: consider only chromosomes 1-22*
 #### Usage
 ```sh
 ./preProcessing_data_run.R \
@@ -53,11 +54,27 @@ The output includes:
 -   ENSEMBL_gene_SNP_2e+5_chr<>_matrix.mtx: sparse matrix (variants x genes) indicates the distance from the gene in bp with a default threshold of 200 kb 
 
 ### Step 1:
-Considering only heritable genes, compute elastic-net regression in a nested cross validation setting without prior information. The aim is to find the optimal alpha-lambda couple parameter for the outer loop. In addition, regression without prior is evaluated. 
+Considering only heritable genes, compute elastic-net regression in a nested cross validation setting without prior information. The aim is to find the optimal alpha-lambda couple parameter for the outer loop. In addition, regression without prior is evaluated.
+
 *NOTE: script is specific for a chromosome and can be used if no genes are heritable such that e-net is computed for all genes*
 #### Usage
->./PriLer_part1_run.R --curChrom --covDat_file --genoDat_file --geneExp_file --ncores (default 20) --outFold --InfoFold --functR Priler_functions.R --seed_out (default 1234) --seed_in (default 42) --nfolds_in (default 5) --nfolds_out (default 5) --cis_thres (default 200000) --Dx (default F)
-
+```sh
+./PriLer_part1_run.R \
+	--curChrom \
+	--covDat_file \
+	--genoDat_file \
+	--geneExp_file \
+	--outFold \
+	--InfoFold \
+	--functR ./Priler_functions.R \
+	--ncores (default 20) \
+	--seed_out (default 1234) \
+	--seed_in (default 42) \
+	--nfolds_in (default 5) \
+	--nfolds_out (default 5) \
+	--cis_thres (default 200000) \
+	--Dx (default F)
+```
 The ouput includes:
 -   optim_lambda_chr<>.txt/optim_alpha_chr<>.txt: optimal lambda/alpha parameter for each outer fold and gene (genes x outer folds)
 -   resNoPrior_NestedCV_HeritableGenes_chr<>.RData/resNoPrior_NestedCV_AllGenes_chr<>.RData: R object containing    
@@ -71,9 +88,29 @@ The ouput includes:
 	-   seed: seed to generate inner and outer partitions
 
 ### Step 2:
-Considering only heritable genes, compute elastic-net regression in a nested cross-validation setting using prior information in order to find optimal E (scale for prior weights) parameter, alpha and lambda are obtained from the previous step. *NOTE: The script is parallelized over given possible values of E parameter. Possible values for E cannot be chosen a prior but depends on the data*.
+Considering only heritable genes, compute elastic-net regression in a nested cross-validation setting using prior information in order to find optimal E (scale for prior weights) parameter, alpha and lambda are obtained from the previous step. 
+
+*NOTE: The script is parallelized over given possible values of E parameter. Possible values for E cannot be chosen a prior but depends on the data*.
 #### Usage
->./ElNet_withPrior_part2_run.R --covDat_file --genoDat_file --geneExp_file --InfoFold --part1Res_fold --priorDat_file --priorInf (default 0)  --ncores (default 10) --functR ./Priler_functions.R --cis_thres (default 200000)  --Dx (default F)  --maxIter (default 20) --dThres  (default 0.001)  --convert_par (default 0.25) --E_set --outFold
+```sh
+./ElNet_withPrior_part2_run.R \
+	--covDat_file \
+	--genoDat_file \
+	--geneExp_file \
+	--InfoFold \
+	--part1Res_fold \
+	--priorDat_file \
+	--priorInf (default 0)  \
+	--ncores (default 10) \
+	--functR ./Priler_functions.R \
+	--cis_thres (default 200000) \
+	--Dx (default F) \
+	--maxIter (default 20) \
+	--dThres  (default 0.001) \
+	--convert_par (default 0.25) \
+	--E_set \
+	--outFold
+```
 
 The output includes:
  -   resE_allchr.RData:  R object with info of E parameter search for each E parameter, folder and interation (not further use, only kept to check/specific plots).
@@ -94,7 +131,26 @@ The output includes:
 Considering only heritable genes, first find optimal alpha and lambda parameter on the entire set (single cross validation) and evaluate total results without prior. Second, use alpha-lambda pairs found and the optimal E parameter (step 2) in the elastic-net with prior information setting and evaluate the results.
 
 #### Usage
-> ./ElNet_withPrior_part3_run.R --covDat_file --genoDat_file --geneExp_file --InfoFold --part2Res_fold --priorDat_file --priorInf (default 0)  --ncores (default 10) --functR ./Priler_functions.R  --cis_thres (default 200000)  --Dx (default F)  --maxIter 20 --dThres  0.001  --convert_par (default 0.25) --seed (default 4321) --nfolds (default 5) --outFold
+```sh
+./ElNet_withPrior_part3_run.R \
+	--covDat_file \
+	--genoDat_file \
+	--geneExp_file \
+	--InfoFold \
+	--part2Res_fold \
+	--priorDat_file \
+	--priorInf (default 0) \
+	--ncores (default 10) \
+	--functR ./Priler_functions.R \
+	--cis_thres (default 200000) \
+	--Dx (default F) \
+	--maxIter (default 20) \
+	--dThres (default 0.001) \
+	--convert_par (default 0.25) \
+	--seed (default 4321) \
+	--nfolds (default 5) \
+	--outFold
+```
 
 The output includes:
 -   resNoPrior_HeritableGenes_allchr.RData: results without prior information:
