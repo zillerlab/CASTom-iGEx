@@ -93,7 +93,7 @@ Considering only heritable genes, compute elastic-net regression in a nested cro
 *NOTE: The script is parallelized over given possible values of E parameter. Possible values for E cannot be chosen a prior but depends on the data*.
 #### Usage
 ```sh
-./ElNet_withPrior_part2_run.R \
+./PriLer_part2_run.R \
 	--covDat_file \
 	--genoDat_file \
 	--geneExp_file \
@@ -132,7 +132,7 @@ Considering only heritable genes, first find optimal alpha and lambda parameter 
 
 #### Usage
 ```sh
-./ElNet_withPrior_part3_run.R \
+./PriLer_part3_run.R \
 	--covDat_file \
 	--genoDat_file \
 	--geneExp_file \
