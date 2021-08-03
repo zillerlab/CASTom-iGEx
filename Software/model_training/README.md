@@ -35,7 +35,7 @@ annotate genes file using bioMart (possibility of recomputing or use the fixed v
 *NOTE consider only chromosomes 1-22*
 #### Usage
 >./preProcessing_data_run.R \
-	--geneExp_file \
+		--geneExp_file \
 	--geneList_file (default NULL) \
 	--VarInfo_file \
 	--cis_thres (default 200000) \
