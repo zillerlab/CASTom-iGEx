@@ -34,8 +34,9 @@ Prepare files needed for the regression model analysis:
 annotate genes file using bioMart (possibility of recomputing or use the fixed version), compute snp-gene distance sparse matrix. If list of heritable genes not provided, all genes are annotated as not heritable
 *NOTE consider only chromosomes 1-22*
 #### Usage
->./preProcessing_data_run.R \
-		--geneExp_file \
+```sh
+./preProcessing_data_run.R \
+	--geneExp_file \
 	--geneList_file (default NULL) \
 	--VarInfo_file \
 	--cis_thres (default 200000) \
@@ -43,6 +44,7 @@ annotate genes file using bioMart (possibility of recomputing or use the fixed v
 	--biomartTSS_file (default NULL) \
 	--outFold \
 	--outFold_snps (default NULL)
+```
 
 The output includes:
 -   RNAseq_filt.txt: gene expression + annotation table (genes x samples)
