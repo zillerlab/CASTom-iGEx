@@ -117,7 +117,7 @@ The output includes:
 -   cv_train_Epar_allchr.txt/cv_test_Epar_allchr.txt: n.folds x n.Epar tested, sum of mean squared error (MSE) on train/test set for all the genes in the final iteration.
 -   obj_Epar_cvtrain_allchr.RData/obj_Epar_cvtest_allchr.RData:  list for each E parameter and each folder of objective function on train/test sets (all iterations). 
 -   evalf_Epar_cvtrain_allchr.RData/evalf_Epar_cvtest_allchr.RData  list for each E parameter and each folder of evaluation function (sum of MSE) on train/test set (all iterations). 
--   resPrior_EOpt_NestedCV_HeritableGenes_allchr.RData  R object containing results for the optimal E parameter and the corresponding latest iteration
+-   resPrior_EOpt(orEFixed)_NestedCV_HeritableGenes_allchr.RData  R object containing results for the optimal E parameter and the corresponding latest iteration. If minimum is reached as the latest E value (i.e. not reached in the interval given), then optimal E is chosen as the paramter that lead to objective function convergence in decreasing: |obj(step_i) - obj(step_i+1)|< 0.5
 	-   geneAnn: gene annotation
 	-   train_opt: evaluation on train set for each outer folder
 	-   test_opt: evaluation on test set for each outer folder
@@ -126,6 +126,7 @@ The output includes:
 	-   beta_snps_opt: regression coefficient for SNPs in each outer folder (divided by chr)
 	-   beta_cov_opt: regression coefficient for covariates in each outer folder (divided by chr)
 	-   weights_opt: n.prior features x n.outer folds, weights associated to each prior feature
+	-	E_opt: value of optimal E paramter
 
 ### Step 3:
 Considering only heritable genes, first find optimal alpha and lambda parameter on the entire set (single cross validation) and evaluate total results without prior. Second, use alpha-lambda pairs found and the optimal E parameter (step 2) in the elastic-net with prior information setting and evaluate the results.
