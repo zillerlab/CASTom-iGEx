@@ -59,7 +59,7 @@ generateCVRuns <- function (labels, ntimes = 10, nfold = 10, leaveOneOut = FALSE
 }
 
 
-#### used in PriLer_part1_run.R ####
+#### used in PriLer_part1_run.R and PriLer_part4_run.R ####
 # find optimal lambda and alpha for each gene via CV, use all the samples, no prior weights,
 # NOTE: assigning penalty.factor the same values is the same as not using it
 expPrediction_cv_noPrior_fold <- function(X, alpha, fold, seed, nfolds){
@@ -570,19 +570,16 @@ expPrediction_fin_chr <- function(X, prior, id_chr, genDat){
   
 }
 
-###################################
-######## REVIEW FROM HERE #########
-###################################
 
-#### used in ElNet_withPrior_part4_run.R ####
+#### used in PriLer_part4_run.R ####
 ## predict on new genes
 # compute regression for fixed alpha and lambda parameter for each chromosome
 expPrediction_Prior_fold <- function(X, prior, lambda, alpha, fold){
   
-  ind_SNPs=geneSnpDist[,X]!=0 #&pDat[,2]!=0
-  nSnp=sum(ind_SNPs)
+  ind_SNPs <- geneSnpDist[,X]!=0 #&pDat[,2]!=0
+  nSnp <- sum(ind_SNPs)
   
-  if (nSnp>2 & !is.na(lambda)){
+  if(nSnp>2 & !is.na(lambda)){
     
     # # ######
     # cons <- setdiff(which(ind_SNPs)[1]:which(ind_SNPs)[length(which(ind_SNPs))], which(ind_SNPs))
@@ -592,9 +589,9 @@ expPrediction_Prior_fold <- function(X, prior, lambda, alpha, fold){
     # # use to check the SNPs id are consecutive
     # # ######
     
-    d=which(ind_SNPs)[1]-1
-    genotype=as.matrix(cbind(genDat[fold,ind_SNPs],covDat[fold,]))
-    expressionValue=as.numeric(expDat[fold,X])
+    d <- which(ind_SNPs)[1]-1
+    genotype <- as.matrix(cbind(genDat[fold,ind_SNPs],covDat[fold,]))
+    expressionValue <- as.numeric(expDat[fold,X])
     
     # compute deviance for the model using only covariates
     cov_mod <- cbind(expressionValue, covDat[fold,])
@@ -620,10 +617,10 @@ expPrediction_Prior_fold <- function(X, prior, lambda, alpha, fold){
     selIntercept <- res$a0
     r <- as.numeric(which(beta!=0))
     selBeta <- as.numeric(beta)[r]
-    sInd=r>nSnp
-    v=r[sInd]-nSnp
-    r[r<=nSnp]=r[r<=nSnp]+d
-    r[sInd]=covIndex[v]
+    sInd <- r>nSnp
+    v <- r[sInd]-nSnp
+    r[r<=nSnp] <- r[r<=nSnp]+d
+    r[sInd] <- covIndex[v]
     r <- c(r, nrow(geneSnpDist)+ncol(covDat[fold,])+1)
     r <- r[!is.na(r)]
     
@@ -644,16 +641,15 @@ expPrediction_Prior_fold <- function(X, prior, lambda, alpha, fold){
     
     cor_est <- cor.test(expressionValue_geno,as.numeric(pred_geno))$estimate
     cor_pval <- cor.test(expressionValue_geno,as.numeric(pred_geno))$p.value
+    # consider the original dataset
+    cor_est_noadj <- cor.test(expressionValue,as.numeric(pred_geno))$estimate
+    cor_pval_noadj <- cor.test(expressionValue,as.numeric(pred_geno))$p.value
     
     
     # return(cbind(X,r,c(selBeta,as.numeric(selIntercept)),selLambda,selAlpha,res$dev.ratio))
-    return(cbind(X,r,c(selBeta,as.numeric(selIntercept)), selLambda, selAlpha, SquErr, res$dev.ratio, dev_geno, dev_cov, dev_geno_cov, dev_lmgeno,  cor_est, cor_pval))
-    
+    return(cbind(X,r,c(selBeta,as.numeric(selIntercept)), selLambda, selAlpha, SquErr, res$dev.ratio, dev_geno, dev_cov, dev_geno_cov, dev_lmgeno,  cor_est, cor_pval, cor_est_noadj, cor_pval_noadj))
   }else{
-    
-    
-    return(c(X,NA,NA,NA,NA,NA,NA,NA,NA,NA, NA, NA, NA))
+    return(c(X,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA))
   }
-  
 }
 
