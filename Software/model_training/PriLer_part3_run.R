@@ -90,16 +90,17 @@ if(which.min(colMeans(cv_test))<ncol(cv_test)){
   E_hat <- as.numeric(strsplit(names(id_opt), 'E_h.')[[1]][2])
   E_par <- -1
   print(sprintf('optimal E parameter: %.2f at position %i', E_hat, id_opt))
+  resOpt <- get(load(sprintf('%sresPrior_EOpt_NestedCV_HeritableGenes_allchr.RData', part2Res_fold)))
 }else{
   id_opt <- which(abs(diff(colMeans(cv_test))) < 0.5)[1] + 1
   E_hat <- as.numeric(strsplit(names(id_opt), 'E_h.')[[1]][2])
   E_par <- E_hat
   print(sprintf('minimum not reached in the interval, E parameter based on convergence: %.2f at position %i', E_par, id_opt))
+  resOpt <- get(load(sprintf('%sresPrior_EFixed%.2f_NestedCV_HeritableGenes_allchr.RData', part2Res_fold, E_par)))
 }
 
 
 # load nvar
-resOpt <- get(load(sprintf('%sresPrior_EOpt_NestedCV_HeritableGenes_allchr.RData', part2Res_fold)))
 nvar <- data.frame(chr = all_Chroms, nvar = sapply(resOpt$beta_snps_opt[[1]],  nrow))
 
 #####################

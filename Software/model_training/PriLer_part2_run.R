@@ -546,9 +546,30 @@ save(evalf_steps_train, file = sprintf('%sevalf_Epar_cvtrain_allchr.RData', outF
 # optimal E parameter
 if(length(E_set)>1){
   id_opt <- which.min(colMeans(cv_test_err))  
-}else{id_opt <- 1}
+}else{
+  id_opt <- 1
+}
 
-E_hat <- E_set[id_opt]
+# if the minimum is reached in the interval, use that otherwise
+# use as optimal value the one that lead to convergence: first value st diff lower than 0.5
+if(length(E_set)>1){
+  if(which.min(colMeans(cv_test_err))<ncol(cv_test_err)){
+    id_opt <- which.min(colMeans(cv_test_err))
+    E_hat <- as.numeric(strsplit(names(id_opt), 'E_h.')[[1]][2])
+    E_par <- -1
+    print(sprintf('optimal E parameter: %.2f at position %i', E_hat, id_opt))
+  }else{
+    id_opt <- which(abs(diff(colMeans(cv_test_err))) < 0.5)[1] + 1
+    E_hat <- as.numeric(strsplit(names(id_opt), 'E_h.')[[1]][2])
+    E_par <- E_hat
+    print(sprintf('minimum not reached in the interval, E parameter based on convergence: %.2f at position %i', E_par, id_opt))
+  }
+}else{
+  id_opt <- 1
+  E_hat <- E_set
+  E_par <- E_hat
+}
+
 
 weights_opt <-  matrix(weights_res[[id_opt]], ncol=nfolds_out, nrow = length(pNames))
 rownames(weights_opt) <- pNames
@@ -567,9 +588,15 @@ test_res_opt <- lapply(1:nfolds_out, function(x) data.frame(dev = dev_test[[id_o
 
 res_tot_opt <- list(geneAnn = gene_ann, train_opt = train_res_opt, test_opt = test_res_opt, 
                     cor_comb_test_opt = cor_test_comb[[id_opt]], cor_comb_test_noadj_opt = cor_test_noadj_comb[[id_opt]],
-                    beta_snps_opt = betaSnpsMatrix[[id_opt]], beta_cov_opt = betaCovMatrix[[id_opt]], weights_opt = weights_opt) 
+                    beta_snps_opt = betaSnpsMatrix[[id_opt]], beta_cov_opt = betaCovMatrix[[id_opt]], weights_opt = weights_opt, E_opt = E_hat) 
 
-save(res_tot_opt, file = sprintf('%sresPrior_EOpt_NestedCV_HeritableGenes_allchr.RData', outFold))
+
+if(E_par<0){
+  save(x = res_tot_opt, file = sprintf('%sresPrior_EOpt_NestedCV_HeritableGenes_allchr.RData', outFold))  
+}else{
+  save(x = res_tot_opt, file = sprintf('%sresPrior_EFixed%.2f_NestedCV_HeritableGenes_allchr.RData', outFold, E_par))
+}
+
 
 
 
