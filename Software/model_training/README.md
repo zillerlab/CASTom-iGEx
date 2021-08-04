@@ -171,7 +171,6 @@ The output includes:
 	-   MSE: n.iterations x n. genes, mean squared error 
 	-   beta: for each chr n.variables x n. genes, regression coefficient for both variants and covariates at each step
 	- 	obj: objective function at each step
-	- 
 -   resPrior_EOpt(orEFixed)_HeritableGenes_allchr.RData: results with prior information (final iteration)	    
 	-   geneAnn: gene annotation
 	-   tot: evaluation on entire set
