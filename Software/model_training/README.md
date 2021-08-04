@@ -186,12 +186,30 @@ Considering only not heritable genes, fix prior coefficients found in the previo
 *NOTE: script is specific for a chromosome, seed and n. folds for nested CV and single CV are the same as used in the previous steps*
 
 #### Usage
-> Rscript ElNet_withPrior_part4_run.R --curChrom --covDat_file --genoDat_file --geneExp_file --ncores (default 20) --outFold --InfoFold --functR ElNet_withPrior_functions_run.R --priorDat_file --priorInf (default 0) --part1Res_fold --part2Res_fold --part3Res_fold --cis_thres (default 200000) --Dx (default F) --convert_par (default 0.25)
+```sh
+./PriLer_part4_run.R \
+	--curChrom \
+	--covDat_file \
+	--genoDat_file \
+	--geneExp_file \
+	--ncores (default 20) \
+	--outFold \
+	--InfoFold \
+	--functR ./PriLer_functions_run.R \
+	--priorDat_file \
+	--priorInf (default 0) \
+	--part1Res_fold \
+	--part2Res_fold \
+	--part3Res_fold \
+	--cis_thres (default 200000) \
+	--Dx (default F) \
+	--convert_par (default 0.25)
+```
 
 The output includes:
--   resNoPrior_NestedCV_NotHeritableGenes_chr<>.RData: R object as in ElNet_withPrior_part1_run.R
+-   resNoPrior_NestedCV_NotHeritableGenes_chr<>.RData: R object as in PriLer_part1_run.R
 -   resPrior_NestedCV_NotHeritableGenes_chr<>.RData: R object as above, uses prior in the regression
--   resNoPrior_NotHeritableGenes_chr<>.RData: R object as in ElNet_withPrior_part3_run.R
+-   resNoPrior_NotHeritableGenes_chr<>.RData: R object as in PriLer_part3_run.R
 -   resPrior_NotHeritableGenes_chr<>.RData: R object as above, uses prior in the regression
 
 ### Combine Output
