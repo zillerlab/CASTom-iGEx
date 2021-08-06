@@ -1,5 +1,5 @@
-﻿# Predicting from genotype data with PriLer
-PriLer is a command-line tool that uses trained model to predicts gene expression from genotype-only datasets and convert them to T-scores and pathway scores. Prediction step contains also scripts to perform association with trait of interest. Two versions are available dependening of data dimensionality.
+# Predicting from genotype data with PriLer
+PriLer (Module 2) is a command-line tool that uses trained model to predicts gene expression from genotype-only datasets and convert them to T-scores and pathway scores. Prediction step contains also scripts to perform association with trait of interest. Two versions are available dependening of data dimensionality.
 
 ## Requirements
 To run the prediction the following R packages are required:
@@ -20,7 +20,7 @@ To run the prediction the following R packages are required:
  - lmtest
  
 ## Input Files
-- **Genotype matrix**: dosages for each chromosome (compressed txt) without variants name/position. Variants on the rows, samples on the columns.  *NOTE: SNPs must match with the train genotype data, file must end with chr<>_matrix.txt.gz*
+- **Genotype matrix**: dosages for each chromosome (compressed txt) without variants name/position (variants x samples).  *NOTE: SNPs must match with the train genotype data, file must end with chr<>_matrix.txt.gz*
 - **Phenotype matrix**: columns must contain Individual_ID plus any phenotype to test the association. 
 - **Phenotype description**: rows refers to phenotypes to be tested. Columns must contain: pheno_id FieldID Field	transformed_type,  pheno_id is used to match columns name in Phenotype matrix, transformed_type is a charachter defining the type of data (continous, binary ecc.)
 - **Covariate matrix**: columns must contain Individual_ID and genoSample_ID to match genotype plus covariates to correct for in the phenotype association. Column Dx (0 control 1 case) is optional, if present is used to build the reference set when computing T-scores. *Note: samples in genotype and phenotype matrix are filtered based on covariate matrix*
@@ -29,10 +29,17 @@ To run the prediction the following R packages are required:
 
 ## Workflow
 ### Predict gene expression
-From previously trained PriLer model, predict gene expression based on genotype only dataset
+From previously trained PriLer tissue-specific model (Module 1), predict gene expression based on genotype-only dataset
 #### Usage
->Rscript ElNet_withPrior_predictGeneExp_run.R --genoDat_file --covDat_file --cis_thres (default = 200000) --outFold --outTrain_fold  --InfoFold
-
+```sh
+./ElNet_withPrior_predictGeneExp_run.R \
+    --genoDat_file \
+    --covDat_file \
+    --cis_thres (default = 200000) \
+    --outFold \
+    --outTrain_fold  \
+    --InfoFold
+```
 *NOTE: can be splitted for subset of samples (depends on covDat_file), genes are NOT filtered*
 - *InfoFold* folder with gene-snp distance matrix
 - *outTrain_fold* : folder with results training model
