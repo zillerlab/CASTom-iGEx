@@ -53,7 +53,7 @@ outFold <- args$outFold
 # priorDat_file <- '../priorMatrix_'
 # priorInf <- c(2,3)
 # covDat_file <- '../../INPUT_DATA/Covariates/Covariates_PEERfact_PCs.txt'
-################################################################
+# ###############################################################
 
 covDat <- read.table(covDat_file, header = T, sep = '\t', stringsAsFactors = F, check.names=F)
 sampleAnn <- covDat[, colnames(covDat) %in% c('Individual_ID', 'genoSample_ID', 'RNASample_ID')]
@@ -385,8 +385,11 @@ ggsave(sprintf('%s.png',file_name), plot = plot_cvobjerr_test, width = 8, height
 #############################
 
 dev_train_test <- data.frame(train = res_p$train_dev, test = res_p$test_dev, type = res_p$type) 
-id_na <-  is.na(rowSums(dev_train_test[, 1:2])) 
-dev_train_test <- dev_train_test[!id_na, ]
+# remove NA
+id_na <-  is.na(rowSums(dev_train_test[, 1:2]))
+# remove inf
+id_fin <-  is.finite(rowSums(dev_train_test[, 1:2]))
+dev_train_test <- dev_train_test[!id_na & id_fin, ]
 id_zero <- dev_train_test$train == 0 # correspond to NA reuslts (no snps)
 dev_train_test <- dev_train_test[!id_zero, ]
 dev_train_test$type <- factor(dev_train_test$type)
@@ -407,8 +410,11 @@ ggsave(sprintf('%s.pdf',file_name), ggMarginal(pl_devcv, groupColour = TRUE, gro
 ##################################
 
 devgeno_train_test <- data.frame(train = res_p$train_dev_geno, test = res_p$test_dev_geno, type = res_p$type) 
-id_na <-  is.na(rowSums(devgeno_train_test[, 1:2])) 
-devgeno_train_test <- devgeno_train_test[!id_na, ]
+# remove NA
+id_na <-  is.na(rowSums(devgeno_train_test[, 1:2]))
+# remove inf
+id_fin <-  is.finite(rowSums(devgeno_train_test[, 1:2]))
+devgeno_train_test <- devgeno_train_test[!id_na & id_fin, ]
 id_zero <- devgeno_train_test$train == 0 # correspond to NA reuslts (no snps)
 devgeno_train_test <- devgeno_train_test[!id_zero, ]
 devgeno_train_test$type <- factor(devgeno_train_test$type)
@@ -423,6 +429,55 @@ pl_devgenocv <- ggplot(devgeno_train_test, aes(x = train, y = test, color = type
 file_name <- sprintf('%splot_CVdevgeno_trainVStest_allgenes', outFold)
 ggsave(sprintf('%s.png',file_name), ggMarginal(pl_devgenocv, groupColour = TRUE, groupFill = TRUE), width = 5, height = 5, units = "in")
 ggsave(sprintf('%s.pdf',file_name), ggMarginal(pl_devgenocv, groupColour = TRUE, groupFill = TRUE), width = 5, height = 5, units = "in")
+
+##########################
+#### cor (all genes) #####
+##########################
+
+cor_train_test <- data.frame(train = res_p$train_cor, test = res_p$test_cor, type = res_p$type) 
+# remove NA
+id_na <-  is.na(rowSums(cor_train_test[, 1:2]))
+# remove inf
+id_fin <-  is.finite(rowSums(cor_train_test[, 1:2]))
+cor_train_test <- cor_train_test[!id_na & id_fin, ]
+cor_train_test$type <- factor(cor_train_test$type)
+
+pl_cor <- ggplot(cor_train_test, aes(x = train, y = test, color = type, group = type)) + 
+  geom_abline(intercept = 0, slope = 1, color="red", linetype="dashed")+
+  ylim(min(cor_train_test$test),1)+
+  xlim(min(cor_train_test$train),1)+
+  geom_point(size = 0.5) + ggtitle(bquote('Mean CV genotype R'^2))+
+  xlab('Train Set') +  ylab('Test Set')+ theme_bw() + theme(legend.position = "bottom", plot.title = element_text(hjust = 0.5))+
+  scale_colour_manual(values = c('black', 'darkgrey'))
+
+file_name <- sprintf('%splot_CVcor_trainVStest_allgenes', outFold)
+ggsave(sprintf('%s.png',file_name), ggMarginal(pl_cor, groupColour = TRUE, groupFill = TRUE), width = 5, height = 5, units = "in")
+ggsave(sprintf('%s.pdf',file_name), ggMarginal(pl_cor, groupColour = TRUE, groupFill = TRUE), width = 5, height = 5, units = "in")
+
+#######################################
+#### cor not adjusted (all genes) #####
+#######################################
+
+cornoadj_train_test <- data.frame(train = res_p$train_cor_noadj, test = res_p$test_cor_noadj, type = res_p$type) 
+# remove NA
+id_na <-  is.na(rowSums(cornoadj_train_test[, 1:2]))
+# remove inf
+id_fin <-  is.finite(rowSums(cornoadj_train_test[, 1:2]))
+cornoadj_train_test <- cornoadj_train_test[!id_na & id_fin, ]
+cornoadj_train_test$type <- factor(cornoadj_train_test$type)
+
+pl_cor <- ggplot(cornoadj_train_test, aes(x = train, y = test, color = type, group = type)) + 
+  geom_abline(intercept = 0, slope = 1, color="red", linetype="dashed")+
+  ylim(min(cornoadj_train_test$test),1)+
+  xlim(min(cornoadj_train_test$train),1)+
+  geom_point(size = 0.5) + ggtitle(bquote('Mean CV genotype R'^2))+
+  xlab('Train Set') +  ylab('Test Set')+ theme_bw() + theme(legend.position = "bottom", plot.title = element_text(hjust = 0.5))+
+  scale_colour_manual(values = c('black', 'darkgrey'))
+
+file_name <- sprintf('%splot_CVcor_noadj_trainVStest_allgenes', outFold)
+ggsave(sprintf('%s.png',file_name), ggMarginal(pl_cor, groupColour = TRUE, groupFill = TRUE), width = 5, height = 5, units = "in")
+ggsave(sprintf('%s.pdf',file_name), ggMarginal(pl_cor, groupColour = TRUE, groupFill = TRUE), width = 5, height = 5, units = "in")
+
 
 ##########################################################
 #### CV dev geno (all genes) diff with/without prior #####
@@ -455,7 +510,7 @@ pl_genonew_train <- ggplot(subset(tot_df, train_dev_geno_nop>=0.001), aes(x = tr
   geom_hline(yintercept =0, color = 'black', size = 0.5)+
   geom_vline(xintercept = 0.0009, color = 'black', size = 0.5, linetype =2, alpha = 0.6)+
   xlab(expression (R[el-net]^2)) +  xlab(expression (R[el-net]^2))+
-  theme_classic() + ylab(expression(frac(R[el-net-prior]^2 - R[el-net]^2,R[el-net]^2))) + theme(legend.position = "none",plot.title = element_text(hjust = 0.5))+
+  theme_classic() + ylab(expression(frac(R[PriLer]^2 - R[el-net]^2,R[el-net]^2))) + theme(legend.position = "none",plot.title = element_text(hjust = 0.5))+
   annotate(geom="text", x=pos_text, y=max(tot_df$perc_train[tot_df$train_dev_geno_nop>=0.001])-0.1, 
            label=paste("% improved genes\n", round(length(which(tot_df$train_col == 'red'))/nrow(tot_df),digits=3)), color="black", size = 3)+
   scale_color_manual(values =c("red", "blue"))
@@ -471,7 +526,7 @@ pl_genonew_test <- ggplot(subset(tot_df, test_dev_geno_nop>=0.001), aes(x = test
   geom_hline(yintercept =0, color = 'black', size = 0.5)+
   geom_vline(xintercept = 0.0009, color = 'black', size = 0.5, linetype =2, alpha = 0.6)+
   xlab(expression (R[el-net]^2)) +  xlab(expression (R[el-net]^2))+
-  theme_classic() + ylab(expression(frac(R[el-net-prior]^2 - R[el-net]^2,R[el-net]^2))) + theme(legend.position = "none",plot.title = element_text(hjust = 0.5))+
+  theme_classic() + ylab(expression(frac(R[PriLer]^2 - R[el-net]^2,R[el-net]^2))) + theme(legend.position = "none",plot.title = element_text(hjust = 0.5))+
   annotate(geom="text", x=pos_text, y=max(tot_df$perc_test[tot_df$test_dev_geno_nop>=0.001])-0.1,
            label=paste("% improved genes\n", round(length(which(tot_df$test_col == 'red'))/nrow(tot_df),digits=3)), color="black", size = 3)+
   scale_color_manual(values =c("red", "blue"))
@@ -485,10 +540,10 @@ ggsave(sprintf('%s.pdf',file_name), pl_genonew_test, width = 4, height = 4, unit
 ##################################################################
 
 df_tot <- data.frame(dev_type = rep(c(rep('total', nrow(res_p)), rep('geno', nrow(res_p)), rep('cov', nrow(res_p)), rep('cov_geno', nrow(res_p))),2), 
-                     reg_type = c(rep('el-net-prior', nrow(res_p)*4), rep('el-net', nrow(res_p)*4)), 
+                     reg_type = c(rep('PriLer', nrow(res_p)*4), rep('el-net', nrow(res_p)*4)), 
                      dev = c(res_p$dev, res_p$dev_geno, res_p$dev_cov, res_p$dev_geno_cov, res_nop$dev, res_nop$dev_geno, res_nop$dev_cov, res_nop$dev_geno_cov))
 
-df_tot$reg_type <- factor(df_tot$reg_type, levels = c('el-net', 'el-net-prior'))
+df_tot$reg_type <- factor(df_tot$reg_type, levels = c('el-net', 'PriLer'))
 
 # boxplot
 pl_box <- ggplot(df_tot, aes(x = dev_type, y = dev, fill = reg_type)) + 
@@ -507,10 +562,10 @@ tmp <- cbind(res_p$dev, res_nop$dev)
 id_rm <- is.na(rowSums(tmp))
 ngenes <- ifelse(length(which(id_rm))>0, nrow(res_p) -length(which(id_rm)), nrow(res_p) )
 
-df_tot <- data.frame(type = c(rep('el-net-prior', ngenes), rep('el-net',ngenes)), 
+df_tot <- data.frame(type = c(rep('PriLer', ngenes), rep('el-net',ngenes)), 
                      deviance = c(sort(res_p$dev[!id_rm], decreasing = T), sort(res_nop$dev[!id_rm], decreasing = T)))
 
-df_tot$type <- factor(df_tot$type,  levels = c('el-net', 'el-net-prior'))
+df_tot$type <- factor(df_tot$type,  levels = c('el-net', 'PriLer'))
 df_tot$gene <- c(rep(1:ngenes, 2))
 
 pl_dev <- ggplot(df_tot, aes(x = gene, y = deviance, color = type)) + 
@@ -528,10 +583,10 @@ tmp <- cbind(res_p$dev_geno, res_nop$dev_geno)
 id_rm <- is.na(rowSums(tmp))
 ngenes <- ifelse(length(which(id_rm))>0, nrow(res_p) -length(which(id_rm)), nrow(res_p) )
 
-df_tot <- data.frame(type = c(rep('el-net-prior', ngenes), rep('el-net',ngenes)), 
+df_tot <- data.frame(type = c(rep('PriLer', ngenes), rep('el-net',ngenes)), 
                      deviance = c(sort(res_p$dev_geno[!id_rm], decreasing = T), sort(res_nop$dev_geno[!id_rm], decreasing = T)))
 
-df_tot$type <- factor(df_tot$type,  levels = c('el-net', 'el-net-prior'))
+df_tot$type <- factor(df_tot$type,  levels = c('el-net', 'PriLer'))
 df_tot$gene <- c(rep(1:ngenes, 2))
 
 pl_dev <- ggplot(df_tot, aes(x = gene, y = deviance, color = type)) + 
@@ -678,8 +733,9 @@ pl_w <- ggplot(df_contr, aes(x = feature, y = max, fill = feature) ) +
   xlab('') +  theme_bw() + ylab('') + theme(legend.position = "none") + ggtitle('Maximum contribution to prior coefficient')+
   scale_fill_d3('category20')
 
-file_name <- sprintf('%s/plot_maxcontr_weights.png', outFold)
-ggsave(file_name,  pl_w, width = 6, height = 2+0.1*length(pNames), units = "in")
+file_name <- sprintf('%splot_maxcontr_weights', outFold)
+ggsave(sprintf('%s.png',file_name),  pl_w, width = 6, height = 2+0.1*length(pNames), units = "in")
+ggsave(sprintf('%s.png',file_name),  pl_w, width = 6, height = 2+0.1*length(pNames), units = "in")
 
 pl_w <- ggplot(df_contr, aes(x = feature, y = w, fill = feature) ) + 
   geom_bar(stat="identity", color = 'black') + 
@@ -695,10 +751,10 @@ ggsave(sprintf('%s.pdf',file_name),  pl_w, width = 6, height = 2+0.1*length(pNam
 #### iteration weigths for prior feature #####
 ##############################################
 
-if(id_con == id_opt){
+if(E_par<0){
   res_p_her_tot_allchr_it <- get(load(sprintf('%sresPrior_EOpt_Iteration_HeritableGenes_allchr.RData', part3Res_fold)))
 }else{
-  res_p_her_tot_allchr_it <- get(load(sprintf('%sresPrior_EFixed%.2f_Iteration_HeritableGenes_allchr.RData', part3Res_fold, Epar[id_con])))
+  res_p_her_tot_allchr_it <- get(load(sprintf('%sresPrior_EFixed%.2f_Iteration_HeritableGenes_allchr.RData', part3Res_fold, E_hat)))
 }
 
 it_weights <- as.matrix(res_p_her_tot_allchr_it$pWeight, ncol = length(pNames))
@@ -769,7 +825,7 @@ pl_prior <- ggplot(df_prior, aes(x = frac_nop, y = frac, color = Prior, size = w
   geom_abline(slope = 1, intercept = 0, linetype=2, alpha = 0.6)+
   geom_abline(slope = 2, intercept = 0, linetype=2, alpha = 0.6, color = 'red')+
   xlab(TeX('$\\frac{n. reg-SNPs\\,with\\,prior}{n. reg-SNPs}$ el-net'))  +  theme_classic() + 
-  ylab(TeX('$\\frac{n. reg-SNPs\\,with\\,prior}{n. reg-SNPs}$ el-net-prior')) + theme(legend.position = c(0.75, 0.3), plot.title = element_text(hjust = 0.5))+
+  ylab(TeX('$\\frac{n. reg-SNPs\\,with\\,prior}{n. reg-SNPs}$ PriLer')) + theme(legend.position = c(0.75, 0.3), plot.title = element_text(hjust = 0.5))+
   scale_color_d3('category20')+labs(size = "Max contribution \nto prior coefficient")+
   guides(color =FALSE)
 
@@ -779,7 +835,7 @@ tmp <- ggplot(df_prior, aes(x = frac_nop, y = frac, color = Prior, size = weight
   geom_abline(slope = 1, intercept = 0, linetype=2, alpha = 0.6)+
   geom_abline(slope = 2, intercept = 0, linetype=2, alpha = 0.6, color = 'red')+
   xlab(TeX('$\\frac{n. reg-SNPs\\,with\\,prior}{n. reg-SNPs}$ el-net')) +  theme_classic() +
-  ylab(TeX('$\\frac{n. reg-SNPs\\,with\\,prior}{n. reg-SNPs}$ el-net-prior')) + theme(legend.position = 'right', plot.title = element_text(hjust = 0.5))+
+  ylab(TeX('$\\frac{n. reg-SNPs\\,with\\,prior}{n. reg-SNPs}$ PriLer')) + theme(legend.position = 'right', plot.title = element_text(hjust = 0.5))+
   scale_color_d3('category20')+labs(size = "Max contribution \nto prior coefficient")+
   guides(size =FALSE)
 
@@ -808,7 +864,7 @@ abs_beta_reg_prior_sep_p <- lapply(id_snps_gene_and_prior_p_sep, function(x) abs
 df_abs <- data.frame(val = log10(c(unlist(abs_beta_reg_prior_sep_nop), unlist(abs_beta_reg_prior_sep_p))), 
                      prior = c(unlist(lapply(1:length(pNames), function(x) rep(pNames[x], length(abs_beta_reg_prior_sep_nop[[x]])))), 
                                unlist(lapply(1:length(pNames), function(x) rep(pNames[x], length(abs_beta_reg_prior_sep_p[[x]]))))),
-                     type = c(rep('el-net', length(unlist(abs_beta_reg_prior_sep_nop))), rep('el-net-prior', length(unlist(abs_beta_reg_prior_sep_p)))))
+                     type = c(rep('el-net', length(unlist(abs_beta_reg_prior_sep_nop))), rep('PriLer', length(unlist(abs_beta_reg_prior_sep_p)))))
 
 df_abs$prior <- factor(df_abs$prior, levels = pNames)
 df_abs$type <- factor(df_abs$type)
@@ -837,7 +893,7 @@ pl_med <- ggplot(df_abs_med, aes(x = nop, y = p, color = prior, size = weights))
   ggtitle('log10 abs(beta) reg-SNPs with prior (median)')+
   geom_abline(slope = 1, intercept = 0, linetype=2, alpha = 0.6)+
   xlab('el-net')  +  theme_classic() + 
-  ylab('el-net-prior') + theme(legend.position = c(0.75, 0.3), plot.title = element_text(hjust = 0.5))+
+  ylab('PriLer') + theme(legend.position = c(0.75, 0.3), plot.title = element_text(hjust = 0.5))+
   scale_color_d3('category20')+labs(size = "Max contribution \nto prior coefficient")+
   guides(color =FALSE)
 
