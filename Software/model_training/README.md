@@ -1,6 +1,6 @@
 # Training prediction model with PriLer
 
-PriLer is a command-line tool that create model for predicting gene expression from genotype data integrating prior features on variants whose relevance is automatically learned in a machine learning set up. 
+PriLer (CASTom-iGEx Module 1) is a command-line tool that create model for predicting gene expression from genotype data integrating prior features on variants whose relevance is automatically learned in a machine learning set up. 
 
 ## Requirements
 To run PriLer the following R packages are required:
