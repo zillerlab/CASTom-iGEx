@@ -8,8 +8,6 @@ The framework is divided in 3 separate modules:
 3. **Patients stratification** based on imputed gene expression quantifying differences in genetic liability distribution
 across directly interpretable biological process and pathways as well as clinical and endophenotypic parameters.
 
-
-
-![](overview.png)
+![](./overview.png)
 
 
