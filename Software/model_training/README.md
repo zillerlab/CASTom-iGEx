@@ -214,10 +214,26 @@ The output includes:
 ### Combine Output
 The last step combines regression results from nested CV and total set  regression. In addition, results are separated for with and without setting to allow for a straightforward comparison. The regression coefficients are saved in a .RData object, divided by chromosomes. Finally, plot of the entire pipeline are produced. 
 #### Usage 
->Rscript ElNet_withPrior_finalOutput_run.R --covDat_file --outFold --InfoFold --functR ElNet_withPrior_functions_run.R --priorDat_file --priorInf (default 0) --part1Res_fold --part2Res_fold --part3Res_fold --part4Res_fold --cis_thres (default 200000) --Dx (default F) --convert_par (default 0.25)
+```sh
+./ElNet_withPrior_finalOutput_run.R \
+	--covDat_file \
+	--outFold \
+	--InfoFold \
+	--functR ./PriLer_functions_run.R \ 
+	--priorDat_file \
+	--priorInf (default 0) \
+	--part1Res_fold \
+	--part2Res_fold \
+	--part3Res_fold \
+	--part4Res_fold \
+	--cis_thres (default 200000) \
+	--Dx (default F) \
+	--convert_par (default 0.25)
+```
 
 The output includes:
 -   resNoPrior_regEval_allchr.txt and resPrior_regEval_allchr.txt regression evaluation for each gene + gene annotation
 -   resNoPrior_regCoeffCov_allchr.txt and resPrior_regCoeffCov_allchr.txt regression coefficients for covariates
 -   resNoPrior_regCoeffSnps_allchr.RData and resPrior_regCoeffSnps_allchr.RData regression coefficient for variants divided by chr (sparse matrix)
--   plots
+-   plots for model evaluation and quality checks
+'NoPrior' refers to elastic-net, 'Prior' refers to PriLer results.
