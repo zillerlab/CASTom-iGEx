@@ -419,7 +419,8 @@ betaCovMatrix <-  lapply(1:length(all_Chroms), function(x) modelMatrix[[x]][(P_c
 weights_fin <- pWeight
 prior_coeff <- lapply(priorMat, function(x) getPrior(x, weights_fin))
 tot_p <- data.frame(dev = devFin[nIter,], dev_geno =  devFin_geno[nIter,], dev_cov = devFin_cov[nIter,], dev_genocov = devFin_genocov[nIter, ], dev_lmgeno = devFin_lmgeno[nIter, ], 
-                    cor = corFin[nIter, ], cor_pval = corFin_pval[nIter, ])
+                    cor = corFin[nIter, ], cor_pval = corFin_pval[nIter, ], 
+                    cor_noadj = corFin_noadj[nIter, ], cor_noadj_pval = corFin_noadj_pval[nIter, ])
 
 res_tot_p <- list(geneAnn = gene_ann, tot = tot_p, beta_snps = betaSnpsMatrix, beta_cov = betaCovMatrix, 
                   Eopt = E_hat, weights = weights_fin, prior_coeff = prior_coeff)
