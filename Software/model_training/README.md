@@ -215,7 +215,7 @@ The output includes:
 The last step combines regression results from nested CV and total set  regression. In addition, results are separated for with and without setting to allow for a straightforward comparison. The regression coefficients are saved in a .RData object, divided by chromosomes. Finally, plot of the entire pipeline are produced. 
 #### Usage 
 ```sh
-./ElNet_withPrior_finalOutput_run.R \
+./PriLer_finalOutput_run.R \
 	--covDat_file \
 	--outFold \
 	--InfoFold \
