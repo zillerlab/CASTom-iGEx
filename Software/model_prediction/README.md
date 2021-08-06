@@ -32,7 +32,7 @@ To run the prediction the following R packages are required:
 From previously trained PriLer tissue-specific model (Module 1), predict gene expression based on genotype-only dataset
 #### Usage
 ```sh
-./ElNet_withPrior_predictGeneExp_run.R \
+./Priler_predictGeneExp_run.R \
     --genoDat_file \
     --covDat_file \
     --cis_thres (default = 200000) \
