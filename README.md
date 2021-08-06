@@ -15,8 +15,8 @@ across directly interpretable biological process and pathways as well as clinica
 
 ## Usage
 For details of each module please refer to 
-* [Module 1](Software/module_training/)
-* [Module 2](Software/module_prediction/)
-* [Module 3](Software/module_clustering/)
+* [Module 1](master/Software/module_training/)
+* [Module 2](master/Software/module_prediction/)
+* [Module 3](master/Software/module_clustering/)
 
 ## References
