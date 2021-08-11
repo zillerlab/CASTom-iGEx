@@ -302,7 +302,7 @@ plot_cverr_test<- ggplot(data = df_cv_test, aes(x = it, y = error)) +
         axis.text.x=element_text(size = 11),
         axis.text.y=element_text(size = 11))
 
-if(E_par>0){
+if(E_par<0){
   file_name <- sprintf("%splot_CVmse_TEST_Eopt", outFold)
 }else{
   file_name <- sprintf("%splot_CVmse_TEST_Efixed%s", outFold, as.character(E_hat))
@@ -320,7 +320,7 @@ plot_cverr_train <- ggplot(data = df_cv_train, aes(x = it, y = error)) +
         axis.text.x=element_text(size = 11),
         axis.text.y=element_text(size = 11))
 
-if(E_par>0){
+if(E_par<0){
   file_name <- sprintf("%splot_CVmse_TRAIN_Eopt", outFold)
 }else{
   file_name <- sprintf("%splot_CVmse_TRAIN_Efixed%s", outFold, as.character(E_hat))
@@ -347,7 +347,7 @@ plot_cvobjerr_train<- ggplot(data = df_objcv_train, aes(x = it, y = error)) +
         axis.text.x=element_text(size = 11),
         axis.text.y=element_text(size = 11))
 
-if(E_par>0){
+if(E_par<0){
   file_name <- sprintf("%splot_CVobj_TRAIN_Eopt", outFold)
 }else{
   file_name <- sprintf("%splot_CVobj_TRAIN_Efixed%s", outFold, as.character(E_hat))
@@ -372,7 +372,7 @@ plot_cvobjerr_test<- ggplot(data = df_objcv_test, aes(x = it, y = error)) +
         axis.text.x=element_text(size = 11),
         axis.text.y=element_text(size = 11))
 
-if(E_par>0){
+if(E_par<0){
   file_name <- sprintf("%splot_CVobj_TEST_Eopt", outFold)
 }else{
   file_name <- sprintf("%splot_CVobj_TEST_Efixed%s", outFold, as.character(E_hat))
