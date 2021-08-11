@@ -1,4 +1,4 @@
-# Predicting from genotype data with PriLer
+# Imputation of gene expression, computation of individual pathway-scores and association with trait 
 CASTom-iGEx (Module 2) is a command-line tool that uses trained model to predicts gene expression from genotype-only datasets and convert them to T-scores and pathway scores. Prediction step contains also scripts to perform association with trait of interest. Two versions are available dependening of data dimensionality.
 
 ## Requirements
