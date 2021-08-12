@@ -156,8 +156,6 @@ nfolds_in <- resNoPrior_Her_nCV$seed$nfold[resNoPrior_Her_nCV$seed$type == 'inne
 seed_out <- resNoPrior_Her_nCV$seed$value[resNoPrior_Her_nCV$seed$type == 'outer']
 nfolds_out <- resNoPrior_Her_nCV$seed$nfold[resNoPrior_Her_nCV$seed$type == 'outer']
 
-resPrior_Her_nCV <- get(load(sprintf('%sresPrior_EOpt_NestedCV_HeritableGenes_allchr.RData',part2Res_fold)))
-
 # total prior and seed/nfold CV
 err_test <- read.table(sprintf('%scv_test_Epar_allchr.txt', part2Res_fold), header = T)
 if(which.min(colMeans(err_test))<ncol(err_test)){
