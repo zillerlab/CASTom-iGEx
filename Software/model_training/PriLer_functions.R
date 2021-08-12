@@ -579,7 +579,7 @@ expPrediction_Prior_fold <- function(X, prior, lambda, alpha, fold){
   ind_SNPs <- geneSnpDist[,X]!=0 #&pDat[,2]!=0
   nSnp <- sum(ind_SNPs)
   
-  if(nSnp>2 & !is.na(lambda)){
+  if(nSnp>2 & !is.na(lambda[X])){
     
     # # ######
     # cons <- setdiff(which(ind_SNPs)[1]:which(ind_SNPs)[length(which(ind_SNPs))], which(ind_SNPs))
