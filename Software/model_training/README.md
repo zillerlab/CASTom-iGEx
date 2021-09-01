@@ -20,18 +20,20 @@ To run PriLer the following R packages are required:
 - ggExtra
 
 ## Input Files
-- **Gene expression matrix**: preprocessed gene expression (genes x samples). First column refers to gene names (ensembl annotation or HUGO nomenclature)
-- **Genotype matrix**: dosages for each chromosome (compressed txt) without variants name/position (variants x samples). *NOTE: the file must end with chr<>_matrix.txt.gz*
-- **Genotype info matrix**: contains variants position, name and other info, must contain columns CHR and POS and match with Genotype matrix). *NOTE: the file must end with  chr<>.txt*
-- **Covariate matrix**: columns must contain Individual_ID, genoSample_ID and RNASample_ID to match genotype and gene expression plus covariates to be used in the regression model. Column Dx (0 control 1 case) is optional as well as it's usage. *Note: Samples in genotype and gene expression matrix are filtered based on covariate matrix*
-- **Prior matrix**: prior information for variants (variants x prior features). It doesn't include variant name and MUST match genotype matrix. The columns can be binary (one-hot encoding for intersection) or continuous. 
-- **List heritable genes**: usually obtained from TWAS heritable analysis: list of genes, match external_gene_name or ensembl_gene_id. Reliable set of genes being regulated by cis-variants.
-- **Gene annotation files of TSS and position** obtained using *PrepareData_biomart_TSS.R* script. Possibility of recomputing or use provided fixed version
+- **Gene expression matrix** (*--geneExp_file*): preprocessed gene expression (genes x samples). First column refers to gene names (ensembl annotation or HUGO nomenclature)
+- **Genotype matrix** (*--genoDat_file*): dosages for each chromosome (compressed txt) without variants name/position (variants x samples). *NOTE: the file must end with chr<>_matrix.txt.gz*
+- **Genotype info matrix** (*--VarInfo_file*): contains variants position, name and other info, must contain columns `CHR` and `POS` and match with Genotype matrix). *NOTE: the file must end with  chr<>.txt*
+- **Covariate matrix** (*--covDat_file*): columns must contain `Individual_ID`, `genoSample_ID` and `RNASample_ID` to match genotype and gene expression plus covariates to be used in the regression model. Column `Dx` (0 control 1 case) is optional as well as it's usage. *Note: Samples in genotype and gene expression matrix are filtered based on covariate matrix*
+- **Prior matrix** (*--priorDat_file*): prior information for variants (variants x prior features). It doesn't include variant name and MUST match genotype matrix. The columns can be binary (one-hot encoding for intersection) or continuous. 
+- **List heritable genes** (*--geneList_file*): usually obtained from TWAS heritable analysis: list of genes, match external_gene_name or ensembl_gene_id. Reliable set of genes being regulated by cis-variants.
+- **Gene annotation files of TSS and position** (*--biomartTSS_file --biomartGenePos_file*) obtained using *PrepareData_biomart_TSS.R* script. Possibility of recomputing or use provided fixed version
 
 ## Workflow
 ### Pre-processing:
 Prepare files needed for the regression model analysis: 
 annotate genes file using bioMart (possibility of recomputing or use the fixed version), compute snp-gene distance sparse matrix. If list of heritable genes not provided, all genes are annotated as not heritable.
+
+*--outFold*, *--outFold_geneExp* and *--outFold_snps* are the path where general output, filtered gene expression and SNP annotation shoudl be saved respectively. 
 
 *NOTE: consider only chromosomes 1-22*
 #### Usage
@@ -44,17 +46,20 @@ annotate genes file using bioMart (possibility of recomputing or use the fixed v
 	--biomartGenePos_file (default NULL) \
 	--biomartTSS_file (default NULL) \
 	--outFold \
+	--outFold_geneExp \
 	--outFold_snps (default NULL)
 ```
 
 The output includes:
--   RNAseq_filt.txt: gene expression + annotation table (genes x samples)
--   hg19_ENSEMBL_TSS_chr<>_matched.txt: gene annotation include column with heritable info
--   hg19_SNPs_chr<>_matched.txt: snp annotation, containts position and ID
--   ENSEMBL_gene_SNP_2e+5_chr<>_matrix.mtx: sparse matrix (variants x genes) indicates the distance from the gene in bp with a default threshold of 200 kb 
+-   RNAseq_filt.txt: gene expression + annotation table (genes x samples), saved in *--outFold_geneExp*
+-   hg19_ENSEMBL_TSS_chr<>_matched.txt: gene annotation include column with heritable info, saved in *--outFold*
+-   hg19_SNPs_chr<>_matched.txt: snp annotation, containts position and ID, saved in *--outFold_snps*
+-   ENSEMBL_gene_SNP_2e+5_chr<>_matrix.mtx: sparse matrix (variants x genes) indicates the distance from the gene in bp with a default threshold of 200 kb, saved in *--outFold*
 
 ### Step 1:
 Considering only heritable genes, compute elastic-net regression in a nested cross validation setting without prior information. The aim is to find the optimal alpha-lambda couple parameter for the outer loop. In addition, regression without prior is evaluated.
+
+*--InfoFold* equivalent to *--outFold* in preProcessing and is the folder including ENSEMBL_gene_SNP_2e+5_chr<>_matrix.mtx data. *--curChrom* indicates considered choromosome in e.g. chr1
 
 *NOTE: script is specific for a chromosome and can be used if no genes are heritable such that e-net is computed for all genes*
 #### Usage
@@ -75,7 +80,7 @@ Considering only heritable genes, compute elastic-net regression in a nested cro
 	--cis_thres (default 200000) \
 	--Dx (default F)
 ```
-The ouput includes:
+The ouput includes (saved in *--outFold*):
 -   optim_lambda_chr<>.txt/optim_alpha_chr<>.txt: optimal lambda/alpha parameter for each outer fold and gene (genes x outer folds)
 -   resNoPrior_NestedCV_HeritableGenes_chr<>.RData/resNoPrior_NestedCV_AllGenes_chr<>.RData: R object containing    
 	-	geneAnn: gene annotation
@@ -89,6 +94,8 @@ The ouput includes:
 
 ### Step 2:
 Considering only heritable genes, compute elastic-net regression in a nested cross-validation setting using prior information in order to find optimal E (scale for prior weights) parameter, alpha and lambda are obtained from the previous step. 
+
+*--part1Res_fold* is the folder containing the output of step1, *--priorInf* is a vector of indeces indicating the columns in priorDat_file to be included.
 
 *NOTE: The script is parallelized over given possible values of E parameter. Possible values for E cannot be chosen a prior but depends on the data*.
 #### Usage
@@ -112,7 +119,7 @@ Considering only heritable genes, compute elastic-net regression in a nested cro
 	--outFold
 ```
 
-The output includes:
+The output includes (saved in *--outFold*):
  -   resE_allchr.RData:  R object with info of E parameter search for each E parameter, folder and interation (not further use, only kept to check/specific plots).
 -   cv_train_Epar_allchr.txt/cv_test_Epar_allchr.txt: n.folds x n.Epar tested, sum of mean squared error (MSE) on train/test set for all the genes in the final iteration.
 -   obj_Epar_cvtrain_allchr.RData/obj_Epar_cvtest_allchr.RData:  list for each E parameter and each folder of objective function on train/test sets (all iterations). 
@@ -130,6 +137,8 @@ The output includes:
 
 ### Step 3:
 Considering only heritable genes, first find optimal alpha and lambda parameter on the entire set (single cross validation) and evaluate total results without prior. Second, use alpha-lambda pairs found and the optimal E parameter (step 2) in the elastic-net with prior information setting and evaluate the results.
+
+*--part2Res_fold* is the folder containing the output of step2.
 
 #### Usage
 ```sh
@@ -153,7 +162,7 @@ Considering only heritable genes, first find optimal alpha and lambda parameter 
 	--outFold
 ```
 
-The output includes:
+The output includes (saved in *--outFold*):
 -   resNoPrior_HeritableGenes_allchr.RData: results without prior information:
 	-   geneAnn: gene annotation
 	-   tot: evaluation on entire set
@@ -182,6 +191,9 @@ The output includes:
 
 ### Step 4:
 Considering only not heritable genes, fix prior coefficients found in the previous steps (step 4 in the total set and step 2 in the outer folds for nested CV). First, compute elastic-net regression in a nested CV setting without prior information, find optimal alpha-lambda pairs and evaluate the regression without prior. Second, use optimal alpha-lambda and prior coefficients to evaluate elastic-net regression in a nested CV setting with prior information. Third, find optimal alpha-lambda parameters on the entire set (single CV), evaluate total results with and without prior.
+
+*--part1Res_fold --part2Res_fold --part3Res_fold* are the folders containing output of step1, step2 and step3.
+
 *NOTE: script is specific for a chromosome, seed and n. folds for nested CV and single CV are the same as used in the previous steps*
 
 #### Usage
@@ -205,7 +217,7 @@ Considering only not heritable genes, fix prior coefficients found in the previo
 	--convert_par (default 0.25)
 ```
 
-The output includes:
+The output includes (saved in *--outFold*):
 -   resNoPrior_NestedCV_NotHeritableGenes_chr<>.RData: R object as in PriLer_part1_run.R
 -   resPrior_NestedCV_NotHeritableGenes_chr<>.RData: R object as above, uses prior in the regression
 -   resNoPrior_NotHeritableGenes_chr<>.RData: R object as in PriLer_part3_run.R
@@ -213,6 +225,9 @@ The output includes:
 
 ### Combine Output
 The last step combines regression results from nested CV and total set  regression. In addition, results are separated for with and without setting to allow for a straightforward comparison. The regression coefficients are saved in a .RData object, divided by chromosomes. Finally, plot of the entire pipeline are produced. 
+
+*--part1Res_fold --part2Res_fold --part3Res_fold --part4Res_fold* are the folders containing output of step1, step2, step3 and step4.
+
 #### Usage 
 ```sh
 ./PriLer_finalOutput_run.R \
@@ -231,7 +246,7 @@ The last step combines regression results from nested CV and total set  regressi
 	--convert_par (default 0.25)
 ```
 
-The output includes:
+The output includes (saved in *--outFold*):
 -   resNoPrior_regEval_allchr.txt and resPrior_regEval_allchr.txt regression evaluation for each gene + gene annotation
 -   resNoPrior_regCoeffCov_allchr.txt and resPrior_regCoeffCov_allchr.txt regression coefficients for covariates
 -   resNoPrior_regCoeffSnps_allchr.RData and resPrior_regCoeffSnps_allchr.RData regression coefficient for variants divided by chr (sparse matrix)
