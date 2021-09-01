@@ -1,5 +1,5 @@
 # Imputation of gene expression, computation of individual pathway-scores and association with trait 
-CASTom-iGEx (Module 2) is a command-line tool that uses trained model to predicts gene expression from genotype-only datasets and convert them to T-scores and pathway scores. Prediction step contains also scripts to perform association with trait of interest. Two versions are available dependening of data dimensionality.
+CASTom-iGEx (Module 2) is a command-line tool that uses trained model to predicts gene expression from genotype-only datasets and convert them to T-scores and pathway scores. Two versions are available dependening of data dimensionality. Prediction step contains also scripts to perform association with trait of interest as well as perform mendelian randomization across traits based on based on pathway and genes association.
 
 ## Requirements
 To run the prediction the following R packages are required:
@@ -18,14 +18,16 @@ To run the prediction the following R packages are required:
  - lattice
  - MASS
  - lmtest
- 
+
+
 ## Input Files
 - **Genotype matrix**: dosages for each chromosome (compressed txt) without variants name/position (variants x samples).  *NOTE: SNPs must match with the train genotype data, file must end with chr<>_matrix.txt.gz*
-- **Phenotype matrix**: columns must contain Individual_ID plus any phenotype to test the association. 
-- **Phenotype description**: rows refers to phenotypes to be tested. Columns must contain: pheno_id FieldID Field	transformed_type,  pheno_id is used to match columns name in Phenotype matrix, transformed_type is a charachter defining the type of data (continous, binary ecc.)
-- **Covariate matrix**: columns must contain Individual_ID and genoSample_ID to match genotype plus covariates to correct for in the phenotype association. Column Dx (0 control 1 case) is optional, if present is used to build the reference set when computing T-scores. *Note: samples in genotype and phenotype matrix are filtered based on covariate matrix*
-- **Reactome Pathway annotation**: .gmt file can be downloaded from https://reactome.org/download-data/
-- **GO Pathway annotation**: can be obtained using *Annotate_GOterm_run.R*
+- **Phenotype matrix**: columns must contain `Individual_ID` plus any phenotype to test the association (phenotypes + 1 x samples). This matrix can include multiple phenotypes to be tested. 
+- **Phenotype description**: rows refers to phenotypes to be tested. Columns must include: `pheno_id`, `FieldID`, `Field`,  `transformed_type`;  `pheno_id` is used to match columns name in Phenotype matrix, transformed_type is a charachter defining the type of data (continous, binary ecc.)
+- **Covariate matrix**: covariates to correct for in the association analysis (covariats + IDs x samples). Columns must contain `Individual_ID` and `genoSample_ID` to match genotype plus covariates to correct for in the phenotype association. Column `Dx` (0 control 1 case) is optional, if present is used to build the reference set when computing T-scores. *Note: samples in genotype and phenotype matrix are matched based on covariate matrix*
+- **Reactome Pathway annotation**: .gmt file can be downloaded from https://reactome.org/download-data/ (provided in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/))
+- **GO Pathway annotation**: .RData file, can be obtained using *Annotate_GOterm_run.R*, each pathway is a entry in the list with `GOID` `Term` `Ontology` `geneIds` elemnets (provided in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/))
+- **custom pathways**: .RData file, similar to GO structure, each pathway is a list entry with `name` and `geneIds` elements. Available for WikiPathways (2019) in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/)
 
 ## Workflow
 ### Predict gene expression
