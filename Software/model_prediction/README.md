@@ -21,17 +21,20 @@ To run the prediction the following R packages are required:
 
 
 ## Input Files
-- **Genotype matrix**: dosages for each chromosome (compressed txt) without variants name/position (variants x samples).  *NOTE: SNPs must match with the train genotype data, file must end with chr<>_matrix.txt.gz*
+- **Genotype matrix** (*--genoDat_file*): dosages for each chromosome (compressed txt) without variants name/position (variants x samples).  *NOTE: SNPs must match with the train genotype data, file must end with chr<>_matrix.txt.gz*
 - **Phenotype matrix**: columns must contain `Individual_ID` plus any phenotype to test the association (phenotypes + 1 x samples). This matrix can include multiple phenotypes to be tested. 
 - **Phenotype description**: rows refers to phenotypes to be tested. Columns must include: `pheno_id`, `FieldID`, `Field`,  `transformed_type`;  `pheno_id` is used to match columns name in Phenotype matrix, transformed_type is a charachter defining the type of data (continous, binary ecc.)
-- **Covariate matrix**: covariates to correct for in the association analysis (covariats + IDs x samples). Columns must contain `Individual_ID` and `genoSample_ID` to match genotype plus covariates to correct for in the phenotype association. Column `Dx` (0 control 1 case) is optional, if present is used to build the reference set when computing T-scores. *Note: samples in genotype and phenotype matrix are matched based on covariate matrix*
-- **Reactome Pathway annotation**: .gmt file can be downloaded from https://reactome.org/download-data/ (provided in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/))
-- **GO Pathway annotation**: .RData file, can be obtained using *Annotate_GOterm_run.R*, each pathway is a entry in the list with `GOID` `Term` `Ontology` `geneIds` elemnets (provided in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/))
+- **Covariate matrix** (*--covDat_file*): covariates to correct for in the association analysis (covariats + IDs x samples). Columns must contain `Individual_ID` and `genoSample_ID` to match genotype plus covariates to correct for in the phenotype association. Column `Dx` (0 control 1 case) is optional, if present is used to build the reference set when computing T-scores. *Note: samples in genotype and phenotype matrix are matched based on covariate matrix*
+- **Reactome Pathway annotation** (*--reactome_file*): .gmt file can be downloaded from https://reactome.org/download-data/ (provided in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/))
+- **GO Pathway annotation** (*--GOterms_file*): .RData file, can be obtained using *Annotate_GOterm_run.R*, each pathway is a entry in the list with `GOID` `Term` `Ontology` `geneIds` elemnets (provided in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/))
 - **Custom pathway**: .RData file, similar to GO structure, each pathway is a list entry with `name` and `geneIds` elements. Available for WikiPathways (2019) in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/)
 
 ## Workflow
 ### Predict gene expression
 From previously trained PriLer tissue-specific model (Module 1), predict gene expression based on genotype-only dataset
+
+*--InfoFold* is the folder with gene-snp distance matrix ENSEMBL_gene_SNP_2e+5_chr<>_matrix.mtx, *--outTrain_fold* is the folder with overall results from PriLer
+
 #### Usage
 ```sh
 ./Priler_predictGeneExp_run.R \
@@ -43,13 +46,29 @@ From previously trained PriLer tissue-specific model (Module 1), predict gene ex
     --InfoFold
 ```
 *NOTE: can be splitted for subset of samples (depends on covDat_file), genes are NOT filtered*
-- *InfoFold* folder with gene-snp distance matrix
-- *outTrain_fold* : folder with results training model
 
-The output includes:
+The output includes (saved in *--outFold*):
 - predictedExpression.txt.gz 
  
-Based on data dimension, the next scripts are divided in two parts. If sample size > 10,000 use "Large dataset" part.
+Based on data dimension, the next scripts are divided in two parts. If sample size <= 10,000 follow "Small dataset" part, otherwise "Large dataset".
+
+***
+***
+
+### Small dataset: T-scores and Pathway-scores computation
+
+Tscore_PathScore_diff_run.R
+
+### Small dataset: Association with phenotype of T-score and pathways
+
+pheno_association_smallData_run.R/pheno_association_smallData_customPath_run.R
+
+### Small dataset: Meta-analysis across multiple cohorts
+
+pheno_association_metaAnalysis_run.R/pheno_association_customPath_metaAnalysis_run.R
+
+***
+***
 
 ### 1) Large dataset: preliminary
 Predicted gene expression had been executed for split set of samples. For each of them keep only gene such that dev_geno>0.01 and test_dev_geno>0.
@@ -88,5 +107,23 @@ The output includes:
 - Pathway_Reactome/GO_pvalues.RData: pathway pvalues (t.test) for each pathways and samples
 - PathwaySummaryPvalues_cases_Reactome/GO.txt: Fisher’s combined probability pvalue consider only cases
 - PathwaySummaryPvalues_cases_Reactome/GO.txt: Fisher’s combined probability pvalue consider only controls
+
+***
+***
+
+### Correlation based on gene and pathway association of a trait of interest with multiple endophenotypes 
+
+correlation_pheno_relatedPheno_run.R
+
+### Mendelian randomization based on genes and pathways association 
+
+correlation_features_run.R
+
+#### (direct)
+mendelianRand_pheno_relatedPheno_run.R
+
+#### (reverse)
+
+mendelianRand_reverse_pheno_relatedPheno_run.R
 
 
