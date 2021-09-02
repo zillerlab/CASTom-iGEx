@@ -124,7 +124,7 @@ modPGSEA = function (exprs, geneSets, range=c(1,Inf), center=F, p.value=0.005, m
 
 if(originalRNA){
   
-  sampleAnn <- read.table(covDat_file, header = T, stringsAsFactors = F)
+  sampleAnn <- read.table(covDat_file, header = T, stringsAsFactors = F, sep="\t")
   expDat <- read.table(input_file,sep="\t",header=T, check.names = F)
   
   id_samples <- match(sampleAnn$Individual_ID, colnames(expDat))
@@ -136,7 +136,7 @@ if(originalRNA){
   
 }else{
   
-  sampleAnn <- read.table(covDat_file, header = T, stringsAsFactors = F)
+  sampleAnn <- read.table(covDat_file, header = T, stringsAsFactors = F,sep="\t")
   expDat <- read.table(gzfile(input_file),sep="\t",header=T,  check.names = F)
   
   id_samples <- match(sampleAnn$Individual_ID, colnames(expDat))
@@ -159,6 +159,7 @@ sampleAnn$Temp_ID <- sampleAnn$Individual_ID
 id_h <- sapply(sampleAnn$Individual_ID, function(x) length(strsplit(x, split = '-')[[1]]) >= 2)
 id_n <- sapply(sampleAnn$Individual_ID, function(x) !is.na(as.numeric(strsplit(x, split = '')[[1]][1])))
 id_a <-  sapply(sampleAnn$Individual_ID, function(x) length(strsplit(x, split = '[*]')[[1]]) >= 2)
+id_s <- sapply(sampleAnn$Individual_ID, function(x) length(strsplit(x, split = ' ')[[1]]) >= 2)
 if(any(id_h)){
   sampleAnn$Temp_ID[id_h] <- sapply(sampleAnn$Individual_ID[id_h], function(x) paste0(strsplit(x, split = '-')[[1]], collapse = '_'))
 }
@@ -167,6 +168,9 @@ if(any(id_n)){
 }
 if(any(id_a)){
   sampleAnn$Temp_ID[id_a] <- sapply(sampleAnn$Temp_ID[id_a], function(x) paste0(strsplit(x, split = '[*]')[[1]], collapse = '_'))   
+}
+if(any(id_s)){
+  sampleAnn$Temp_ID[id_s] <- sapply(sampleAnn$Temp_ID[id_s], function(x) paste0(strsplit(x, split = ' ')[[1]], collapse = '_'))   
 }
 colnames(eMat) <- sampleAnn$Temp_ID
 
