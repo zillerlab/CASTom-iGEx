@@ -1,4 +1,4 @@
-#### code written by Lucia Trastulla, e-mail: lucia_trastulla@psych.mpg.de ####
+#!/usr/bin/env Rscript
 
 options(stringsAsFactors=F)
 options(max.print=1000)
