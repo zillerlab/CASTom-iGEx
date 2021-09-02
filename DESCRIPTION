@@ -1,0 +1,9 @@
+Name: CASTom-iGEx
+Type: Statistics, data manipulation, visualization and result summary
+Title: Cases Stratification from imputed gene expression pipeline
+Version: 1.0
+Date: 2021-09-02
+Author: Lucia Trastulla
+Maintainer: Lucia Trastulla <lucia_trastulla@psych.mpg.de>
+Description: R Scripts and functions use to 1. create gene expression model integrating prior information on variants, 2. impute gene expression on genotype-only datasets, build individual gene T-scores and Pathway-scores and perform association with phenotype of interest, 3. perform clustering of cases based on imputed gene expression and validate on additional phenotypes/treatment response.
+License: 
