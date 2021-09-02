@@ -127,13 +127,12 @@ if(originalRNA){
   sampleAnn <- read.table(covDat_file, header = T, stringsAsFactors = F)
   expDat <- read.table(input_file,sep="\t",header=T, check.names = F)
   
-  id_samples <- sapply(sampleAnn$Individual_ID, function(x) which(colnames(expDat) == x ))
-  eMat=as.matrix(expDat[,id_samples])
-  
-  rownames(eMat)=expDat$external_gene_name
+  id_samples <- match(sampleAnn$Individual_ID, colnames(expDat))
+  eMat <- as.matrix(expDat[,id_samples])
+  rownames(eMat) <- expDat$external_gene_name
   geneInfo <- expDat[, -id_samples]
   
-  identical(sampleAnn$Individual_ID, colnames(eMat)) # same order
+  if(!identical(sampleAnn$Individual_ID, colnames(eMat))){print('ERROR: Annotation samples and expression not matching')} # same order
   
 }else{
   
@@ -147,11 +146,11 @@ if(originalRNA){
   expDat <- expDat[expDat$dev_geno >= thr_reliableGenes[1], ]
   expDat <- expDat[expDat$test_dev_geno > thr_reliableGenes[2], ]
   
-  eMat=as.matrix(expDat[,id_samples])
-  rownames(eMat)=expDat$external_gene_name
+  eMat <- as.matrix(expDat[,id_samples])
+  rownames(eMat) <- expDat$external_gene_name
   geneInfo <- expDat[, -id_samples]
-  
-  identical(sampleAnn$Individual_ID, colnames(eMat)) # same order
+
+  if(!identical(sampleAnn$Individual_ID, colnames(eMat))){print('ERROR: Annotation samples and expression not matching')} 
   
 }
 
@@ -171,114 +170,107 @@ if(any(id_a)){
 }
 colnames(eMat) <- sampleAnn$Temp_ID
 
-
 # add Dx info if not present
 if(!'Dx' %in% colnames(sampleAnn)){sampleAnn$Dx <- 0}
 
-# STEP 1: LOAD AND CONFIGURE INPUT DATA FOR SCORECARD CALCULATION
+inputData <- eMat
+sampleGroups <- list()
+comparisons <- list()
 
-inputData = eMat
-sampleGroups = list()
-comparisons = list()
-
-curType = "Gene_expression"
-sampleIds = colnames(inputData)
-ind=rownames(inputData)==""
-inputData=inputData[!ind,]
-sampleNames = NULL
-geneNames = rownames(inputData)
+curType <- "Gene_expression"
+sampleIds <- colnames(inputData)
+ind <- rownames(inputData)==""
+inputData <- inputData[!ind,]
+geneNames <- rownames(inputData)
 sampleGroups[["all"]] = sampleIds
 sampleGroups[["Case"]] = sampleAnn$Temp_ID[sampleAnn$Dx==1] 
 sampleGroups[["Ref"]] = sampleAnn$Temp_ID[sampleAnn$Dx==0] 
 comparisons[[1]] = c("pairwise","all","Ref")
 
-# STEP 2: PERFORM LIMMA ANALYSIS TO DETERMINE SAMPLE-SPECIFIC T-SCORES RELATIVE TO A REFERENCE POPULATION (FOR EACH GENE)
-eMat=eMat[rowSums(is.na(eMat))==0,]
+# Perform Limma analysis to determine sample-specific T-scores relative to a reference population (for each gene)
+eMat <- eMat[rowSums(is.na(eMat))==0,]
 
 # produce a genes*samples table of t-scores for each comparison
 for (i in 1:length(sampleGroups)){sampleGroups[[i]] = unique(sampleGroups[[i]])}
-if (length(intersect(sampleIds,sampleNames))>0) print("Overlap between sampleIds and sampleNames is not allowed")
 
-tscoreTables = list()
-curComparison = comparisons[[1]]
+tscoreTables <- list()
+curComparison <- comparisons[[1]]
 print(paste("Processing: ",paste(curComparison,collapse="::"),sep=""))
-allSamp = sampleGroups[[curComparison[[2]]]] # all
-reference = sampleGroups[[curComparison[[3]]]] # ref (controls)
-overlap = intersect(allSamp,reference) # ref
-nSel=floor(length(overlap)*0.2) #floor(length(overlap)/nFolds)
+allSamp <- sampleGroups[[curComparison[[2]]]] # all
+reference <- sampleGroups[[curComparison[[3]]]] # ref (controls)
+overlap <- intersect(allSamp,reference) # ref
+nSel <- floor(length(overlap)*0.2) #floor(length(overlap)/nFolds)
 
-values = inputData
-row.names(values) = geneNames
-tTable = data.frame(geneId=geneNames)
+values <- inputData
+row.names(values) <- geneNames
+tTable <- data.frame(geneId=geneNames)
 
 # not balanced 
 ovMat=sapply(seq(1,nFolds),function(X){
-  
   vec=rep(F,length(overlap))
   set.seed(42+X)
   vec[sample.int(length(overlap),nSel)]=T
   return(vec)
-  
 })
 
 
-rownames(ovMat)=overlap # ref division (folds)
-tempTable = tTable
+rownames(ovMat) <- overlap # ref division (folds)
+tempTable <- tTable
 
 # determine current subset of samples excluding one of the samples that overlap between allSamp and reference
 for (i in 1:nFolds){
   
-  excluded = rownames(ovMat)[ovMat[,i]]
-  comparisonLabel = paste("Reference_excluding_fold",i,sep="_")#paste("Reference_excluding",excluded,sep="_")
+  excluded <- rownames(ovMat)[ovMat[,i]]
+  comparisonLabel <- paste("Reference_excluding_fold",i,sep="_")
   print(comparisonLabel)
-  curCases = union(excluded,setdiff(allSamp,overlap)) # union part of controls and cases
-  curReference = setdiff(reference,excluded) # the remaining controls
-  curIds = union(curCases,curReference) # total
-  curValues = values[,curIds]
+  curCases <- union(excluded,setdiff(allSamp,overlap)) # union part of controls and cases
+  curReference <- setdiff(reference,excluded) # the remaining controls
+  curIds <- union(curCases,curReference) # total
+  curValues <-values[,curIds]
   # define design matrix for limma analysis
-  designFactor = factor(ifelse(curIds%in%curCases,curIds,"reference")) # remaining control = reference, otherwise ids
-  design = model.matrix(~ -1+designFactor)
-  rownames(design) = curIds
-  colnames(design) = gsub("designFactor","",colnames(design))
+  designFactor <- factor(ifelse(curIds%in%curCases,curIds,"reference")) # remaining control = reference, otherwise ids
+  design <- model.matrix(~ -1+designFactor)
+  rownames(design) <- curIds
+  colnames(design) <- gsub("designFactor","",colnames(design))
   fit <- lmFit(curValues, design)
-  contrastMatrixItems = character(0)
+  contrastMatrixItems <- character(0)
   for (j in 1:length(curCases)) {
-    curItem = paste(curCases[j],"-reference",sep="")
-    contrastMatrixItems = c(contrastMatrixItems,curItem)
+    curItem <- paste(curCases[j],"-reference",sep="")
+    contrastMatrixItems <- c(contrastMatrixItems,curItem)
   }
-  contrastMatrixString = paste(contrastMatrixItems,collapse=", ")
-  contrastMatrixCmd = paste("makeContrasts(",contrastMatrixString,", levels=design)",sep="")
-  contrast.matrix = eval(parse(text=contrastMatrixCmd))
-  contrastNames = dimnames(contrast.matrix)[["Contrasts"]];# contrastNames
+  contrastMatrixString <- paste(contrastMatrixItems,collapse=", ")
+  contrastMatrixCmd <- paste("makeContrasts(",contrastMatrixString,", levels=design)",sep="")
+  contrast.matrix <- eval(parse(text=contrastMatrixCmd))
+  contrastNames <- dimnames(contrast.matrix)[["Contrasts"]];# contrastNames
   # perform limma analysis and obtain t-scores
-  fit2 = contrasts.fit(fit, contrast.matrix) # compute estimated coefficients and standard errors for a given set of contrasts
-  fit2 = eBayes(fit2) # compute moderated t-statistics and log-odds of differential expression by empirical Bayes shrinkage
+  fit2 <- contrasts.fit(fit, contrast.matrix) # compute estimated coefficients and standard errors for a given set of contrasts
+  fit2 <- eBayes(fit2) # compute moderated t-statistics and log-odds of differential expression by empirical Bayes shrinkage
   for (k in 1:length(contrastNames)) {
-    curContrast = contrastNames[k];
-    curLabel = paste(comparisonLabel," :: ",curContrast)
-    topGenes = topTable(fit2,coef=curContrast,sort="none",n=Inf)[,"t",drop=F]
-    tempTable=cbind(tempTable,topGenes)
-    names(tempTable)[ncol(tempTable)] = paste(curLabel,"::",names(topGenes)[ncol(topGenes)])
+    curContrast <- contrastNames[k];
+    curLabel <- paste(comparisonLabel," :: ",curContrast)
+    topGenes <- topTable(fit2,coef=curContrast,sort="none",n=Inf)[,"t",drop=F]
+    tempTable <- cbind(tempTable,topGenes)
+    names(tempTable)[ncol(tempTable)] <- paste(curLabel,"::",names(topGenes)[ncol(topGenes)])
   }
 }
 
 # calculate the median t-score from the different leave-one-out reference sets
 for (curSample in allSamp) {
-  curCols = names(tempTable)
-  curCols = curCols[grep(paste(curSample,"- reference"),curCols)]
+  curCols <- names(tempTable)
+  curCols <- curCols[grep(paste(curSample,"- reference"),curCols)]
   for (suffix in c("t")) {
-    selectedCols = curCols[grep(paste("::",suffix),curCols)]
-    newCol = paste(curSample,"vs reference","::",suffix)
+    selectedCols <- curCols[grep(paste("::",suffix),curCols)]
+    newCol <- paste(curSample,"vs reference","::",suffix)
     print(newCol)
-    tTable[,newCol] = apply(tempTable[,selectedCols,drop=F],1,mean)
+    tTable[,newCol] <- apply(tempTable[,selectedCols,drop=F],1,mean)
   }
 }
-tscoreTables[[paste(curComparison,collapse="::")]] = tTable
-
+tscoreTables[[paste(curComparison,collapse="::")]] <- tTable
 
 # save
-tscoreTables[[1]]=tscoreTables[[1]][is.element(tscoreTables[[1]][,1], geneInfo$external_gene_name),] ##### modify, there are repetitons!
-tmp=tscoreTables[[1]]
+tscoreTables[[1]] <- tscoreTables[[1]][is.element(tscoreTables[[1]][,1], geneInfo$external_gene_name),] 
+
+tmp <- tscoreTables[[1]]
 colnames(tmp)[-1] <- sampleAnn$Individual_ID
 write.table(tmp,sprintf("%spredictedTscores.txt", outFold),sep="\t",row.names=F,quote=F)
 
