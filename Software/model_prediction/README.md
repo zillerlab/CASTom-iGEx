@@ -111,6 +111,11 @@ The output includes:
 ***
 ***
 
+### Initial filtering if datasets are not harmonized 
+
+compare_geneExp_matchedDataset_run.R
+compare_pathScore_matchedDataset_run.R
+
 ### Correlation based on gene and pathway association of a trait of interest with multiple endophenotypes 
 
 correlation_pheno_relatedPheno_run.R
