@@ -99,7 +99,7 @@ The output includes:
 Combine T-scores into Pathway scores using as annotation Reactome and GO.
 *NOTE: computationally heavy*
 #### Usage
-> Rscript PathwayScores_splitGenes_run.R --ncores (default 10) --input_file  --covDat_file  --outFold --split_tot (default 100) --reactome_file --GOterms_file --skip_reactome (default F)
+> Rscript PathwayScores_splitGenes_run.R/PathwayScores_splitGenes_customGeneList_run.R --ncores (default 10) --input_file  --covDat_file  --outFold --split_tot (default 100) --reactome_file --GOterms_file --skip_reactome (default F)
 - *input_file*: common path to .RData object predicted Tscores ({i}.RData part excluded)
 
 The output includes:
@@ -107,6 +107,12 @@ The output includes:
 - Pathway_Reactome/GO_pvalues.RData: pathway pvalues (t.test) for each pathways and samples
 - PathwaySummaryPvalues_cases_Reactome/GO.txt: Fisher’s combined probability pvalue consider only cases
 - PathwaySummaryPvalues_cases_Reactome/GO.txt: Fisher’s combined probability pvalue consider only controls
+
+#### 4) Large dataset: Association
+- pheno_association_prepare_largeData_run.R
+- pheno_association_tscore_largeData_run.R
+- pheno_association_pathscore_largeData_run.R
+- pheno_association_combine_largeData_run.R
 
 ***
 ***
