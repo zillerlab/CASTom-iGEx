@@ -10,6 +10,7 @@ cis_size <- 200000
 
 df_tscore_HARD <- df_pathR_HARD <- df_pathGO_HARD <- list()
 df_tscore_SOFT <- df_pathR_SOFT <- df_pathGO_SOFT <- list()
+df_pathWiki <- list()
 
 for(i in 1:length(tissues_name)){
   
@@ -45,7 +46,17 @@ for(i in 1:length(tissues_name)){
     df_pathGO_SOFT[[i]]$improvement_sign[j] <- all(tmp$info_pathScore_GO[[2]][[j]]$tscore[,8] > df_pathGO_SOFT[[i]][j,15])
   }
   df_pathGO_HARD[[i]]$tissue <-  df_pathGO_SOFT[[i]]$tissue <- t
-  
+ 
+  tmp <- get(load(sprintf('predict_CAD/%s/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/pval_CAD_pheno_covCorr_customPath_WikiPath2019Human.RData', t)))
+  df_pathWiki[[i]] <- tmp$pathScore[[1]]
+  df_pathWiki[[i]]$genes_path <- NA
+  df_pathWiki[[i]]$improvement_sign  <- NA
+  for(j in 1:nrow(df_pathWiki[[i]])){
+    df_pathWiki[[i]]$genes_path[j] <- paste0(tmp$info_pathScore[[1]][[j]]$tscore$external_gene_name, collapse = ',')
+    df_pathWiki[[i]]$improvement_sign[j] <- all(tmp$info_pathScore[[1]][[j]]$tscore[,8] > df_pathWiki[[i]][j,13])
+  }
+  df_pathWiki[[i]]$tissue <- t
+   
 }
 
 df_tscore_HARD <- do.call(rbind, df_tscore_HARD)
@@ -54,6 +65,7 @@ df_pathR_HARD <- do.call(rbind, df_pathR_HARD)
 df_pathR_SOFT <- do.call(rbind, df_pathR_SOFT)
 df_pathGO_HARD <- do.call(rbind, df_pathGO_HARD)
 df_pathGO_SOFT <- do.call(rbind, df_pathGO_SOFT)
+df_pathWiki <- do.call(rbind, df_pathWiki)
 
 # add overall corrected pval
 df_tscore_HARD$CAD_HARD_BHcorr_overall <- p.adjust(df_tscore_HARD[, 8], method = 'BH')
@@ -62,6 +74,7 @@ df_pathR_HARD$CAD_HARD_BHcorr_overall <- p.adjust(df_pathR_HARD[, 13], method = 
 df_pathR_SOFT$CAD_SOFT_BHcorr_overall <- p.adjust(df_pathR_SOFT[, 13], method = 'BH')
 df_pathGO_HARD$CAD_HARD_BHcorr_overall <- p.adjust(df_pathGO_HARD[, 15], method = 'BH')
 df_pathGO_SOFT$CAD_SOFT_BHcorr_overall <- p.adjust(df_pathGO_SOFT[, 15], method = 'BH')
+df_pathWiki$CAD_HARD_BHcorr_overall <- p.adjust(df_pathWiki[, 13], method = 'BH')
 
 
 # create a function to remove pathway with 1 gene and recompute pvalues
@@ -79,6 +92,7 @@ df_pathR_HARD_red <- recompte_path(res = df_pathR_HARD, tissues_name = tissues_n
 df_pathR_SOFT_red <- recompte_path(res = df_pathR_SOFT, tissues_name = tissues_name, id_pval = 13)
 df_pathGO_HARD_red <- recompte_path(res = df_pathGO_HARD, tissues_name = tissues_name, id_pval = 15)
 df_pathGO_SOFT_red <- recompte_path(res = df_pathGO_SOFT, tissues_name = tissues_name, id_pval = 15)
+df_pathWiki_red <- recompte_path(res = df_pathWiki, tissues_name = tissues_name, id_pval = 13)
 
 
 ### save results
@@ -88,11 +102,13 @@ write.table(x = df_pathR_HARD, file = 'predict_CAD/AllTissues/200kb/CAD_GWAS_bin
 write.table(x = df_pathR_SOFT, file = 'predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/path_Reactome_pval_CAD_SOFT_covCorr.txt', col.names=T, row.names=F, sep = '\t', quote = F)
 write.table(x = df_pathGO_HARD, file = 'predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/path_GO_pval_CAD_HARD_covCorr.txt', col.names=T, row.names=F, sep = '\t', quote = F)
 write.table(x = df_pathGO_SOFT, file = 'predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/path_GO_pval_CAD_SOFT_covCorr.txt', col.names=T, row.names=F, sep = '\t', quote = F)
+write.table(x = df_pathWiki, file = 'predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/path_WikiPath2019Human_pval_CAD_HARD_covCorr.txt', col.names=T, row.names=F, sep = '\t', quote = F)
 
 write.table(x = df_pathR_HARD_red, file = 'predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/path_Reactome_pval_CAD_HARD_covCorr_filt.txt', col.names=T, row.names=F, sep = '\t', quote = F)
 write.table(x = df_pathR_SOFT_red, file = 'predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/path_Reactome_pval_CAD_SOFT_covCorr_filt.txt', col.names=T, row.names=F, sep = '\t', quote = F)
 write.table(x = df_pathGO_HARD_red, file = 'predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/path_GO_pval_CAD_HARD_covCorr_filt.txt', col.names=T, row.names=F, sep = '\t', quote = F)
 write.table(x = df_pathGO_SOFT_red, file = 'predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/path_GO_pval_CAD_SOFT_covCorr_filt.txt', col.names=T, row.names=F, sep = '\t', quote = F)
+write.table(x = df_pathWiki_red, file = 'predict_CAD/AllTissues/200kb/CAD_GWAS_bin5e-2/UKBB/path_WikiPath2019Human_pval_CAD_HARD_covCorr_filt.txt', col.names=T, row.names=F, sep = '\t', quote = F)
 
 #####################################
 ####### divide genes per loci #######
@@ -207,7 +223,7 @@ merge_loci_genes <- function(gene_table, cis_size, bp_loci, tissue = 'combined')
   tmp_loci$start[tmp_loci$start < 0] <- 0
   tmp_loci$loci_id <- paste0(tmp_loci$chrom,':',round(tmp_loci$start/1000000, digits = 1), '-', round(tmp_loci$end/1000000, digits = 1), 'Mb')
   tmp_loci$loci_complete <- paste0(tmp_loci$chrom,':',tmp_loci$start,'-',tmp_loci$end)
-
+  
   return(tmp_loci)
 }
 # tissue specific
@@ -216,7 +232,7 @@ for(i in 1:length(tissues_name)){
   
   print(tissues_name[i])
   tissue_spec_loci[[i]] <- merge_loci_genes(gene_table = gene_table[gene_table$tissue %in% tissues_name[i], ],
-                   cis_size = cis_size, bp_loci = bp_loci, tissue = tissues_name[i])
+                                            cis_size = cis_size, bp_loci = bp_loci, tissue = tissues_name[i])
 }
 
 tissue_spec_loci <- do.call(rbind, tissue_spec_loci)
@@ -226,7 +242,7 @@ for(t in tissues_name){
   id <- which(gene_table$tissue %in% t)
   for(i in id){
     gene_table$loci_tissue_specific[i] <- tissue_spec_loci$loci_id[tissue_spec_loci$tissue == t & 
-      grepl(gene_table$ensembl_gene_id[i], tissue_spec_loci$ensembl_gene)]  
+                                                                     grepl(gene_table$ensembl_gene_id[i], tissue_spec_loci$ensembl_gene)]  
   }
 }
 
@@ -236,8 +252,8 @@ all_loci <- merge_loci_genes(gene_table = gene_table, cis_size = cis_size, bp_lo
 gene_table$loci <- NA
 gene_table$loci_complete <- NA
 for(i in 1:nrow(gene_table)){
-    gene_table$loci[i] <- all_loci$loci_id[grepl(gene_table$ensembl_gene_id[i], all_loci$ensembl_gene)]  
-    gene_table$loci_complete[i] <- all_loci$loci_complete[grepl(gene_table$ensembl_gene_id[i], all_loci$ensembl_gene)] 
+  gene_table$loci[i] <- all_loci$loci_id[grepl(gene_table$ensembl_gene_id[i], all_loci$ensembl_gene)]  
+  gene_table$loci_complete[i] <- all_loci$loci_complete[grepl(gene_table$ensembl_gene_id[i], all_loci$ensembl_gene)] 
 }
 gene_table <- gene_table[, !colnames(gene_table) %in% 'new_id']
 
