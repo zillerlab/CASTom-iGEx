@@ -47,16 +47,16 @@ rescale_pheno <- args$rescale_pheno
 outFold <- args$outFold
 
 ####################################################################################################################
-# sampleAnnFile <- 'INPUT_DATA/Covariates/Asthma_clustering/covariateMatrix_Asthma_All_phenoAssoc_FEV1pred.txt'
-# phenoDescFile <- 'INPUT_DATA/Covariates/Asthma_clustering/phenotypeDescription_FEV1pred.txt'
-# phenoDatFile <- 'INPUT_DATA/Covariates/Asthma_clustering/phenotypeMatrix_Asthma_All_phenoAssoc_FEV1pred.txt'
-# clusterFile <- 'OUTPUT_GTEx/predict_UKBB/Whole_Blood/200kb/noGWAS/devgeno0.01_testdevgeno0/Asthma_pheno/Asthma_clustering/tscore_zscaled_clusterCases_PGmethod_HKmetric.RData'
+# sampleAnnFile <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/covariateMatrix_CADHARD_All_phenoAssoc_withMedication.txt'
+# phenoDatFile <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/phenotypeMatrix_CADHARD_All_phenoAssoc_withMedication.txt'
+# phenoDescFile <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/phenotypeDescription_withMedication.txt'
+# clusterFile <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/PCs_clusterCases_PGmethod_HKmetric.RData'
 # type_cluster <- 'Cases'
-# type_data <- 'tscore'
+# type_data <- 'PCs'
 # type_sim <- 'HK'
-# outFold <- 'OUTPUT_GTEx/predict_UKBB/Whole_Blood/200kb/noGWAS/devgeno0.01_testdevgeno0/Asthma_pheno/Asthma_clustering/'
+# outFold <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/'
 # functR <- '/psycl/g/mpsziller/lucia/priler_project/Software/model_clustering/clustering_functions.R'
-# type_input <- 'zscaled'
+# type_input <- 'original'
 # rescale_pheno = T
 ###################################################################################################################
 
@@ -126,11 +126,35 @@ output <- list(phenoDat = phenoDat, phenoInfo = phenoInfo, cl = cluster_output$c
 #### binary regression (gi vs gj) #####
 #######################################
 
+# function to check with cad ordinal to remove
+remove_pheno_ordinal <- function(pheno_df, group, thr){
+  
+  name_pheno <- colnames(pheno_df)
+  pheno_rm <- c()
+  
+  for(i in 1:ncol(pheno_df)){
+    
+    min_p <- min(pheno_df[,i], na.rm = T)
+    n_base_gr0 <- sum(pheno_df[group == 0,i] == min_p, na.rm = T)
+    n_notbase_gr0 <- sum(pheno_df[group == 0,i] > min_p, na.rm = T)
+    n_base_gr1 <- sum(pheno_df[group == 1, i] == min_p, na.rm = T)
+    n_notbase_gr1 <- sum(pheno_df[group == 1, i] > min_p, na.rm = T)
+    
+    if(any(c(n_base_gr0, n_base_gr1, n_notbase_gr0, n_notbase_gr1) < thr)){
+       pheno_rm <- c(pheno_rm, name_pheno[i])
+    }
+  }
+  
+  return(pheno_rm)
+  
+}
+
+
 gr_names <- sort(unique(cl))
 P <- length(gr_names)
 covDat <- sampleAnn[, !colnames(sampleAnn) %in% c('Individual_ID', 'genoSample_ID', 'Dx')]
 if(type_data == 'PCs'){
-  covDat <- sampleAnn[, !colnames(sampleAnn) %in% c(paste0('PC', 1:10), paste0('C', 1:10))]
+  covDat <- covDat[, !colnames(covDat) %in% c(paste0('PC', 1:10), paste0('C', 1:10))]
 }
 fmla  <- as.formula(paste('pheno~gr_id+', paste0(colnames(covDat), collapse = '+')))
 output$covDat = covDat
@@ -159,6 +183,14 @@ for(i in 1:(length(gr_names)-1)){
     # remove phenotype with few true overall (find binomial)
     id_b <- intersect(colnames(new), paste0('p',phenoInfo$pheno_id[!phenoInfo$transformed_type %in% c('CONTINUOUS', 'CAT_ORD')]))
     id_rm <- names(which(colSums(new[, id_b, drop = F], na.rm = T) < 50))
+    if(length(id_rm)>0){
+      new <- new[, !colnames(new) %in% id_rm, drop = F]
+    }
+    # remove phenotype categorical ordinal with less than 10 base 
+    # class in each pairwise group (or viceversa)
+    id_o <- intersect(colnames(new),
+                      paste0('p',phenoInfo$pheno_id[phenoInfo$transformed_type %in% c('CAT_ORD')]))
+    id_rm <- remove_pheno_ordinal(pheno_df = new[, id_o], group = gr_id, thr = 10)
     if(length(id_rm)>0){
       new <- new[, !colnames(new) %in% id_rm, drop = F]
     }
@@ -264,6 +296,15 @@ for(i in 1:length(gr_names)){
   # remove phenotype with few true overall (find binomial)
   id_b <- intersect(colnames(new), paste0('p',phenoInfo$pheno_id[!phenoInfo$transformed_type %in% c('CONTINUOUS', 'CAT_ORD')]))
   id_rm <- names(which(colSums(new[, id_b, drop = F], na.rm = T) < 50))
+  if(length(id_rm)>0){
+    new <- new[, !colnames(new) %in% id_rm, drop = F]
+  }
+  
+  # remove phenotype categorical ordinal with less than 10 base 
+  # class in each pairwise group (or viceversa)
+  id_o <- intersect(colnames(new),
+                    paste0('p',phenoInfo$pheno_id[phenoInfo$transformed_type %in% c('CAT_ORD')]))
+  id_rm <- remove_pheno_ordinal(pheno_df = new[, id_o], group = gr_id, thr = 10)
   if(length(id_rm)>0){
     new <- new[, !colnames(new) %in% id_rm, drop = F]
   }
