@@ -18,6 +18,9 @@ To run the prediction the following R packages are required:
 ### Clustering
 cluster_PGmethod_run.R
 
+### associate clustering with endophenotype:
+cluster_associatePhenoGLM_run.R
+
 ***
 ***
 
