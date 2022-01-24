@@ -97,7 +97,8 @@ Considering only heritable genes, compute elastic-net regression in a nested cro
 
 *--part1Res_fold* is the folder containing the output of step1, *--priorInf* is a vector of indeces indicating the columns in priorDat_file to be included.
 
-*NOTE: The script is parallelized over given possible values of E parameter. Possible values for E cannot be chosen a prior but depends on the data*.
+*NOTE: The script is parallelized over given possible values of E parameter. Possible values for E cannot be chosen a prior but depends on the data.*
+
 #### Usage
 ```sh
 ./PriLer_part2_run.R \
@@ -134,6 +135,10 @@ The output includes (saved in *--outFold*):
 	-   beta_cov_opt: regression coefficient for covariates in each outer folder (divided by chr)
 	-   weights_opt: n.prior features x n.outer folds, weights associated to each prior feature
 	-	E_opt: value of optimal E paramter
+
+#### E parameter calibration:
+Start with 10 values (0.5, 1, 1.5, 2-8) and run part2. To evaluate if the range include the optimal value check average MSE in cv_test_Epar_allchr.txt. The first (few) E parameter(s) should give bigger errore with wide sd compared to the rest, afterward the error should decrease until convergence. Before convergence, there should be a value of E for which the average MSE is minimal.
+If there is no "big gap", move the window to smaller value of E. If there is but no minimum for CV test that can be found, add additional intermediate points. In case a minimum cannot be found, the algorithm chose the first value of convergence, although not optimal.
 
 ### Step 3:
 Considering only heritable genes, first find optimal alpha and lambda parameter on the entire set (single cross validation) and evaluate total results without prior. Second, use alpha-lambda pairs found and the optimal E parameter (step 2) in the elastic-net with prior information setting and evaluate the results.
