@@ -25,7 +25,7 @@ parser$add_argument("--sampleAnnFile", type = "character", help = "file with sam
 parser$add_argument("--clusterFile", type = "character", help = "file with clustering structure")
 parser$add_argument("--type_cluster", type = "character", default = 'All', help = "All, Cases, Controls")
 parser$add_argument("--functR", type = "character", help = "functions to be used")
-parser$add_argument("--type_data", type = "character", help = "tscore, path_Reactome or path_GO")
+parser$add_argument("--type_data", type = "character", help = "tscore, path_Reactome, path_GO, PCs")
 parser$add_argument("--type_sim", type = "character", default = 'HK', help = "HK or ED or SNF")
 parser$add_argument("--type_input", type = "character", default = 'original', help = "original or zscaled")
 parser$add_argument("--risk_score", type = "logical", default = F, help = "if true, phenotype is risk score")
@@ -129,6 +129,9 @@ output <- list(phenoDat = phenoDat, phenoInfo = phenoInfo, cl = cluster_output$c
 gr_names <- sort(unique(cl))
 P <- length(gr_names)
 covDat <- sampleAnn[, !colnames(sampleAnn) %in% c('Individual_ID', 'genoSample_ID', 'Dx')]
+if(type_data == 'PCs'){
+  covDat <- sampleAnn[, !colnames(sampleAnn) %in% c(paste0('PC', 1:10), paste0('C', 1:10))]
+}
 fmla  <- as.formula(paste('pheno~gr_id+', paste0(colnames(covDat), collapse = '+')))
 output$covDat = covDat
 
