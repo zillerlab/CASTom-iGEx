@@ -1,29 +1,13 @@
 # Imputation of gene expression, computation of individual pathway-scores and association with trait 
 CASTom-iGEx (Module 2) is a command-line tool that uses trained model to predicts gene expression from genotype-only datasets and convert them to T-scores and pathway scores. Two versions are available dependening of data dimensionality. Prediction step contains also scripts to perform association with trait of interest as well as perform mendelian randomization across traits based on based on pathway and genes association.
 
-## Requirements
-To run the prediction the following R packages are required:
- - argparse
- - Matrix
- - bigmemory
- - pryr
- - qvalue
- - matrixStats
- - parallel
- - doParallel
- - data.table
- - PGSEA
- - limma
- - nnet
- - lattice
- - MASS
- - lmtest
-
-
 ## Input Files
 - **Genotype matrix** (*--genoDat_file*): dosages for each chromosome (compressed txt) without variants name/position (variants x samples).  *NOTE: SNPs must match with the train genotype data, file must end with chr<>_matrix.txt.gz*
 - **Phenotype matrix**: columns must contain `Individual_ID` plus any phenotype to test the association (phenotypes + 1 x samples). This matrix can include multiple phenotypes to be tested. 
-- **Phenotype description**: rows refers to phenotypes to be tested. Columns must include: `pheno_id`, `FieldID`, `Field`,  `transformed_type`;  `pheno_id` is used to match columns name in Phenotype matrix, transformed_type is a charachter defining the type of data (continous, binary ecc.)
+- **Phenotype description**: csv file, rows refers to phenotypes to be tested. Columns must include: `pheno_id`, `FieldID`, `Field`,  `transformed_type`;  `pheno_id` is used to match columns name in Phenotype matrix, `transformed_type` is a charachter defining the type of data. Inspired by PHESANT for UKBiobank, possible values of `transformed_type` are 
+    - "CONTINUOUS" (gaussian regression)
+    - "CAT_SINGLE_UNORDERED", "CAT_SINGLE_BINARY", "CAT_MUL_BINARY_VAR" for binary (binomial regression)
+    - "CAT_ORD" for ordinal (ordered logistic regression)
 - **Covariate matrix** (*--covDat_file*): covariates to correct for in the association analysis (covariats + IDs x samples). Columns must contain `Individual_ID` and `genoSample_ID` to match genotype plus covariates to correct for in the phenotype association. Column `Dx` (0 control 1 case) is optional, if present is used to build the reference set when computing T-scores. *Note: samples in genotype and phenotype matrix are matched based on covariate matrix*
 - **Reactome Pathway annotation** (*--reactome_file*): .gmt file can be downloaded from https://reactome.org/download-data/ (provided in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/))
 - **GO Pathway annotation** (*--GOterms_file*): .RData file, can be obtained using *Annotate_GOterm_run.R*, each pathway is a entry in the list with `GOID` `Term` `Ontology` `geneIds` elemnets (provided in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/))
@@ -35,7 +19,6 @@ From previously trained PriLer tissue-specific model (Module 1), predict gene ex
 
 *--InfoFold* is the folder with gene-snp distance matrix ENSEMBL_gene_SNP_2e+5_chr<>_matrix.mtx, *--outTrain_fold* is the folder with overall results from PriLer
 
-#### Usage
 ```sh
 ./Priler_predictGeneExp_run.R \
     --genoDat_file \
@@ -53,11 +36,49 @@ The output includes (saved in *--outFold*):
 Based on data dimension, the next scripts are divided in two parts. If sample size <= 10,000 follow "Small dataset" part, otherwise "Large dataset".
 
 ***
-***
+### Small dataset: T-scores and Pathway-scores computation
+Predicted gene expression is converted into T-scores and combined into Pathway-scores. T-scores are computed using a subset of control samples (`Dx == 0`) as reference set if column `Dx` is present in *--covDat_file*, otherwise a random subset of samples is selected. 
+
+*--input_file* is predictedExpression.txt.gz of the previous step, 
+
+```sh
+./Tscore_PathScore_diff_run.R \
+    --input_file \
+    --reactome_file \
+    --GOterms_file \
+    --originalRNA (default = F) \
+    --thr_reliableGenes (default = c(0.01, 0)) \
+    --covDat_file \
+    --nFolds (default = 20) \
+    --outFold
+```
+The output includes (saved in *--outFold*):
+- predictedTscores.txt: gene T-scores (used HUGO nomenclature)
+- Pathway_Reactome_scores.txt
+- Pathway_GO_scores.txt
 
 ### Small dataset: T-scores and Pathway-scores computation
+Predicted gene expression is converted into T-scores and combined into Pathway-scores. T-scores are computed using a subset of control samples (`Dx == 0`) as reference set if column `Dx` is present in *--covDat_file*, otherwise a random subset of samples is selected. 
 
-Tscore_PathScore_diff_run.R
+*--input_file* is predictedExpression.txt.gz of the previous step, 
+
+```sh
+./Tscore_PathScore_diff_run.R \
+    --input_file \
+    --reactome_file \
+    --GOterms_file \
+    --originalRNA (default = F) \
+    --thr_reliableGenes (default = c(0.01, 0)) \
+    --covDat_file \
+    --nFolds (default = 20) \
+    --outFold
+```
+The output includes (saved in *--outFold*):
+- predictedTscores.txt: gene T-scores (used HUGO nomenclature)
+- Pathway_Reactome_scores.txt
+- Pathway_GO_scores.txt
+
+***
 
 ### Small dataset: Association with phenotype of T-score and pathways
 
