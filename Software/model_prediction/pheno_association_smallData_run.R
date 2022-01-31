@@ -25,7 +25,7 @@ parser$add_argument("--covDat_file", type = "character", nargs = '*', help = "fi
 parser$add_argument("--phenoDat_file", type = "character", nargs = '*', help = "file(s) with individual_ID to match and phenotype to test association, associated to covDat_file")
 parser$add_argument("--names_file", type = "character", nargs = '*', help = "for each couple of covDat/phenoDat file, associated name")
 parser$add_argument("--phenoAnn_file", type = "character", help = "file with phenotype annotation (used to determine the type of regression)")
-parser$add_argument("--cov_corr", type = "logical",default = F,  help = "if T column in covDat_file are use to correct association (excluded Dx and IDs)")
+parser$add_argument("--cov_corr", type = "logical", default = T,  help = "if T column in covDat_file are use to correct association (excluded Dx and IDs)")
 parser$add_argument("--ncores", type = "integer", default = 0, help = "number of cores for the parallelization (over genes, if zero not parallelized)")
 parser$add_argument("--geneAnn_file", type = "character", help = "file with gene info from train, to be filtered")
 parser$add_argument("--functR", type = "character", help = "Rscript with functions to be used")
