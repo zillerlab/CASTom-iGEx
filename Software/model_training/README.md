@@ -2,23 +2,6 @@
 
 PriLer (CASTom-iGEx Module 1) is a command-line tool that create model for predicting gene expression from genotype data integrating prior features on variants whose relevance is automatically learned in a machine learning set up. 
 
-## Requirements
-To run PriLer the following R packages are required:
-
-- argparse 
-- Matrix
-- biomaRt
-- glmnet
-- parallel
-- doParallel
-- nloptr
-- bigmemory
-- ggplot2
-- gridExtra
-- RColorBrewer
-- ggsci
-- ggExtra
-
 ## Input Files
 - **Gene expression matrix** (*--geneExp_file*): preprocessed gene expression (genes x samples). First column refers to gene names (ensembl annotation or HUGO nomenclature)
 - **Genotype matrix** (*--genoDat_file*): dosages for each chromosome (compressed txt) without variants name/position (variants x samples). *NOTE: the file must end with chr<>_matrix.txt.gz*
@@ -36,7 +19,6 @@ annotate genes file using bioMart (possibility of recomputing or use the fixed v
 *--outFold*, *--outFold_geneExp* and *--outFold_snps* are the path where general output, filtered gene expression and SNP annotation shoudl be saved respectively. 
 
 *NOTE: consider only chromosomes 1-22*
-#### Usage
 ```sh
 ./preProcessing_data_run.R \
 	--geneExp_file \
@@ -62,7 +44,6 @@ Considering only heritable genes, compute elastic-net regression in a nested cro
 *--InfoFold* equivalent to *--outFold* in preProcessing and is the folder including ENSEMBL_gene_SNP_2e+5_chr<>_matrix.mtx data. *--curChrom* indicates considered choromosome in e.g. chr1
 
 *NOTE: script is specific for a chromosome and can be used if no genes are heritable such that e-net is computed for all genes*
-#### Usage
 ```sh
 ./PriLer_part1_run.R \
 	--curChrom \
@@ -99,7 +80,6 @@ Considering only heritable genes, compute elastic-net regression in a nested cro
 
 *NOTE: The script is parallelized over given possible values of E parameter. Possible values for E cannot be chosen a prior but depends on the data.*
 
-#### Usage
 ```sh
 ./PriLer_part2_run.R \
 	--covDat_file \
@@ -145,7 +125,6 @@ Considering only heritable genes, first find optimal alpha and lambda parameter 
 
 *--part2Res_fold* is the folder containing the output of step2.
 
-#### Usage
 ```sh
 ./PriLer_part3_run.R \
 	--covDat_file \
@@ -201,7 +180,6 @@ Considering only not heritable genes, fix prior coefficients found in the previo
 
 *NOTE: script is specific for a chromosome, seed and n. folds for nested CV and single CV are the same as used in the previous steps*
 
-#### Usage
 ```sh
 ./PriLer_part4_run.R \
 	--curChrom \
@@ -232,8 +210,7 @@ The output includes (saved in *--outFold*):
 The last step combines regression results from nested CV and total set  regression. In addition, results are separated for with and without setting to allow for a straightforward comparison. The regression coefficients are saved in a .RData object, divided by chromosomes. Finally, plot of the entire pipeline are produced. 
 
 *--part1Res_fold --part2Res_fold --part3Res_fold --part4Res_fold* are the folders containing output of step1, step2, step3 and step4.
-
-#### Usage 
+ 
 ```sh
 ./PriLer_finalOutput_run.R \
 	--covDat_file \
