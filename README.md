@@ -12,6 +12,20 @@ across directly interpretable biological process and pathways as well as clinica
 
 ## Built with
 * R (3.5.3)
+### Required R packages
+- argparse 
+- Matrix
+- biomaRt
+- glmnet
+- parallel
+- doParallel
+- nloptr
+- bigmemory
+- ggplot2
+- gridExtra
+- RColorBrewer
+- ggsci
+- ggExtra
 
 ## Usage
 For details of each module please refer to 
