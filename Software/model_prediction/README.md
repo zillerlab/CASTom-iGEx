@@ -11,7 +11,7 @@ CASTom-iGEx (Module 2) is a command-line tool that uses trained model to predict
 - **Covariate matrix** (*--covDat_file*): covariates to correct for in the association analysis (covariats + IDs x samples). Columns must contain `Individual_ID` and `genoSample_ID` to match genotype plus covariates to correct for in the phenotype association. Column `Dx` (0 control 1 case) is optional, if present is used to build the reference set when computing T-scores. *Note: samples in genotype and phenotype matrix are matched based on covariate matrix*
 - **Reactome Pathway annotation** (*--reactome_file*): .gmt file can be downloaded from https://reactome.org/download-data/ (provided in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/))
 - **GO Pathway annotation** (*--GOterms_file*): .RData file, can be obtained using *Annotate_GOterm_run.R*, each pathway is a entry in the list with `GOID` `Term` `Ontology` `geneIds` elemnets (provided in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/))
-- **Custom pathway**: .RData file, similar to GO structure, each pathway is a list entry with `name` and `geneIds` elements. Available for WikiPathways (2019) in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/)
+- **Custom pathway** (*--pathwayStructure_file*): .RData file, similar to GO structure, each pathway is a list entry with `name` and `geneIds` elements. Available for WikiPathways (2019) in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/)
 
 ## Workflow
 ### Predict gene expression
@@ -92,7 +92,7 @@ T-scores and pathway-scores are tested for association with phenotypes. The regr
     --names_file \
     --phenoAnn_file \
     --cov_corr (default = T) \
-    --ncores (default = 0)\
+    --ncores (default = 0) \
     --geneAnn_file \
     --functR ./pheno_association_functions.R \
     --outFold
@@ -108,7 +108,29 @@ The output includes (saved in *--outFold*):
 
 
 ### Small dataset: Association with phenotype of custom pathways
-pheno_association_smallData_customPath_run.R
+Same as before btu for custom gene sets. It requires the association between phenotypes and T-scores to be complete (previous step).
+
+```sh
+./pheno_association_smallData_customPath_run.R \
+    --pathwayStructure_file  \
+    --sampleAnn_file \
+    --thr_reliableGenes (default = c(0.01, 0)) \
+    --covDat_file \
+    --phenoDat_file \
+    --names_file \
+    --phenoAnn_file \
+    --cov_corr (default = T) \
+    --ncores (default = 0) \
+    --geneAnn_file \
+    --functR ./pheno_association_functions.R \
+    --geneSetName \
+    --abs_tscore (default F) \
+    --not_rm_samepath (default F) \
+    --outFold
+```
+
+The output includes (saved in *--outFold*):
+- pval_<*names_file*>_covCorr_customPath_<*geneSetName*>.RData/pval_<*names_file*>_customPath_<*geneSetName*>.RData (same as previous step)
 
 ### Small dataset: Meta-analysis for multiple cohorts T-scores and pathways
 pheno_association_metaAnalysis_run.R
