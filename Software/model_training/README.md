@@ -257,3 +257,10 @@ The output includes (saved in *--outFold*):
 -   resNoPrior_regCoeffSnps_allchr.RData and resPrior_regCoeffSnps_allchr.RData regression coefficient for variants divided by chr (sparse matrix)
 -   plots for model evaluation and quality checks
 'NoPrior' refers to elastic-net, 'Prior' refers to PriLer results.
+
+### Note on quality check
+- *plot_devtest_compareWithPrior_increase.png* should indicate a percentage of increase > 50%
+- *plot_CVmse_TEST_Eopt.png* should decrease at each iteration (at least for some folds)
+- *plot_numberSNPs_elVSelP_gene.png* n. of reg-SNPs should be lower in PriLer with a decrease of "without prior" component
+- *plot_iteration_weigths_priorFeat.png* when relevant, prior feature weigths iteratively increase 
+
