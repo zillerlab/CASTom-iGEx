@@ -54,29 +54,26 @@ Predicted gene expression is converted into T-scores and combined into Pathway-s
 ```
 The output includes (saved in *--outFold*):
 - predictedTscores.txt: gene T-scores (used HUGO nomenclature)
-- Pathway_Reactome_scores.txt
-- Pathway_GO_scores.txt
+- Pathway_Reactome_scores.txt: pathway scores based on Reactome
+- Pathway_GO_scores.txt: pathway scores based on GO
+Pathway scores can include pathway made of the same genes but with different names (filtered in the association steps)
 
-### Small dataset: T-scores and Pathway-scores computation
-Predicted gene expression is converted into T-scores and combined into Pathway-scores. T-scores are computed using a subset of control samples (`Dx == 0`) as reference set if column `Dx` is present in *--covDat_file*, otherwise a random subset of samples is selected. 
+### Small dataset: Pathway-scores computation for custom gene list
+Based on already computed T-scores, create pathway-scores for a custom .RData object containing gene sets (example WikiPathways)
 
-*--input_file* is predictedExpression.txt.gz of the previous step, 
+*--tscore_file* is - predictedTscores.txt: gene T-scores of the previous step, *--geneSetName* custom name for gene sets databse
 
 ```sh
-./Tscore_PathScore_diff_run.R \
-    --input_file \
-    --reactome_file \
-    --GOterms_file \
-    --originalRNA (default = F) \
-    --thr_reliableGenes (default = c(0.01, 0)) \
-    --covDat_file \
-    --nFolds (default = 20) \
+./pathScore_customGeneList_run.R \
+    --pathwayStruct_file \
+    --tscore_file \
+    --sampleAnn_file \
+    --geneSetName \
+    --abs_tscore (default = F) \
     --outFold
 ```
 The output includes (saved in *--outFold*):
-- predictedTscores.txt: gene T-scores (used HUGO nomenclature)
-- Pathway_Reactome_scores.txt
-- Pathway_GO_scores.txt
+- Pathway_<geneSetName>_scores.tx
 
 ***
 
