@@ -73,15 +73,24 @@ Based on already computed T-scores, create pathway-scores for a custom .RData ob
     --outFold
 ```
 The output includes (saved in *--outFold*):
-- Pathway_<geneSetName>_scores.tx
+- Pathway_<*geneSetName*>_scores.txt
+
+### Small dataset: Association with phenotype of T-score and pathways
+pheno_association_smallData_run.R
+
+### Small dataset: Association with phenotype of custom pathways
+pheno_association_smallData_customPath_run.R
+
+### Small dataset: Meta-analysis for multiple cohorts T-scores and pathways
+pheno_association_metaAnalysis_run.R
+
+### Small dataset: Meta-analysis for multiple cohorts custom pathways 
+pheno_association_customPath_metaAnalysis_run.R
 
 ***
 
-### Small dataset: Association with phenotype of T-score and pathways
 
-pheno_association_smallData_run.R/pheno_association_smallData_customPath_run.R
 
-### Small dataset: Meta-analysis across multiple cohorts
 
 pheno_association_metaAnalysis_run.R/pheno_association_customPath_metaAnalysis_run.R
 
