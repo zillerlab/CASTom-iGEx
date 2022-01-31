@@ -130,7 +130,7 @@ Same as before btu for custom gene sets. It requires the association between phe
 ```
 
 The output includes (saved in *--outFold*):
-- pval_<*names_file*>_covCorr_customPath_<*geneSetName*>.RData/pval_<*names_file*>_customPath_<*geneSetName*>.RData (same as previous step)
+- pval_<*names_file*>_covCorr_customPath_<*geneSetName*>.RData / pval_<*names_file*>_customPath_<*geneSetName*>.RData (same as previous step)
 
 ### Small dataset: Meta-analysis for multiple cohorts T-scores and pathways
 pheno_association_metaAnalysis_run.R
