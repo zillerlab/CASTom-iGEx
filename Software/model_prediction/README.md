@@ -3,8 +3,8 @@ CASTom-iGEx (Module 2) is a command-line tool that uses trained model to predict
 
 ## Input Files
 - **Genotype matrix** (*--genoDat_file*): dosages for each chromosome (compressed txt) without variants name/position (variants x samples).  *NOTE: SNPs must match with the train genotype data, file must end with chr<>_matrix.txt.gz*
-- **Phenotype matrix**: columns must contain `Individual_ID` plus any phenotype to test the association (phenotypes + 1 x samples). This matrix can include multiple phenotypes to be tested. 
-- **Phenotype description**: csv file, rows refers to phenotypes to be tested. Columns must include: `pheno_id`, `FieldID`, `Field`,  `transformed_type`;  `pheno_id` is used to match columns name in Phenotype matrix, `transformed_type` is a charachter defining the type of data. Inspired by PHESANT for UKBiobank, possible values of `transformed_type` are 
+- **Phenotype matrix** (*--phenoDat_file*): columns must contain `Individual_ID` plus any phenotype to test the association (phenotypes + 1 x samples). This matrix can include multiple phenotypes to be tested. 
+- **Phenotype description (*--phenoAnn_file*)**: csv file, rows refers to phenotypes to be tested. Columns must include: `pheno_id`, `FieldID`, `Field`,  `transformed_type`;  `pheno_id` is used to match columns name in Phenotype matrix, `transformed_type` is a charachter defining the type of data. Inspired by PHESANT for UKBiobank, possible values of `transformed_type` are 
     - "CONTINUOUS" (gaussian regression)
     - "CAT_SINGLE_UNORDERED", "CAT_SINGLE_BINARY", "CAT_MUL_BINARY_VAR" for binary (binomial regression)
     - "CAT_ORD" for ordinal (ordered logistic regression)
@@ -56,6 +56,7 @@ The output includes (saved in *--outFold*):
 - predictedTscores.txt: gene T-scores (used HUGO nomenclature)
 - Pathway_Reactome_scores.txt: pathway scores based on Reactome
 - Pathway_GO_scores.txt: pathway scores based on GO
+
 Pathway scores can include pathway made of the same genes but with different names (filtered in the association steps)
 
 ### Small dataset: Pathway-scores computation for custom gene list
@@ -76,7 +77,35 @@ The output includes (saved in *--outFold*):
 - Pathway_<*geneSetName*>_scores.txt
 
 ### Small dataset: Association with phenotype of T-score and pathways
-pheno_association_smallData_run.R
+T-scores and pathway-scores are tested for association with phenotypes. The regression type depends on the nature of the phenotype (gaussin, binary and ordinal logistic). Redundant pathways composed of the same gene sets are removed keeping the one with lower number of annotated total gene. Genes/pathways are corrected for multiple testing.
+
+*--thr_reliableGenes* MUST be the same as the filtering criteria previously applied, *--inputFold* contains pathways and t-scores results, *--covDat_file* includes covariates to filter for, *--sampleAnn_file* same sample list of *covDat_file* but can exclude actual covariates, *--names_file* name for the phenotype group to be tested, *--geneAnn_file* resPrior_regEval_allchr.txt from PriLer
+
+```sh
+./pheno_association_smallData_run.R \
+    --reactome_file \
+    --GOterms_file \
+    --sampleAnn_file \
+    --thr_reliableGenes (default = c(0.01, 0)) \
+    --covDat_file \
+    --phenoDat_file \
+    --names_file \
+    --phenoAnn_file \
+    --cov_corr (default = T) \
+    --ncores (default = 0)\
+    --geneAnn_file \
+    --functR ./pheno_association_functions.R \
+    --outFold
+```
+The output includes (saved in *--outFold*):
+- pval_<*names_file*>_covCorr.RData/pval_<*names_file*>.RData list composed of 
+    - pheno: phenoAnn info
+    - tscore: summary statistics of association from tscores for each reliable genes
+    - pathScore_reactome: summary statistics of association from pathscore (Reactome)
+    - pathScore_GO: summary statistics of association from pathscore (GO)
+    - info_pathScore_reactome: for each pathway in Reactome, its summary statistics and those of the genes belonging to the pathway
+    - info_pathScore_GO: for each pathway in GO, its summary statistics and those of the genes belonging to the pathway
+
 
 ### Small dataset: Association with phenotype of custom pathways
 pheno_association_smallData_customPath_run.R
@@ -86,13 +115,6 @@ pheno_association_metaAnalysis_run.R
 
 ### Small dataset: Meta-analysis for multiple cohorts custom pathways 
 pheno_association_customPath_metaAnalysis_run.R
-
-***
-
-
-
-
-pheno_association_metaAnalysis_run.R/pheno_association_customPath_metaAnalysis_run.R
 
 ***
 ***
