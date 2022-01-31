@@ -3,13 +3,12 @@
 options(stringsAsFactors=F)
 options(max.print=1000)
 suppressPackageStartupMessages(library(argparse))
-#suppressPackageStartupMessages(library(PGSEA))
 suppressPackageStartupMessages(library(limma))
 suppressPackageStartupMessages(library(qvalue))
 
 parser <- ArgumentParser(description="Compute PathCcore for a specific pathway structure")
 
-parser$add_argument("--pathwayStruct_file", type = "character", help = "List of genes")
+parser$add_argument("--pathwayStruct_file", type = "character", help = "List of genes (.RData)")
 parser$add_argument("--tscore_file", type = "character", help = "already computed tscore")
 parser$add_argument("--sampleAnn_file", type = "character", help = "file with sample info for new genotype data, must contain Dx column (0 controls 1 cases)")
 parser$add_argument("--geneSetName", type = "character", help = "name pathway custom")
