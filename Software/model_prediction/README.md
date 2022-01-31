@@ -100,11 +100,11 @@ T-scores and pathway-scores are tested for association with phenotypes. The regr
 The output includes (saved in *--outFold*):
 - pval_<*names_file*>_covCorr.RData/pval_<*names_file*>.RData list composed of 
     - pheno: phenoAnn info
-    - tscore: summary statistics of association from tscores for each reliable genes
-    - pathScore_reactome: summary statistics of association from pathscore (Reactome)
-    - pathScore_GO: summary statistics of association from pathscore (GO)
-    - info_pathScore_reactome: for each pathway in Reactome, its summary statistics and those of the genes belonging to the pathway
-    - info_pathScore_GO: for each pathway in GO, its summary statistics and those of the genes belonging to the pathway
+    - tscore (list, each entry refers to a phenotype): summary statistics of association from tscores for each reliable genes
+    - pathScore_reactome (list, each entry refers to a phenotype): summary statistics of association from pathscore (Reactome)
+    - pathScore_GO (list, each entry refers to a phenotype): summary statistics of association from pathscore (GO)
+    - info_pathScore_reactome (list, each entry refers to a phenotype): for each pathway in Reactome, its summary statistics and those of the genes belonging to the pathway
+    - info_pathScore_GO (list, each entry refers to a phenotype): for each pathway in GO, its summary statistics and those of the genes belonging to the pathway
 
 
 ### Small dataset: Association with phenotype of custom pathways
