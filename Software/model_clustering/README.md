@@ -1,10 +1,6 @@
 # Cases stratification based on imputed gene expression
 CASTom-iGEx (Module 3) is a command-line tool that uses gene-level T-scores scaled by their association with trait of interest to cluster patients using a graph-based clustering technique. These groups are then tested for association with endophenotype differences and genes/pathway scores as well as group-specific treatment response when data available. If no clinical information are present, plausible differences in endophenotypes are detected with the approximation of gene risk-scores. Two versions are available dependening of data structure (single or multiple cohorts). 
 
-## Requirements
-To run the prediction the following R packages are required:
- - argparse
-
 ## Input Files
 - **Genotype matrix** (*--genoDat_file*): dosages for each chromosome (compressed txt) without variants name/position (variants x samples).  *NOTE: SNPs must match with the train genotype data, file must end with chr<>_matrix.txt.gz*
 - **Phenotype matrix**: columns must contain `Individual_ID` plus any phenotype to test the association (phenotypes + 1 x samples). This matrix can include multiple phenotypes to be tested. 
@@ -16,7 +12,7 @@ To run the prediction the following R packages are required:
 
 ## Workflow (single cohort)
 ### Clustering
-cluster_PGmethod_run.R
+cluster_PGmethod_corrPCs_run.R
 
 ### associate clustering with endophenotype:
 cluster_associatePhenoGLM_run.R
