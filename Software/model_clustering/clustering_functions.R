@@ -1,3 +1,123 @@
+## load input data ##
+load_input_matrix <- function(inputFile, sampleAnn, res_pval, split_tot, id_info){
+  
+  if(split_tot == 0){
+    
+    ### load score ###
+    if(substr(inputFile, nchar(inputFile)-3, nchar(inputFile)) == '.txt'){
+      tmp <- read.delim(inputFile, h=T, stringsAsFactors = F, check.names = F)
+      if(type_data == 'tscore'){
+        # correct sample names
+        sampleID <- unname(sapply(colnames(tmp)[-1], function(x) strsplit(x, split = '.vs')[[1]][1]))
+        colnames(tmp)[-1] <- sampleID
+      }
+      # filter out elements that are repeated twice:
+      id_dup <- names(which(table(tmp[,1] ) > 1)) 
+      tmp <- tmp[!tmp[,1] %in% id_dup, ]
+      id_el <- intersect(tmp[,1], res_pval[, id_info])
+      tmp <- tmp[match(id_el, tmp[,1]),]
+      res_pval <- res_pval[match(id_el, res_pval[, id_info]),]
+      elementID <- tmp[,1]
+      # consider only samples in common
+      common_samples <- intersect(sampleAnn$Individual_ID, colnames(tmp))
+      sampleAnn <- sampleAnn[match(common_samples, sampleAnn$Individual_ID),]
+      tmp <- tmp[, match(common_samples, colnames(tmp))]
+      scoreMat <- as.matrix(t(tmp))
+      colnames(scoreMat) <- elementID
+    }else{  
+      
+      scoreMat <- get(load(inputFile))
+      # filter out based on samples and ids
+      id_el <- intersect(scoreMat[,1], res_pval[, id_info])
+      scoreMat <- scoreMat[match(id_el,scoreMat[,1]), ]
+      
+      common_samples <- intersect(sampleAnn$Individual_ID, colnames(scoreMat))
+      sampleAnn <- sampleAnn[match(common_samples, sampleAnn$Individual_ID),]
+      scoreMat <- t(scoreMat[,match(common_samples,colnames(scoreMat))])
+      
+      rownames(scoreMat) <- common_samples
+      colnames(scoreMat) <- id_el
+      res_pval <- res_pval[match(id_el, res_pval[, id_info]),]
+    } 
+    
+  }else{
+    
+    scoreMat_list <- vector(mode = 'list', length = split_tot)
+    samplesID <- vector(mode = 'list', length = split_tot)
+    elementID <- NULL
+    
+    for(i in 1:split_tot){
+      
+      print(i)
+      if(file.exists(sprintf('%s%i.RData', inputFile, i))){
+        tmp <- get(load(sprintf('%s%i.RData', inputFile, i)))
+        elementID <- c(elementID,tmp[,1])
+        samplesID[[i]] <- intersect(sampleAnn$Individual_ID, colnames(tmp))
+        scoreMat_list[[i]] <- t(tmp[,match(samplesID[[i]],colnames(tmp))])
+      }else{
+        print(sprintf('split %i does not exist', i))
+        split_tot <- split_tot - 1
+      }
+    }
+    
+    print(split_tot)
+    # check samplesID always the same
+    if(!all(table(unlist(samplesID)) == split_tot)){print('ERROR: wrong name annotations')}
+    
+    scoreMat <- do.call(cbind, scoreMat_list)
+    colnames(scoreMat) <- elementID
+    rm(scoreMat_list)
+    
+    # filter out elements that are repeated twice:
+    id_dup <- names(which(table(colnames(scoreMat)) > 1)) 
+    scoreMat <- scoreMat[, !colnames(scoreMat) %in% id_dup]
+    
+    id_el <- intersect(colnames(scoreMat),  res_pval[, id_info])
+    scoreMat <- scoreMat[, match(id_el, colnames(scoreMat))]
+    
+    rownames(scoreMat) <- samplesID[[1]]
+    # remove sample that have NAs
+    id_s <- rowSums(is.na(scoreMat)) == 0
+    if(!all(id_s)){scoreMat <- scoreMat[id_s, ]}
+    
+    common_samples <- intersect(sampleAnn$Individual_ID, rownames(scoreMat))
+    sampleAnn <- sampleAnn[match(common_samples, sampleAnn$Individual_ID),]
+    scoreMat <- scoreMat[match(common_samples,rownames(scoreMat)),]
+    res_pval <- res_pval[match(id_el, res_pval[, id_info]),]
+    
+  }
+  
+  return(list(res_pval = res_pval, sampleAnn = sampleAnn, scoreMat = scoreMat))
+  
+}
+
+## clumping ##
+clumping_features <- function(res_pval, id_info, corr_feat, id_pval, corr_thr){
+
+  feat_info <- res_pval[,c(id_info, id_pval)]
+  feat_info <- feat_info[order(feat_info[,2], decreasing = F), ]
+  corr_feat <- corr_feat[match(feat_info[,1], rownames(corr_feat)), 
+                         match(feat_info[,1], colnames(corr_feat))]
+  element_rm <- c()
+  stop_cond <- F
+  list_feat <- feat_info[,1]
+  
+  while(!stop_cond){
+    
+    id <- which(abs(corr_feat[,list_feat[1]])>corr_thr)
+    if(length(id)>1){
+      element_rm <- c(element_rm, names(id)[-which.max(feat_info[match(names(id),feat_info[,1]), 2])])
+    }
+    list_feat <- list_feat[!list_feat %in% names(id)]
+    # print(length(list_feat))
+    stop_cond <- length(list_feat) == 0
+    
+  }
+  
+  element_rm <- unique(element_rm)
+  return(element_rm)
+}
+
 ## cluster using PG method ##
 clust_PGmethod_HKsim <- function(kNN, score, type_Dx, multiple_cohorts = F, sample_info, euclDist){
   
@@ -270,7 +390,7 @@ pheat_pl <- function(mat, cl, type_mat, height_pl = 10, width_pl = 7, outFile ){
 pheat_pl_gr <- function(mat, type_mat, height_pl = 10, width_pl = 7, color_df, outFile){
   
   coul <- rev(colorRampPalette(brewer.pal(11, "RdBu"))(100))
-
+  
   tmp_mat <- as.matrix(mat[, !colnames(mat) %in% c('id', 'tissue')])
   
   val <- max(abs(tmp_mat))
@@ -467,7 +587,7 @@ pheat_pl_path <- function(mat, cl, info_feat = NA, test_feat = NA, height_pl = 1
   row_ha <- rowAnnotation(n_genes = info_feat$ngenes_tscore, perc = info_feat$ngenes_tscore/info_feat$ngenes_path, 
                           annotation_label = list(n_genes = 'n. genes', perc = '% tot genes'), 
                           col = list(n_genes = ngenes_col_fun, perc = perc_col_fun))
- 
+  
   # add pvalue info for each group
   estimate_col_fun = colorRamp2(c(min(test_feat$estimates), 0, max(test_feat$estimates)), c("darkgreen", "#F0F0F0", "darkorange"))
   df_pch <- list()
@@ -606,7 +726,7 @@ pheat_pl_tot <- function(pheno_name, mat_tscore, info_feat_tscore, test_feat_tsc
   colnames(df_font) <- paste0('gr', 1:P)
   
   row_ha_gr <- rowAnnotation(gr = anno_simple(df_est, col = estimate_col_fun, pch = df_pch, border = T, pt_gp = gpar(fontface = df_font)), 
-                              annotation_label = '', annotation_name_side = 'top', annotation_name_rot = 0, simple_anno_size_adjust = T)
+                             annotation_label = '', annotation_name_side = 'top', annotation_name_rot = 0, simple_anno_size_adjust = T)
   
   hm_pl <- Heatmap(tmp_mat, name = "scaled\nT-scores", col = coul, cluster_rows = FALSE, cluster_columns = FALSE,  show_column_names = F, 
                    top_annotation = column_ha, column_split = cl$gr, column_title = NULL,
@@ -615,7 +735,7 @@ pheat_pl_tot <- function(pheno_name, mat_tscore, info_feat_tscore, test_feat_tsc
                    right_annotation = row_ha_gr, 
                    border = TRUE, use_raster = T, show_heatmap_legend = F)
   tot_pl <- hm_pl
- 
+  
   
   # cohort info
   if('cohort' %in% colnames(cl)){
@@ -667,7 +787,7 @@ pheat_pl_tot <- function(pheno_name, mat_tscore, info_feat_tscore, test_feat_tsc
     ngenes_col_fun = colorRamp2(c(min(info_feat_path$ngenes_tscore),max(info_feat_path$ngenes_tscore)), c("white", "#035F1D"))
     perc_col_fun = colorRamp2(c(min(info_feat_path$ngenes_tscore/info_feat_path$ngenes_path), max(info_feat_path$ngenes_tscore/info_feat_path$ngenes_path)), c("white", "#316879"))
   }
- 
+  
   row_ha <- rowAnnotation(n_genes = info_feat_path$ngenes_tscore, perc = info_feat_path$ngenes_tscore/info_feat_path$ngenes_path, 
                           zstat = info_feat_path$Zstat,
                           annotation_label = list(n_genes = 'n. genes', perc = '% tot genes', zstat = sprintf('z-statistic %s', pheno_name)), 
@@ -718,7 +838,7 @@ pheat_pl_tot <- function(pheno_name, mat_tscore, info_feat_tscore, test_feat_tsc
   pdf(file=paste0(outFile, '.pdf'), width = width_pl, height = height_pl)
   draw(ht_list , annotation_legend_list = list(lgd_est, lgd_sig), merge_legend = T, auto_adjust = T, padding = unit(c(2, 2 + side_par, 2, 2), "mm"))
   dev.off()
-
+  
 }
 
 
@@ -732,60 +852,60 @@ compute_reg_endopheno <- function(fmla, type_pheno, mat){
     
     res <- tryCatch(glm(fmla, data = mat, family = 'gaussian'),warning=function(...) NA, error=function(...) NA)
     if(is.list(res)){
-       output <- coef(summary(res))[rownames(coef(summary(res))) == 'gr_id1',1:4]
-       output[5] <- output[1]
-       output[6] <-  output[1] + qnorm(0.025)*output[2]
-       output[7] <-  output[1] + qnorm(0.975)*output[2]
+      output <- coef(summary(res))[rownames(coef(summary(res))) == 'gr_id1',1:4]
+      output[5] <- output[1]
+      output[6] <-  output[1] + qnorm(0.025)*output[2]
+      output[7] <-  output[1] + qnorm(0.975)*output[2]
     }else{
-       output <- rep(NA, 7)
+      output <- rep(NA, 7)
     }
   }else{
-  
-  if((type_pheno %in% c('CAT_SINGLE_UNORDERED', 'CAT_SINGLE_BINARY', 'CAT_MUL_BINARY_VAR')) | (type_pheno == 'CAT_ORD' & length(unique(na.omit(mat[, 'pheno']))) == 2)){
     
-    if(!all(unique(na.omit(mat[, 'pheno']) %in% c(0,1)))){
+    if((type_pheno %in% c('CAT_SINGLE_UNORDERED', 'CAT_SINGLE_BINARY', 'CAT_MUL_BINARY_VAR')) | (type_pheno == 'CAT_ORD' & length(unique(na.omit(mat[, 'pheno']))) == 2)){
       
-      min_id <- which(mat[, 'pheno'] == min(mat[,'pheno'], na.rm = T))
-      mat[min_id,  'pheno'] <- 0
-      max_id <- which(mat[, 'pheno'] == max(mat[,  'pheno'], na.rm = T))
-      mat[max_id,  'pheno'] <- 1
+      if(!all(unique(na.omit(mat[, 'pheno']) %in% c(0,1)))){
+        
+        min_id <- which(mat[, 'pheno'] == min(mat[,'pheno'], na.rm = T))
+        mat[min_id,  'pheno'] <- 0
+        max_id <- which(mat[, 'pheno'] == max(mat[,  'pheno'], na.rm = T))
+        mat[max_id,  'pheno'] <- 1
+        
+      }
       
-    }
-    
-    res <- tryCatch(glm(fmla, data = mat, family = 'binomial'),warning=function(...) NA, error=function(...) NA)
-    if(is.list(res)){
-    	output <- coef(summary(res))[rownames(coef(summary(res))) == 'gr_id1',1:4]
-    	output[5] <- exp(output[1])
-    	output[6] <- exp(output[1] + qnorm(0.025)*output[2])
-    	output[7] <- exp(output[1] + qnorm(0.975)*output[2])
-    }else{
-	output <- rep(NA, 7)
-    }
-  }else{
-  
-  if(type_pheno == 'CAT_ORD' & length(unique(na.omit(mat[, 'pheno']))) > 2){
-    
-    mat$pheno <- factor(mat$pheno)
-    output <- rep(NA, 7)
-
-    res <- tryCatch(polr(fmla, data = mat, Hess=TRUE),warning=function(...) NA, error=function(...) NA)
-    if(is.list(res)){
-      if(!any(is.na(res$Hess))){
-        ct <- coeftest(res)  
-        output <- ct[rownames(ct) == 'gr_id1',1:4]
+      res <- tryCatch(glm(fmla, data = mat, family = 'binomial'),warning=function(...) NA, error=function(...) NA)
+      if(is.list(res)){
+        output <- coef(summary(res))[rownames(coef(summary(res))) == 'gr_id1',1:4]
         output[5] <- exp(output[1])
         output[6] <- exp(output[1] + qnorm(0.025)*output[2])
         output[7] <- exp(output[1] + qnorm(0.975)*output[2])
+      }else{
+        output <- rep(NA, 7)
+      }
+    }else{
+      
+      if(type_pheno == 'CAT_ORD' & length(unique(na.omit(mat[, 'pheno']))) > 2){
+        
+        mat$pheno <- factor(mat$pheno)
+        output <- rep(NA, 7)
+        
+        res <- tryCatch(polr(fmla, data = mat, Hess=TRUE),warning=function(...) NA, error=function(...) NA)
+        if(is.list(res)){
+          if(!any(is.na(res$Hess))){
+            ct <- coeftest(res)  
+            output <- ct[rownames(ct) == 'gr_id1',1:4]
+            output[5] <- exp(output[1])
+            output[6] <- exp(output[1] + qnorm(0.025)*output[2])
+            output[7] <- exp(output[1] + qnorm(0.975)*output[2])
+          }
+        }
+        
+        
+      }else{
+        output <- rep(NA, 7)
       }
     }
-
-    
-  }else{
-  output <- rep(NA, 7)
   }
-  }
-  }
-
+  
   return(output)
   
 }
@@ -794,11 +914,11 @@ compute_reg_endopheno_lmm <- function(fmla, type_pheno, mat){
   
   res <- tryCatch(lmer(fmla, data = mat),warning=function(...) NULL, error=function(...) NULL)
   if(!is.null(res)){
-      ci <- confint.merMod(res, level = 0.95)
-      ct <- coef(summary(res))  
-      output <- data.frame(beta = ct[rownames(ct) == 'gr_id1','Estimate'], se_beta = ct[rownames(ct) == 'gr_id1','Std. Error'], z = ct[rownames(ct) == 'gr_id1','t value'])
-      output$CI_low <- ci['gr_id1',1]
-      output$CI_up <- ci['gr_id1',2]
+    ci <- confint.merMod(res, level = 0.95)
+    ct <- coef(summary(res))  
+    output <- data.frame(beta = ct[rownames(ct) == 'gr_id1','Estimate'], se_beta = ct[rownames(ct) == 'gr_id1','Std. Error'], z = ct[rownames(ct) == 'gr_id1','t value'])
+    output$CI_low <- ci['gr_id1',1]
+    output$CI_up <- ci['gr_id1',2]
   }else{
     output <- data.frame(beta = c(), se_beta = c(), z = c(), CI_low = c(), CI_up = c())
   }
@@ -863,7 +983,7 @@ compute_reg_endopheno_multi <- function(fmla, type_pheno, mat, cov_int){
             rownames(output) <- cov_int
           }
         }
-      
+        
       }else{
         output <- NULL
       }
@@ -881,7 +1001,7 @@ meta_analysis_res <- function(beta, se_beta, thr_het = 0.001, type_pheno = NULL)
   if(all(beta == 0)){
     df <- data.frame(beta = NA, se_beta = NA, z = NA, pvalue = NA, Cochran_stat = NA, Cochran_pval = NA, model = NA, OR_or_Beta = NA, CI_low = NA, CI_up = NA)
   }else{
-  
+    
     model <- 'fixed'
     w <- 1/(se_beta)^2
     beta_all <- sum(beta*w, na.rm = T)/sum(w, na.rm = T)

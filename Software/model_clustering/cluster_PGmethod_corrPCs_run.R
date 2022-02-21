@@ -1,4 +1,4 @@
-# cluster 
+# cluster, correct for PCs, single cohort
 
 options(stringsAsFactors=F)
 options(max.print=1000)
@@ -112,16 +112,19 @@ if(type_data == 'tscore'){
   res_pval <- res_pval$tscore[[pval_id]]
   id_pval <- 8
   id_info <- 2
+  id_geno_summ <- 3
 }else{
   if(type_data == 'path_Reactome'){
     res_pval <- res_pval$pathScore_reactome[[pval_id]]
     id_pval <- 13
     id_info <- 1
+    id_geno_summ <- 4
   }else{
     if(type_data == 'path_GO'){
       res_pval <- res_pval$pathScore_GO[[pval_id]]
       id_pval <- 15
       id_info <- 1
+      id_geno_summ <- 6
     }else{
       stop('unknown pathway called')
     }
@@ -150,81 +153,27 @@ if(exclude_MHC & type_data == 'tscore'){
 res_pval <- res_pval[res_pval[,id_pval+2] <= pval_thr,]
 print(dim(res_pval))
 
-# load input matrix 
-if(split_tot == 0){
-  
-  scoreMat <- get(load(inputFile))
-  # filter out based on samples and ids
-  id_el <- intersect(scoreMat[,1], res_pval[, id_info])
-  scoreMat <- scoreMat[match(id_el,scoreMat[,1]), ]
-  
-  common_samples <- intersect(sampleAnn$Individual_ID, colnames(scoreMat))
-  sampleAnn <- sampleAnn[match(common_samples, sampleAnn$Individual_ID),]
-  scoreMat <- t(scoreMat[,match(common_samples,colnames(scoreMat))])
-  
-  rownames(scoreMat) <- common_samples
-  colnames(scoreMat) <- id_el
-  res_pval <- res_pval[match(id_el, res_pval[, id_info]),]
-  
-}else{
-  
-  ###### load score Mat #######
-  scoreMat_list <- vector(mode = 'list', length = split_tot)
-  samplesID <- vector(mode = 'list', length = split_tot)
-  elementID <- NULL
-  
-  for(i in 1:split_tot){
-    
-    print(i)
-    if(file.exists(sprintf('%s%i.RData', inputFile, i))){
-      tmp <- get(load(sprintf('%s%i.RData', inputFile, i)))
-      elementID <- c(elementID,tmp[,1])
-      samplesID[[i]] <- intersect(sampleAnn$Individual_ID, colnames(tmp))
-      scoreMat_list[[i]] <- t(tmp[,match(samplesID[[i]],colnames(tmp))])
-    }else{
-      print(sprintf('split %i does not exist', i))
-      split_tot <- split_tot - 1
-    }
-  }
-  
-  print(split_tot)
-  # check samplesID always the same
-  if(!all(table(unlist(samplesID)) == split_tot)){print('ERROR: wrong name annotations')}
-  
-  scoreMat <- do.call(cbind, scoreMat_list)
-  colnames(scoreMat) <- elementID
-  rm(scoreMat_list)
-  
-  # filter out elements that are repeated twice:
-  id_dup <- names(which(table(colnames(scoreMat)) > 1)) 
-  scoreMat <- scoreMat[, !colnames(scoreMat) %in% id_dup]
-  
-  id_el <- intersect(colnames(scoreMat),  res_pval[, id_info])
-  scoreMat <- scoreMat[, match(id_el, colnames(scoreMat))]
-  
-  rownames(scoreMat) <- samplesID[[1]]
-  # remove sample that have NAs
-  id_s <- rowSums(is.na(scoreMat)) == 0
-  if(!all(id_s)){scoreMat <- scoreMat[id_s, ]}
-  
-  common_samples <- intersect(sampleAnn$Individual_ID, rownames(scoreMat))
-  sampleAnn <- sampleAnn[match(common_samples, sampleAnn$Individual_ID),]
-  scoreMat <- scoreMat[match(common_samples,rownames(scoreMat)),]
-  res_pval <- res_pval[match(id_el, res_pval[, id_info]),]
-  
-}
+#### load input matrix ####
+load_output <- load_input_matrix(inputFile = inputFile, 
+                              sampleAnn = sampleAnn, 
+                              res_pval = res_pval, 
+                              split_tot = split_tot, 
+                              id_info = id_info)
+
+scoreMat <- load_output$scoreMat
+res_pval <- load_output$res_pval
+sampleAnn <- load_output$sampleAnn
+
 print(identical(colnames(scoreMat), res_pval[, id_info]))
 
-# remove higly correlated features, keep highest association
+### clumping: sort according best SNP association ###
 cor_score <- cor(scoreMat)
-element_rm <- c()
-for(i in 1:(nrow(cor_score)-1)){
-  id <-  which(abs(cor_score[i:nrow(cor_score),i])>corr_thr)
-  if(length(id)>1){
-    element_rm <- c(element_rm, names(id)[-which.min(res_pval[match(names(id), res_pval[,id_info]),id_pval])])
-  }
-}
-element_rm <- unique(element_rm)
+element_rm <- clumping_features(res_pval=res_pval, 
+                                id_info = id_info, 
+                                corr_feat = cor_score, 
+                                id_pval = id_pval, 
+                                corr_thr = corr_thr)
+
 print(paste(length(element_rm),'features removed due to high correlation'))
 scoreMat <- scoreMat[,!colnames(scoreMat) %in% element_rm]
 res_pval <- res_pval[match(colnames(scoreMat), res_pval[, id_info]),]
@@ -257,7 +206,9 @@ if(type_input == 'zscaled'){
   }else{
     tmp_val <- res_pval[, id_pval-1]
   }
-  input_data <- sapply(1:ncol(input_data), function(x) input_data[, x]*tmp_val[res_pval[,id_info] == colnames(input_data)[x]])
+  input_data <- sapply(1:ncol(input_data), function(x) 
+    input_data[, x]*tmp_val[res_pval[,id_info] == colnames(input_data)[x]])
+  
   colnames(input_data) <- colnames(scoreMat)
 }
 
@@ -274,7 +225,10 @@ PG_cl <- vector(mode = 'list', length = length(kNN_par))
 test_cov <- vector(mode = 'list', length = length(kNN_par))
 for(i in 1:length(kNN_par)){
   
-  PG_cl[[i]] <- fun_cl(kNN = kNN_par[i], score = input_data, type_Dx = type_cluster, sample_info=sampleAnn, euclDist=ed_dist)
+  PG_cl[[i]] <- fun_cl(kNN = kNN_par[i], score = input_data, 
+                       type_Dx = type_cluster, sample_info=sampleAnn,
+                       euclDist=ed_dist)
+  
   print(PG_cl[[i]]$info)
   # cluster depend on PC?
   id <- PG_cl[[i]]$cl$membership
@@ -320,10 +274,13 @@ if(type_cluster == 'All'){
   }
 }
 
-output <- list(best_k = opt_k, cl_res = PG_cl, test_cov = test_cov, info_tune = info_hyperParam, feat = colnames(input_data), res_pval = res_pval,
+output <- list(best_k = opt_k, cl_res = PG_cl, test_cov = test_cov, 
+               info_tune = info_hyperParam, feat = colnames(input_data),
+               res_pval = res_pval,
                cl_best = data.frame(id = sampleAnn$Individual_ID, gr = PG_cl[[which.max(info_hyperParam$DB_mean)]]$cl$membership))
 output$Dx_perc <- list(perc = df_perc, test = df_perc_test)
 output$samples_id <- rownames(input_data)
+
 # most significant elements
 test_diff <- data.frame(id = colnames(input_data), pval = apply(input_data, 2, function(x) kruskal.test(x = x, g = factor(output$cl_best$gr))$p.value))
 test_diff$pval_corr <- p.adjust(test_diff$pval, method = 'BH')
@@ -349,9 +306,10 @@ output$gr_input <- list(mean = df_gr_mean, sd = df_gr_sd, cv = df_gr_cv)
 output$input_data <- input_data
 
 # save results:
-save(output, file = sprintf('%s%s_corrPCs_%s_cluster%s_PGmethod_%smetric.RData', outFold, type_data, type_input, type_cluster, type_sim))
+save(output, file = sprintf('%s%s_corrPCs_%s_cluster%s_PGmethod_%smetric.RData', 
+                            outFold, type_data, type_input, type_cluster, type_sim))
 
-### plot: UMAP
+### plot: UMAP ###
 n_comp_umap <- 2
 n_neigh_umap <- opt_k
 min_dist_umap <- 0.01
@@ -365,87 +323,65 @@ custom.settings$random_state <- seed_umap
 
 umap_res <- umap::umap(input_data, custom.settings)
 
-df <- data.frame(component_1=umap_res$layout[,1], component_2=umap_res$layout[,2], gr = output$cl_best$gr)
+df <- data.frame(component_1=umap_res$layout[,1], 
+                 component_2=umap_res$layout[,2], 
+                 gr = output$cl_best$gr)
 df$gr <- factor(df$gr)
+P <- length(unique(df$gr))
+gr_color <- pal_d3(palette = 'category20')(P)
 
 tot_pl <- ggplot(df, aes(x = component_1, y = component_2, color = gr))+
-  geom_point(size = 0.05)+
+  geom_point(size = 0.05, alpha = 0.8)+
+  xlab('UMAP component 1')+ ylab('UMAP component 2')+
+  scale_color_manual(values = gr_color)+
   theme_bw()+theme(legend.position = 'right')
 width_pl <- 4
-if(type_cluster == 'All'){
-  df$Dx <- factor(sampleAnn$Dx)
-  pl_extra <- ggplot(df, aes(x = component_1, y=component_2, color = Dx))+
-    geom_point(size = 0.05)+
-    theme_bw()+theme(legend.position = 'right')
-  tot_pl <- ggarrange(plotlist = list(tot_pl, pl_extra), ncol = 2, nrow = 1, align='h')
-  width_pl <- 8
-}
+
 ggsave(filename = sprintf('%s%s_corrPCs_%s_cluster%s_PGmethod_%smetric_umap.png', outFold, type_data, type_input, type_cluster, type_sim), width = width_pl, height = 4, plot = tot_pl, device = 'png')
 ggsave(filename = sprintf('%s%s_corrPCs_%s_cluster%s_PGmethod_%smetric_umap.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = width_pl, height = 4, plot = tot_pl, device = 'pdf')
 
-df$Gender <- factor(sampleAnn$Gender)
-df$Batch <- factor(sampleAnn$Batch)
-df$Array <- factor(sampleAnn$Array)
-df$Centre <- factor(sampleAnn$initial_assessment_centre)
-df$Age <- sampleAnn$Age
+# plot distribution PCs
+df_cov <- cbind(sampleAnn, data.frame(gr = df$gr))
+df_cov$gr <- paste0('gr', df_cov$gr)
+df_cov$gr <- factor(df_cov$gr, levels = paste0('gr', 1:P))
+df_cov_PC <- data.frame(val = as.vector(as.matrix(df_cov[, paste0('PC', 1:10)])), 
+                        PC = unlist(lapply(paste0('PC', 1:10), function(x) rep(x, nrow(df_cov)))), 
+                        gr = rep(df_cov$gr, 10))
+df_cov_PC$PC <- factor(df_cov_PC$PC, levels = paste0('PC', 1:10))
 
-myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
-sc <- scale_colour_gradientn(colours = myPalette(100), limits=c(min(sampleAnn$Age), max(sampleAnn$Age)))
+p <- ggboxplot(df_cov_PC, x = "gr", y = "val", fill = "gr", color = 'black', legend = 'none', outlier.size = 0.2, alpha = 0.8) + stat_compare_means(label = "p.format", size = 3) 
+p <- ggpar(p, palette = gr_color, xlab = '', ylab = '', x.text.angle = 45)
+p <- facet(p, facet.by = "PC", short.panel.labs = T, scales = 'free_y', nrow = 1)
 
-pl1 <- ggplot(df, aes(x = component_1, y=component_2, color = Gender))+
-  geom_point(size = 0.03)+ggtitle('Gender')+
+ggsave(filename = sprintf('%s%s_corrPCs_%s_cluster%s_PGmethod_%smetric_PCs.png', outFold, type_data, type_input, type_cluster, type_sim), width = 13, height = 4, plot = p, device = 'png')
+ggsave(filename = sprintf('%s%s_corrPCs_%s_cluster%s_PGmethod_%smetric_PCs.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = 13, height = 4, plot = p, device = 'pdf')
+
+# plot distribution AGE, Sex
+df_cov_age <- data.frame(Age = df_cov$Age, gr = df_cov$gr)
+output$test_cov$pval[output$test_cov$cov_id == 'Age'] <- kruskal.test(df_cov_age$Age, g = df_cov_age$gr)$p.value
+
+df_cov_sex <- data.frame(n = as.vector(table(df_cov$Gender, df_cov$gr)), Sex = rep(c('male', 'female'), P), gr = unlist(lapply(paste0('gr', 1:P), function(x) rep(x, 2))))
+df_cov_sex$Sex <- factor(df_cov_sex$Sex, levels = c('male', 'female'))
+
+pl_a <- ggplot(df_cov_age, aes(x = gr, y = Age, fill = gr))+
+  geom_violin(alpha = 0.8)+
+  geom_boxplot(width=0.2, fill="white")+
+  xlab('')+ ylab('Age')+
+  scale_fill_manual(values = gr_color)+
+  annotate("text", x = 1, y = max(df_cov_age$Age)+2, label = sprintf('p=%s', as.character(round(res_cl$test_cov$pval[res_cl$test_cov$cov_id == 'Age'], digits = 2))))+
   theme_bw()+theme(legend.position = 'none')
-pl2 <- ggplot(df, aes(x = component_1, y=component_2, color = Batch))+
-  geom_point(size = 0.03)+ggtitle('Batch')+
-  theme_bw()+theme(legend.position = 'none')
-pl3 <- ggplot(df, aes(x = component_1, y=component_2, color = Array))+
-  geom_point(size = 0.03)+ggtitle('Array')+
-  theme_bw()+theme(legend.position = 'none')
-pl4 <- ggplot(df, aes(x = component_1, y=component_2, color = Centre))+
-  geom_point(size = 0.03)+ggtitle('Centre')+
-  theme_bw()+theme(legend.position = 'none')
-pl5 <- ggplot(df, aes(x = component_1, y=component_2, color = Age))+
-  geom_point(size = 0.03)+ggtitle('Age')+sc+
+
+pl_s <- ggplot(df_cov_sex, aes(x = gr, y = n, color = gr, fill = Sex))+
+  geom_bar(size = 1, alpha = 0.8, stat = 'identity', position = position_dodge())+
+  xlab('')+ ylab('number of individual')+
+  scale_color_manual(values = gr_color)+
+  scale_fill_manual(values = c('grey10', 'grey60'))+
+  guides(color = FALSE)+
+  annotate("text", x = 1, y = max(df_cov_sex$n)+2, label = sprintf('p=%s', as.character(round(res_cl$test_cov$pval[res_cl$test_cov$cov_id == 'Gender'], digits = 2))))+
   theme_bw()+theme(legend.position = 'right')
-tot_pl <- ggarrange(plotlist = list(pl1, pl2, pl3, pl4, pl5), ncol = 3, nrow = 2)
-ggsave(filename = sprintf('%s%s_corrPCs_%s_cluster%s_PGmethod_%smetric_umap_cov.png', outFold, type_data, type_input, type_cluster, type_sim), width = 12, height = 8, plot = tot_pl, device = 'png')
-ggsave(filename = sprintf('%s%s_corrPCs_%s_cluster%s_PGmethod_%smetric_umap_cov.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = 12, height = 8, plot = tot_pl, device = 'pdf')
 
-### plot: heatmap
-file_name <- sprintf('%s%s_corrPCs_%s_cluster%s_PGmethod_%smetric', outFold, type_data, type_input, type_cluster, type_sim)
-tmp <- test_diff[test_diff$pval_corr < 0.05,]
-if(nrow(tmp)>50){
-  keep_feat <- test_diff[order(test_diff$pval)[1:50],]
-}else{
-  keep_feat <- tmp
-}
-
-
-pheat_pl(mat = input_data[,keep_feat$id], type_mat = type_data, cl = output$cl_best, height_pl = 7, width_pl = 5, 
-         outFile = paste0(file_name, '_heatmap'))
-if(type_input == 'zscaled'){
-  pheat_pl(mat = scale(input_data[,keep_feat$id]), type_mat = type_data, cl = output$cl_best, height_pl = 7, width_pl = 5, 
-           outFile = paste0(file_name, '_heatmap_scaled'))
-}
-
-color_tissues <- read.table(color_file, h=T, stringsAsFactors = F)
-color_tissues <- color_tissues[match(tissues_name, color_tissues$tissues),]
-
-mat <- output$gr_input$cv[output$gr_input$cv$id %in%  keep_feat$id, ]
-width_pl <- 7
-if(type_data == 'path_GO'){
-  mat$id <- res_pval$path[match(mat$id, res_pval[, id_info])]
-  width_pl <- 9
-  print(str(mat))
-}
-if(type_data == 'path_Reactome'){
-  width_pl <- 9
-}
-
-# remove duplicated
-mat <- mat[!duplicated(mat$id),]
-mat$tissue <- tissues_name
-
-pheat_pl_gr(mat, type_mat = type_data, height_pl = 7, width_pl = width_pl, color_df = color_tissues, outFile = paste0(file_name, '_heatmap_gr'))
+tot_pl <- ggarrange(plotlist = list(pl_a, pl_s), ncol = 2, nrow = 1, align='h', widths=c(1, 1.4))
+ggsave(filename = sprintf('%s%s_corrPCs_%s_cluster%s_PGmethod_%smetric_Age_Sex.png', outFold, type_data, type_input, type_cluster, type_sim), width = 6.5, height = 3, plot = tot_pl, device = 'png')
+ggsave(filename = sprintf('%s%s_corrPCs_%s_cluster%s_PGmethod_%smetric_Age_Sex.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = 6.5, height = 3, plot = tot_pl, device = 'pdf')
 
 
