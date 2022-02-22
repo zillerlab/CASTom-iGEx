@@ -369,7 +369,8 @@ pl_a <- ggplot(df_cov_age, aes(x = gr, y = Age, fill = gr))+
   geom_boxplot(width=0.2, fill="white")+
   xlab('')+ ylab('Age')+
   scale_fill_manual(values = gr_color)+
-  annotate("text", x = 1, y = max(df_cov_age$Age)+2, label = sprintf('p=%s', as.character(round(res_cl$test_cov$pval[res_cl$test_cov$cov_id == 'Age'], digits = 2))))+
+  annotate("text", x = 1, y = max(df_cov_age$Age)+2, 
+	label = sprintf('p=%s',	as.character(round(output$test_cov$pval[output$test_cov$cov_id == 'Age'], digits = 2))))+
   theme_bw()+theme(legend.position = 'none')
 
 pl_s <- ggplot(df_cov_sex, aes(x = gr, y = n, color = gr, fill = Sex))+
@@ -378,7 +379,8 @@ pl_s <- ggplot(df_cov_sex, aes(x = gr, y = n, color = gr, fill = Sex))+
   scale_color_manual(values = gr_color)+
   scale_fill_manual(values = c('grey10', 'grey60'))+
   guides(color = FALSE)+
-  annotate("text", x = 1, y = max(df_cov_sex$n)+2, label = sprintf('p=%s', as.character(round(res_cl$test_cov$pval[res_cl$test_cov$cov_id == 'Gender'], digits = 2))))+
+  annotate("text", x = 1, y = max(df_cov_sex$n)+2, 
+	label = sprintf('p=%s', as.character(round(output$test_cov$pval[output$test_cov$cov_id == 'Gender'], digits = 2))))+
   theme_bw()+theme(legend.position = 'right')
 
 tot_pl <- ggarrange(plotlist = list(pl_a, pl_s), ncol = 2, nrow = 1, align='h', widths=c(1, 1.4))
