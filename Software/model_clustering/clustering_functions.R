@@ -1151,3 +1151,26 @@ merge_loci_genes <- function(gene_table, cis_size, bp_loci, tissue = 'combined')
   return(tmp_loci)
 }
 
+# function to check with category ordinal to remove (used in GLMassociation)
+remove_pheno_ordinal <- function(pheno_df, group, thr){
+  
+  name_pheno <- colnames(pheno_df)
+  pheno_rm <- c()
+  
+  for(i in 1:ncol(pheno_df)){
+    
+    min_p <- min(pheno_df[,i], na.rm = T)
+    n_base_gr0 <- sum(pheno_df[group == 0,i] == min_p, na.rm = T)
+    n_notbase_gr0 <- sum(pheno_df[group == 0,i] > min_p, na.rm = T)
+    n_base_gr1 <- sum(pheno_df[group == 1, i] == min_p, na.rm = T)
+    n_notbase_gr1 <- sum(pheno_df[group == 1, i] > min_p, na.rm = T)
+    
+    if(any(c(n_base_gr0, n_base_gr1, n_notbase_gr0, n_notbase_gr1) < thr)){
+      pheno_rm <- c(pheno_rm, name_pheno[i])
+    }
+  }
+  
+  return(pheno_rm)
+  
+}
+

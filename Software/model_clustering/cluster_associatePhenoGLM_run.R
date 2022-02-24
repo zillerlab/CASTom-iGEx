@@ -125,31 +125,6 @@ output <- list(phenoDat = phenoDat, phenoInfo = phenoInfo, cl = cluster_output$c
 #######################################
 #### binary regression (gi vs gj) #####
 #######################################
-
-# function to check with cad ordinal to remove
-remove_pheno_ordinal <- function(pheno_df, group, thr){
-  
-  name_pheno <- colnames(pheno_df)
-  pheno_rm <- c()
-  
-  for(i in 1:ncol(pheno_df)){
-    
-    min_p <- min(pheno_df[,i], na.rm = T)
-    n_base_gr0 <- sum(pheno_df[group == 0,i] == min_p, na.rm = T)
-    n_notbase_gr0 <- sum(pheno_df[group == 0,i] > min_p, na.rm = T)
-    n_base_gr1 <- sum(pheno_df[group == 1, i] == min_p, na.rm = T)
-    n_notbase_gr1 <- sum(pheno_df[group == 1, i] > min_p, na.rm = T)
-    
-    if(any(c(n_base_gr0, n_base_gr1, n_notbase_gr0, n_notbase_gr1) < thr)){
-       pheno_rm <- c(pheno_rm, name_pheno[i])
-    }
-  }
-  
-  return(pheno_rm)
-  
-}
-
-
 gr_names <- sort(unique(cl))
 P <- length(gr_names)
 covDat <- sampleAnn[, !colnames(sampleAnn) %in% c('Individual_ID', 'genoSample_ID', 'Dx')]
@@ -214,7 +189,6 @@ for(i in 1:(length(gr_names)-1)){
     
   }
   
-  
 }
 
 tot_bin_reg <- do.call(rbind, do.call(c,bin_reg))
@@ -224,45 +198,9 @@ tot_bin_reg$pval_corr_overall <-  p.adjust(tot_bin_reg$pvalue, method = 'BY')
 write.table(x = tot_bin_reg, sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation_GLMpairwise.txt', outFold, type_data, type_input, type_cluster, type_sim), col.names = T, row.names = F, sep = '\t', quote = F)
 
 output$bin_reg = tot_bin_reg
-
 save(output, file = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation_GLMpairwise.RData', outFold, type_data, type_input, type_cluster, type_sim))
 
-###############################################################################
-if(!risk_score){
-  test_pheno <- tot_bin_reg
-  test_pheno$sign <- 'no'
-  test_pheno$sign[test_pheno$pval_corr_overall <= 0.05] <- 'yes'
-  test_pheno$logpval <- -log10(test_pheno$pvalue)
-  test_pheno$sign <- factor(test_pheno$sign, levels = c('no', 'yes'))
-  test_pheno$new_Field <- test_pheno$Field
-  test_pheno$new_Field[test_pheno$Field == 'Blood clot, DVT, bronchitis, emphysema, asthma, rhinitis, eczema, allergy diagnosed by doctor'] <- 'Blood clot, etc. diagnosed by doctor'
-  test_pheno$new_id <- test_pheno$new_Field
-  test_pheno$new_id[!is.na(test_pheno$meaning)] <- paste(test_pheno$meaning[!is.na(test_pheno$meaning)], test_pheno$new_Field[!is.na(test_pheno$meaning)], sep = '\n')
-  
-  test_pheno <- test_pheno[order(test_pheno$pvalue),]
-  if(length(which(test_pheno$sign == 'yes'))>=20){
-    test_pheno <- test_pheno[1:length(which(test_pheno$sign == 'yes'))+1,]
-    height_pl <- 5 + (nrow(test_pheno)-20)*0.2
-  }else{
-    test_pheno <- test_pheno[1:20,] 
-    height_pl = 5
-  }
-  
-  test_pheno$comp <- factor(test_pheno$comp)
-  test_pheno$new_id <- factor(test_pheno$new_id, levels = unique(test_pheno$new_id))
-  
-  pl <-  ggplot(test_pheno, aes(x = new_id, y = logpval, fill = sign))+
-    geom_bar(stat = 'identity', position = position_dodge(), width = 0.5) + theme_bw()+ 
-    ylab('-log10(pvalue)')+xlab('')+geom_hline(yintercept = -log10(0.05))+
-    facet_wrap(.~comp, scales = 'free_y', ncol = 1, strip.position="right")+
-    scale_fill_manual(values=c("#999999", "#E69F00"))+
-    theme(legend.position = 'none', plot.title = element_text(size=9), axis.text.y = element_text(size = 7), strip.text = element_text(size=5))+
-    ggtitle(paste(type_data, type_input, 'cluster', type_cluster))+
-    coord_flip()
-  ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation_GLMpairwise.png', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = height_pl, plot = pl, device = 'png')
-  ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation_GLMpairwise.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = height_pl, plot = pl, device = 'pdf')
-}
-###############################################################################################
+#################################################################################
 # same but not pairwise (1 gropu against all the others)
 
 output <- list(phenoDat = phenoDat, phenoInfo = phenoInfo, cl = cluster_output$cl_best)
@@ -340,42 +278,4 @@ write.table(x = tot_bin_reg, sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoA
 output$bin_reg = tot_bin_reg
 
 save(output, file = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation_GLM.RData', outFold, type_data, type_input, type_cluster, type_sim))
-
-###############################################################################
-if(!risk_score){
-  test_pheno <- tot_bin_reg
-  test_pheno$sign <- 'no'
-  test_pheno$sign[test_pheno$pval_corr <= 0.05] <- 'yes'
-  test_pheno$logpval <- -log10(test_pheno$pvalue)
-  test_pheno$sign <- factor(test_pheno$sign, levels = c('no', 'yes'))
-  test_pheno$new_Field <- test_pheno$Field
-  test_pheno$new_Field[test_pheno$Field == 'Blood clot, DVT, bronchitis, emphysema, asthma, rhinitis, eczema, allergy diagnosed by doctor'] <- 'Blood clot, etc. diagnosed by doctor'
-  test_pheno$new_Field[test_pheno$Field == 'Medication for cholesterol, blood pressure, diabetes, or take exogenous hormones'] <- 'Medication for cholesterol etc. (female)'
-  test_pheno$new_Field[test_pheno$Field == 'Medication for cholesterol, blood pressure or diabetes'] <- 'Medication for cholesterol etc. (male)'
-  test_pheno$new_id <- test_pheno$new_Field
-  test_pheno$new_id[!is.na(test_pheno$meaning)] <- paste(test_pheno$meaning[!is.na(test_pheno$meaning)], test_pheno$new_Field[!is.na(test_pheno$meaning)], sep = '\n')
-  
-  test_pheno <- test_pheno[order(test_pheno$pvalue),]
-  if(length(which(test_pheno$sign == 'yes'))>=20){
-    test_pheno <- test_pheno[1:length(which(test_pheno$sign == 'yes'))+1,]
-    height_pl <- 5 + (nrow(test_pheno)-20)*0.2
-  }else{
-    test_pheno <- test_pheno[1:20,] 
-    height_pl = 5
-  }
-  
-  test_pheno$comp <- factor(test_pheno$comp)
-  test_pheno$new_id <- factor(test_pheno$new_id, levels = unique(test_pheno$new_id))
-  
-  pl <-  ggplot(test_pheno, aes(x = new_id, y = logpval, fill = sign))+
-    geom_bar(stat = 'identity', position = position_dodge(), width = 0.5) + theme_bw()+ 
-    ylab('-log10(pvalue)')+xlab('')+geom_hline(yintercept = -log10(0.05))+
-    facet_wrap(.~comp, scales = 'free_y', ncol = 1, strip.position="right")+
-    scale_fill_manual(values=c("#999999", "#E69F00"))+
-    theme(legend.position = 'none', plot.title = element_text(size=9), axis.text.y = element_text(size = 7), strip.text = element_text(size=5))+
-    ggtitle(paste(type_data, type_input, 'cluster', type_cluster))+
-    coord_flip()
-  ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation_GLM.png', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = height_pl, plot = pl, device = 'png')
-  ggsave(filename = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation_GLM.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = 4.5, height = height_pl, plot = pl, device = 'pdf')
-}
 
