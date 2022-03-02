@@ -165,7 +165,7 @@ for(i in 1:(length(gr_names)-1)){
     # class in each pairwise group (or viceversa)
     id_o <- intersect(colnames(new),
                       paste0('p',phenoInfo$pheno_id[phenoInfo$transformed_type %in% c('CAT_ORD')]))
-    id_rm <- remove_pheno_ordinal(pheno_df = new[, id_o], group = gr_id, thr = 10)
+    id_rm <- remove_pheno_ordinal(pheno_df = new[, id_o, drop = F], group = gr_id, thr = 10)
     if(length(id_rm)>0){
       new <- new[, !colnames(new) %in% id_rm, drop = F]
     }
@@ -242,7 +242,7 @@ for(i in 1:length(gr_names)){
   # class in each pairwise group (or viceversa)
   id_o <- intersect(colnames(new),
                     paste0('p',phenoInfo$pheno_id[phenoInfo$transformed_type %in% c('CAT_ORD')]))
-  id_rm <- remove_pheno_ordinal(pheno_df = new[, id_o], group = gr_id, thr = 10)
+  id_rm <- remove_pheno_ordinal(pheno_df = new[, id_o, drop = F], group = gr_id, thr = 10)
   if(length(id_rm)>0){
     new <- new[, !colnames(new) %in% id_rm, drop = F]
   }
