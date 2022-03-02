@@ -75,7 +75,7 @@ write.table(x = res_pheno,
 ##############################
 if(forest_plot){
 
-  pheno_ann <- read.delim(color_file, header = T, stringsAsFactors = F)
+  pheno_ann <- read.delim(colorFile, header = T, stringsAsFactors = F)
   
   id_keep <- unique(res_pheno$pheno_id[res_pheno$pvalue <= pval_pheno | res_pheno$pval_corr <= 0.05])
   df_red <- res_pheno %>% filter(pheno_id %in% id_keep) %>% 
