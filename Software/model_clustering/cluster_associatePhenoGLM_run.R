@@ -157,19 +157,23 @@ for(i in 1:(length(gr_names)-1)){
     new <- new[,!p_rm, drop = F]
     # remove phenotype with few true overall (find binomial)
     id_b <- intersect(colnames(new), paste0('p',phenoInfo$pheno_id[!phenoInfo$transformed_type %in% c('CONTINUOUS', 'CAT_ORD')]))
-    id_rm <- names(which(colSums(new[, id_b, drop = F], na.rm = T) < 50))
-    if(length(id_rm)>0){
-      new <- new[, !colnames(new) %in% id_rm, drop = F]
-    }
+    if(length(id_b)>0){
+      id_rm <- names(which(colSums(new[, id_b, drop = F], na.rm = T) < 50))
+      if(length(id_rm)>0){
+        new <- new[, !colnames(new) %in% id_rm, drop = F]
+      }
+    } 
     # remove phenotype categorical ordinal with less than 10 base 
     # class in each pairwise group (or viceversa)
     id_o <- intersect(colnames(new),
                       paste0('p',phenoInfo$pheno_id[phenoInfo$transformed_type %in% c('CAT_ORD')]))
-    id_rm <- remove_pheno_ordinal(pheno_df = new[, id_o, drop = F], group = gr_id, thr = 10)
-    if(length(id_rm)>0){
-      new <- new[, !colnames(new) %in% id_rm, drop = F]
+    if(length(id_o)>0){                  
+      id_rm <- remove_pheno_ordinal(pheno_df = new[, id_o, drop = F], group = gr_id, thr = 10)
+      if(length(id_rm)>0){
+        new <- new[, !colnames(new) %in% id_rm, drop = F]
+      }
     }
-    
+
     new_cov <- rbind(covDat_tmp[[1]], covDat_tmp[[j]])
     res_glm <- matrix(nrow = ncol(new), ncol = 7)
     for(l in 1:ncol(new)){
@@ -233,20 +237,24 @@ for(i in 1:length(gr_names)){
   new <- new[,!p_rm, drop = F]
   # remove phenotype with few true overall (find binomial)
   id_b <- intersect(colnames(new), paste0('p',phenoInfo$pheno_id[!phenoInfo$transformed_type %in% c('CONTINUOUS', 'CAT_ORD')]))
-  id_rm <- names(which(colSums(new[, id_b, drop = F], na.rm = T) < 50))
-  if(length(id_rm)>0){
-    new <- new[, !colnames(new) %in% id_rm, drop = F]
+  if(length(id_b)>0){
+    id_rm <- names(which(colSums(new[, id_b, drop = F], na.rm = T) < 50))
+    if(length(id_rm)>0){
+      new <- new[, !colnames(new) %in% id_rm, drop = F]
+    }
   }
-  
   # remove phenotype categorical ordinal with less than 10 base 
   # class in each pairwise group (or viceversa)
+     
   id_o <- intersect(colnames(new),
-                    paste0('p',phenoInfo$pheno_id[phenoInfo$transformed_type %in% c('CAT_ORD')]))
-  id_rm <- remove_pheno_ordinal(pheno_df = new[, id_o, drop = F], group = gr_id, thr = 10)
-  if(length(id_rm)>0){
-    new <- new[, !colnames(new) %in% id_rm, drop = F]
+                      paste0('p',phenoInfo$pheno_id[phenoInfo$transformed_type %in% c('CAT_ORD')]))
+  if(length(id_o)>0){
+    id_rm <- remove_pheno_ordinal(pheno_df = new[, id_o, drop = F], group = gr_id, thr = 10)
+    if(length(id_rm)>0){
+      new <- new[, !colnames(new) %in% id_rm, drop = F]
+    }
   }
-  
+
   new_cov <- do.call(rbind, covDat_tmp)
   res_glm <- matrix(nrow = ncol(new), ncol = 7)
   for(l in 1:ncol(new)){
