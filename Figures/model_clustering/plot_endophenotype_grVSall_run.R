@@ -1,4 +1,3 @@
-
 options(stringsAsFactors=F)
 options(max.print=1000)
 suppressPackageStartupMessages(library(argparse))
@@ -35,16 +34,17 @@ forest_plot <- args$forest_plot
 pval_pheno <- args$pval_pheno
 
 #################################################################
-# type_input <- 'original'
+# type_input <- 'corrPCs_zscaled'
 # type_cluster <- 'Cases'
-# type_cluster_data <- 'PCs'
+# type_cluster_data <- 'tscore'
 # forest_plot <- T
 # pval_pheno <- 0.001
-# outFold <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/'
-# endopFile <- c('INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/rescaleCont_withMedication_PCs_original_clusterCases_PGmethod_HKmetric_phenoAssociation_GLM.RData', 
-#                'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/rescaleCont_withoutMedication_PCs_original_clusterCases_PGmethod_HKmetric_phenoAssociation_GLM.RData')
-# color_file <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/INPUT_DATA_GTEx/CAD/Covariates/UKBB/color_pheno_type_UKBB.txt'
-#################################################################
+# fold='OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/update_corrPCs/'
+# outFold <- fold
+# endopFile <- c(sprintf('%srescaleCont_withMedication_tscore_corrPCs_zscaled_clusterCases_PGmethod_HKmetric_phenoAssociation_GLM.RData', fold),
+#                sprintf('%srescaleCont_withoutMedication_tscore_corrPCs_zscaled_clusterCases_PGmethod_HKmetric_phenoAssociation_GLM.RData', fold))
+# colorFile <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/INPUT_DATA_GTEx/CAD/Covariates/UKBB/color_pheno_type_UKBB.txt'
+################################################################
 
 
 res_pheno <- list()
@@ -57,6 +57,9 @@ for(i in 1:length(endopFile)){
     tmp_name <- sapply(tmp_name, function(x) paste0(strsplit(x, split = ' ')[[1]], collapse = '_'))
     tmp$phenoInfo$pheno_type <- tmp_name
     tmp$phenoInfo$pheno_type[tmp$phenoInfo$pheno_type == 'Summary_Information_(diagnoses)'] <- 'ICD9-10_OPCS4'
+  }
+  if(any(c('129', '130') %in% tmp$phenoInfo$pheno_id)){
+    tmp$phenoInfo$pheno_type[tmp$phenoInfo$pheno_id %in% c('129', '130')] <- 'Early_life_factors'
   }
   res_pheno[[i]]$pheno_type <- tmp$phenoInfo$pheno_type[match(res_pheno[[i]]$pheno_id,tmp$phenoInfo$pheno_id)]
 }
@@ -74,10 +77,11 @@ write.table(x = res_pheno,
 #### endophenotype plots #####
 ##############################
 if(forest_plot){
-
-  pheno_ann <- read.delim(colorFile, header = T, stringsAsFactors = F)
   
+  pheno_ann <- read.delim(colorFile, header = T, stringsAsFactors = F)
+
   id_keep <- unique(res_pheno$pheno_id[res_pheno$pvalue <= pval_pheno | res_pheno$pval_corr <= 0.05])
+  id_keep <- id_keep[!is.na(id_keep)]
   df_red <- res_pheno %>% filter(pheno_id %in% id_keep) %>% 
     mutate(new_id = ifelse(is.na(meaning), paste(Field),paste(Field, meaning, sep = '\n'))) %>%
     mutate(sign = ifelse(pval_corr <= 0.05, 'yes', 'no')) %>%
@@ -86,14 +90,15 @@ if(forest_plot){
     mutate(CI_low = ifelse(se_beta > 100, NA, CI_low)) %>% 
     mutate(CI_up = ifelse(se_beta > 100, NA, CI_up))
   
-  df_red$comp <- factor(df_red$comp, levels = unique(df_red$comp))
   df_red$new_id <- factor(df_red$new_id, levels = unique(df_red$new_id))
+  df_red$comp <- factor(df_red$comp, levels = unique(df_red$comp))
   df_red$pheno_type <- factor(df_red$pheno_type, levels = unique(df_red$pheno_type))
   df_red$sign <- factor(df_red$sign, levels = c('no', 'yes'))
   df_red$type_res <- factor(df_red$type_res, levels = c('OR', 'beta'))
   
-  pheno_ann_red1 <- pheno_ann[match(df_red$pheno_type[df_red$type_pheno != 'CONTINUOUS'], pheno_ann$pheno_type), ]
-  pheno_ann_red2 <- pheno_ann[match(df_red$pheno_type[df_red$type_pheno == 'CONTINUOUS'], pheno_ann$pheno_type), ]
+  df_red_for_ann <- df_red[!duplicated(df_red$new_id),]
+  pheno_ann_red1 <- pheno_ann[match(df_red_for_ann$pheno_type[df_red_for_ann$type_pheno != 'CONTINUOUS'], pheno_ann$pheno_type), ]
+  pheno_ann_red2 <- pheno_ann[match(df_red_for_ann$pheno_type[df_red_for_ann$type_pheno == 'CONTINUOUS'], pheno_ann$pheno_type), ]
   
   len_w <- length(unique(df_red$comp))
   len_h <- length(unique(df_red$pheno_id))
