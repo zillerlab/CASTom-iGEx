@@ -7,8 +7,7 @@ load_input_matrix <- function(inputFile, sampleAnn, res_pval, split_tot, id_info
     if(substr(inputFile, nchar(inputFile)-3, nchar(inputFile)) == '.txt'){
       tmp <- read.delim(inputFile, h=T, stringsAsFactors = F, check.names = F)
       if(type_data == 'tscore'){
-        # correct sample names
-        sampleID <- unname(sapply(colnames(tmp)[-1], function(x) strsplit(x, split = '.vs')[[1]][1]))
+        sampleID <-  unname(sapply(colnames(tmp)[-1], function(x) strsplit(x, split = ' vs reference')[[1]][1]))
         colnames(tmp)[-1] <- sampleID
       }
       # filter out elements that are repeated twice:
