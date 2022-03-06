@@ -17,6 +17,7 @@ suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(RColorBrewer))
 suppressPackageStartupMessages(library(pheatmap))
 suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(ggsci))
 options(bitmapType = 'cairo', device = 'png')
 
 parser <- ArgumentParser(description="predict cluster probability for new samples")
@@ -30,7 +31,6 @@ parser$add_argument("--split_tot", type = "integer", default = 0, help = "if 0 t
 parser$add_argument("--functR", type = "character", help = "functions to be used")
 parser$add_argument("--type_input", type = "character", default = 'original', help = "original or zscaled")
 parser$add_argument("--tissues_name", type = "character", help = "name tissue")
-parser$add_argument("--color_file", type = "character", help = "file with color based on phenotype")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
 args <- parser$parse_args()
@@ -44,8 +44,8 @@ type_input <- args$type_input
 split_tot <- args$split_tot
 type_cluster <- args$type_cluster
 tissues_name <- args$tissues_name
-color_file <- args$color_file
 outFold <- args$outFold
+
 
 ###################################################################################################################
 # sampleAnn_file <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/covariateMatrix_CADHARD_All.txt'
