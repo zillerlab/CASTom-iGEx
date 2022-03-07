@@ -117,6 +117,102 @@ clumping_features <- function(res_pval, id_info, corr_feat, id_pval, corr_thr){
   return(element_rm)
 }
 
+# merge locus by position, add info Zstat (used to group clustering results)
+
+merge_locus_pos <- function(info_chr, cis_size = 200000, dist_size = 1000000, tissue){
+  
+    # print(j)
+    chr_id <- unique(info_chr$chrom)
+    if(nrow(info_chr) == 1){
+      
+      loci_out <- data.frame(chrom = info_chr$chrom, 
+                             start = info_chr$TSS_start - cis_size, 
+                             end = info_chr$TSS_start + cis_size, 
+                             ngenes_withrep = 1, ngenes_unique = 1,
+                             gene = info_chr$external_gene_name, 
+                             mean_Zstat = info_chr$Zstat, 
+                             sd_Zstat = NA, highest_Zstat = info_chr$Zstat, 
+                             tissue = tissue)  
+    }else{
+      
+      info_chr <- info_chr[order(info_chr$TSS_start), ]
+  
+      reg_gene <- data.frame(start = info_chr$TSS_start - cis_size,  
+                             end = info_chr$TSS_start + cis_size)
+      
+      merg_cond <- sapply(reg_gene$end, function(x) abs(x-reg_gene$start) < dist_size) # the end of the second genes is close to the start of the first gene 1Mb
+      
+      merge_pos <- lapply(1:nrow(merg_cond), function(x) which(merg_cond[x,]))
+      merge_pos_vect <- sapply(merge_pos, function(x) paste0(x, collapse = ','))
+      merge_pos_vect <- merge_pos_vect[!duplicated(merge_pos_vect)]
+      
+      merge_pos <- lapply( merge_pos_vect, function(x) as.numeric(strsplit(x, split = ',')[[1]]))
+      new_merge_pos <- list()
+      all_merg <- F
+      it <- 0
+      
+      if(length(merge_pos)>1){
+        while(!all_merg){
+          
+          it <- it+1
+          print(it)
+          
+          for(l in 1:(length(merge_pos)-1)){
+            
+            if(!all(is.na(merge_pos[[l]]))){
+              
+              if(all(!merge_pos[[l]] %in% merge_pos[[l+1]])){
+                new_merge_pos <- list.append(new_merge_pos, merge_pos[[l]])
+              }else{
+                if(!(all(merge_pos[[l]] %in% merge_pos[[l+1]]) | all(merge_pos[[l+1]] %in% merge_pos[[l]]))){
+                  new_merge_pos <- list.append(new_merge_pos, unique(c(merge_pos[[l]], merge_pos[[l+1]])))
+                }else{
+                  if(all(merge_pos[[l+1]] %in% merge_pos[[l]])){
+                    merge_pos[[l+1]] <- NA
+                    new_merge_pos <- list.append(new_merge_pos, merge_pos[[l]])
+                  }
+                }
+              }
+              
+            }
+            
+          }
+          
+          new_merge_pos <- list.append(new_merge_pos, merge_pos[[length(merge_pos)]])
+          
+          all_merg <- all(!duplicated(unlist(new_merge_pos)))
+          merge_pos <- new_merge_pos
+          new_merge_pos <- list() 
+          
+        }
+        # remove NA
+        merge_pos <- merge_pos[!sapply(merge_pos, function(x) all(is.na(x)))]
+      }
+      
+      tmp <-  lapply(merge_pos, function(x) data.frame(chrom = chr_id, 
+                                                       start = min(info_chr$TSS_start[x] - cis_size), 
+                                                       end = max(info_chr$TSS_start[x] + cis_size), 
+                                                       ngenes_withrep = length(x), 
+                                                       ngenes_unique = length(unique(info_chr$external_gene_name[x])),
+                                                       gene = paste0(unique(info_chr$external_gene_name[x]), collapse = ','), 
+                                                       mean_Zstat = mean(info_chr$Zstat[x]), 
+                                                       sd_Zstat = sd(info_chr$Zstat[x]), 
+                                                       highest_Zstat = info_chr$Zstat[x][which.max(abs(info_chr$Zstat[x]))], 
+                                                       tissue = tissue))
+      loci_out <-  do.call(rbind, tmp)
+    }
+    
+    loci_out$loci_id <- paste0(loci_out$chrom,':',round(loci_out$start/1000000, digits = 1), 
+                               '-', round(loci_out$end/1000000, digits = 1), 'Mb')
+    
+    if(tissue != 'combined'){
+      loci_out <- loci_out[, colnames(loci_out) != 'ngenes_withrep']
+      colnames(loci_out)[colnames(loci_out) == 'ngenes_unique'] <- 'ngenes' 
+    }
+    
+    return(loci_out)
+}
+
 ## cluster using PG method ##
 clust_PGmethod_HKsim <- function(kNN, score, type_Dx, multiple_cohorts = F, sample_info, euclDist){
   

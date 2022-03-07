@@ -1,5 +1,6 @@
 # find relevant genes/pathways to cluster structure 
-# use GLM
+# use wilcoxon test
+# possible include multiple tissues
 
 options(stringsAsFactors=F)
 options(max.print=1000)
@@ -16,22 +17,28 @@ suppressPackageStartupMessages(library(umap))
 suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(ggpubr))
 suppressPackageStartupMessages(library(RColorBrewer))
+suppressPackageStartupMessages(library(rlist))
+suppressPackageStartupMessages(library(doParallel))
 options(bitmapType = 'cairo', device = 'png')
 
 parser <- ArgumentParser(description="Find relevant genes for a cluster comparison")
 parser$add_argument("--sampleAnnFile", type = "character", help = "file with samples to be used")
 parser$add_argument("--clusterFile", type = "character", help = "file with clustering structure")
 parser$add_argument("--split_tot", type = "integer", default = 0, help = "if 0 then inpuntFile load alone, otherwise splitted version")
-parser$add_argument("--inputFile", type = "character", default = 'NA', help = "file to be loaded (predicted tscore or pathScore)")
+parser$add_argument("--inputFile", type = "character", nargs = '*', default = 'NA', help = "file to be loaded (predicted tscore or pathScore)")
+parser$add_argument("--tissues", type = "character", nargs = '*', help = "tissues name")
 parser$add_argument("--type_cluster", type = "character", default = 'All', help = "All, Cases, Controls")
 parser$add_argument("--functR", type = "character", help = "functions to be used")
 parser$add_argument("--type_data", type = "character", help = "tscore, path_Reactome or path_GO")
 parser$add_argument("--type_data_cluster", type = "character", help = "tscore, path_Reactome or path_GO")
 parser$add_argument("--type_sim", type = "character", default = 'HK', help = "HK or ED or SNF")
 parser$add_argument("--type_input", type = "character", default = 'original', help = "original or zscaled")
-parser$add_argument("--pvalresFile", type = "character", default = 'NA', help = "file with pvalue results")
+parser$add_argument("--pvalresFile", type = "character", nargs = '*',  help = "file with pvalue results")
+parser$add_argument("--geneInfoFile", type = "character", nargs = '*', default = NULL, help = "file with info model genes")
 parser$add_argument("--min_genes_path", type = "integer", default = 1, help = "minimum number of genes for a pathway, if > 1 recompute corrected pvalues")
 parser$add_argument("--pval_id", type = "integer", default = 0, help = "id to be used on pvalue file")
+parser$add_argument("--pvalcorr_thr", type = "double", default = 0.05, help = "group sign")
+parser$add_argument("--ncores", type = "integer", default = 5, help = "n, cores parallelization per tissue")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
 args <- parser$parse_args()
@@ -48,26 +55,39 @@ pvalresFile <- args$pvalresFile
 type_data_cluster <- args$type_data_cluster
 min_genes_path <- args$min_genes_path
 pval_id <- args$pval_id
+tissues <- args$tissues
+geneInfoFile <- args$geneInfoFile
+pvalcorr_thr <- args$pvalcorr_thr
+ncores <- args$ncores
 outFold <- args$outFold
 
-# ###################################################################################################################
-# inputFile <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/predictedTscores_splitGenes'
+###################################################################################################################
+# tissues <- c('Liver', 'Adipose_Subcutaneous')
+# inputFile <- sprintf('OUTPUT_GTEx/predict_CAD/%s/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/predictedTscores_splitGenes', tissues)
 # split_tot <- 100
-# sampleAnnFile <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/covariateMatrix_CADHARD_All_phenoAssoc.txt'
-# clusterFile <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/tscore_zscaled_clusterCases_PGmethod_HKmetric.RData'
+# sampleAnnFile <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/covariateMatrix_CADHARD_All_phenoAssoc.txt'
+# clusterFile <- 'OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/update_corrPCs/tscore_corrPCs_zscaled_clusterCases_PGmethod_HKmetric.RData'
 # type_cluster <- 'Cases'
 # type_data <- 'tscore'
 # type_data_cluster <- 'tscore'
 # type_sim <- 'HK'
 # min_genes_path <- 2
 # pval_id <- 1
-# pvalresFile <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/pval_CAD_pheno_covCorr.RData'
-# outFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/'
-# functR <- '/psycl/g/mpsziller/lucia/priler_project/Software/model_clustering/clustering_functions.R'
+# pvalresFile <- sprintf('OUTPUT_GTEx/predict_CAD/%s/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/pval_CAD_pheno_covCorr.RData', tissues)
+# outFold <- 'OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/'
+# functR <- '/psycl/g/mpsziller/lucia/castom-igex/Software/model_clustering/clustering_functions.R'
 # type_input <- 'zscaled'
-# ####################################################################################################################
+# geneInfoFile <- sprintf('OUTPUT_GTEx/train_GTEx/%s/200kb/CAD_GWAS_bin5e-2/resPrior_regEval_allchr.txt', tissues)
+####################################################################################################################
 
 source(functR)
+# combine function for parallelization
+comb <- function(x, ...) {
+  lapply(seq_along(x),
+         function(i) c(x[[i]], lapply(list(...), function(y) y[[i]])))
+}
+###############################
+
 cluster_output <- get(load(clusterFile))
 
 # used in case of prediction
@@ -78,144 +98,117 @@ if(!'cl_best' %in% names(cluster_output)){
   cluster_output$cl_best <- cluster_output$cl_new
 }
 
-sampleAnn <- read.table(sampleAnnFile, h=T, stringsAsFactors = F, check.names = F)
-sampleAnn <- sampleAnn[match(cluster_output$samples_id, sampleAnn$Individual_ID), ]
-
-identical(sampleAnn$Individual_ID, cluster_output$samples_id)
-
-# load pval res
-res_pval <- get(load(pvalresFile))
 if(type_data == 'tscore'){
-  res_pval <- res_pval$tscore[[pval_id]]
   id_pval <- 8
   id_info <- 2
+  id_geno_summ <- 3
 }else{
   if(type_data == 'path_Reactome'){
-    res_pval <- res_pval$pathScore_reactome[[pval_id]]
     id_pval <- 13
     id_info <- 1
+    id_geno_summ <- 4
   }else{
     if(type_data == 'path_GO'){
-      res_pval <- res_pval$pathScore_GO[[pval_id]]
       id_pval <- 15
       id_info <- 1
+      id_geno_summ <- 6
     }else{
       stop('unknown pathway called')
     }
   }
 }
 
-# recompute pvalue if ngenes_tscore > 1
-if(min_genes_path > 1 & grepl('path',type_data)){
-  res_pval <- res_pval[res_pval$ngenes_tscore >= min_genes_path, ]
-  res_pval[,id_pval+1] <- qvalue(res_pval[,id_pval])$qvalues
-  res_pval[,id_pval+2] <- p.adjust(res_pval[,id_pval], method = 'BH')
-}
-
-# load input matrix 
-if(split_tot == 0){
-  
-  if(grepl('.txt', inputFile, fixed = TRUE)){
-    scoreMat <- read.delim(inputFile, h=T, stringsAsFactors = F, check.names = F)
-    id_el <- intersect(scoreMat[,1], res_pval[, id_info])
-    scoreMat <- scoreMat[match(id_el,scoreMat[,1]), ]
-    # rownames(scoreMat) <- scoreMat[,1]
-    scoreMat <- scoreMat[,-1]
-    if(type_data == 'tscore'){
-      new_id <- unname(sapply(colnames(scoreMat), function(x) strsplit(x, split = ' vs reference')[[1]][1]))
-      colnames(scoreMat) <- new_id  
-    }
-  }else{
-    scoreMat <- get(load(inputFile))
-    # filter out based on samples and ids
-    id_el <- intersect(scoreMat[,1], res_pval[, id_info])
-    scoreMat <- scoreMat[match(id_el,scoreMat[,1]), ]
-  }
-  
-  common_samples <- sampleAnn$Individual_ID
-  scoreMat <- t(scoreMat[,match(common_samples,colnames(scoreMat))])
-  
-  rownames(scoreMat) <- common_samples
-  colnames(scoreMat) <- id_el
-  # filter out elements that are repeated twice:
-  id_dup <- names(which(table(colnames(scoreMat)) > 1)) 
-  scoreMat <- scoreMat[, !colnames(scoreMat) %in% id_dup]
-  
-  id_el <- intersect(colnames(scoreMat),  res_pval[, id_info])
-  scoreMat <- scoreMat[, match(id_el, colnames(scoreMat))]
-  res_pval <- res_pval[match(id_el, res_pval[, id_info]),]
-  
-  # remove sample that have NAs
-  id_s <- rowSums(is.na(scoreMat)) == 0
-  if(!all(id_s)){scoreMat <- scoreMat[id_s, ]}
-  
-}else{
-  
-  ###### load score Mat #######
-  scoreMat_list <- vector(mode = 'list', length = split_tot)
-  samplesID <- vector(mode = 'list', length = split_tot)
-  elementID <- NULL
-  
-  for(i in 1:split_tot){
-    
-    print(i)
-    if(file.exists(sprintf('%s%i.RData', inputFile, i))){
-      tmp <- get(load(sprintf('%s%i.RData', inputFile, i)))
-      elementID <- c(elementID,tmp[,1])
-      samplesID[[i]] <- intersect(sampleAnn$Individual_ID, colnames(tmp))
-      scoreMat_list[[i]] <- t(tmp[,match(samplesID[[i]],colnames(tmp))])
-    }else{
-      print(sprintf('split %i does not exist', i))
-      split_tot <- split_tot - 1
-    }
-  }
-  
-  print(split_tot)
-  # check samplesID always the same
-  if(!all(table(unlist(samplesID)) == split_tot)){print('ERROR: wrong name annotations')}
-  
-  scoreMat <- do.call(cbind, scoreMat_list)
-  colnames(scoreMat) <- elementID
-  rm(scoreMat_list)
-  
-  # filter out elements that are repeated twice:
-  id_dup <- names(which(table(colnames(scoreMat)) > 1)) 
-  scoreMat <- scoreMat[, !colnames(scoreMat) %in% id_dup]
-  
-  id_el <- intersect(colnames(scoreMat),  res_pval[, id_info])
-  scoreMat <- scoreMat[, match(id_el, colnames(scoreMat))]
-  
-  rownames(scoreMat) <- samplesID[[1]]
-  # remove sample that have NAs
-  id_s <- rowSums(is.na(scoreMat)) == 0
-  if(!all(id_s)){scoreMat <- scoreMat[id_s, ]}
-  
-  common_samples <- sampleAnn$Individual_ID
-  scoreMat <- scoreMat[match(common_samples,rownames(scoreMat)),]
-  res_pval <- res_pval[match(id_el, res_pval[, id_info]),]
-  
-}
-
-print(identical(colnames(scoreMat), res_pval[, id_info]))
-print(identical(rownames(scoreMat), sampleAnn$Individual_ID))
-
+sampleAnn <- read.table(sampleAnnFile, h=T, stringsAsFactors = F, check.names = F)
+sampleAnn <- sampleAnn[match(cluster_output$samples_id, sampleAnn$Individual_ID), ]
+name_cov <- setdiff(colnames(sampleAnn),c('Individual_ID', 'genoSample_ID', 'Dx', 'Sex', 'Age', 'Gender'))
 covDat <- sampleAnn[,!colnames(sampleAnn) %in% c('Individual_ID', 'Dx', 'genoSample_ID')]
 
-cl <-  cluster_output$cl_best$gr
-scale_data <- scale(scoreMat)
-attr(scale_data, "scaled:scale") <- NULL
-attr(scale_data, "scaled:center") <- NULL
+identical(sampleAnn$Individual_ID, cluster_output$samples_id)
+# scale_data_t <- scoreMat_t <- res_pval_t <- list()
 
-output <- list(inputData = scoreMat, scaleData = scale_data, res_pval = res_pval, cl = cluster_output$cl_best)
+# load score matrix, load pval matrix, rescale for p-value
+registerDoParallel(cores=min(ncores, length(tissues)))
+
+res <- foreach(id_t=1:length(tissues), .combine='comb', 
+               .multicombine=TRUE, 
+               .init=list(list(), list(), list()))%dopar%{
+
+# for(id_t in 1:length(tissues)){
+  
+  # load pval res
+  res_pval <- get(load(pvalresFile[id_t]))
+  if(type_data == 'tscore'){
+    res_pval <- res_pval$tscore[[pval_id]]
+  }else{
+    if(type_data == 'path_Reactome'){
+      res_pval <- res_pval$pathScore_reactome[[pval_id]]
+    }else{
+      if(type_data == 'path_GO'){
+        res_pval <- res_pval$pathScore_GO[[pval_id]]
+      }else{
+        stop('unknown pathway called')
+      }
+    }
+  }
+  
+  # recompute pvalue if ngenes_tscore > 1
+  if(min_genes_path > 1 & grepl('path',type_data)){
+    res_pval <- res_pval[res_pval$ngenes_tscore >= min_genes_path, ]
+    res_pval[,id_pval+1] <- qvalue(res_pval[,id_pval])$qvalues
+    res_pval[,id_pval+2] <- p.adjust(res_pval[,id_pval], method = 'BH')
+  }
+  
+  #### load input matrix ####
+  load_output <- load_input_matrix(inputFile = inputFile[id_t], 
+                                   sampleAnn = sampleAnn, 
+                                   res_pval = res_pval, 
+                                   split_tot = split_tot, 
+                                   id_info = id_info)
+  
+  scoreMat_t <- load_output$scoreMat
+  res_pval_t <- load_output$res_pval
+  
+  input_data_notcorr <- scale(scoreMat_t)
+  attr(input_data_notcorr, "scaled:scale") <- NULL
+  attr(input_data_notcorr, "scaled:center") <- NULL
+  
+  # remove PCs1-10 for each genes
+  input_data <- matrix(ncol = ncol(input_data_notcorr), nrow = nrow(input_data_notcorr))
+  rownames(input_data) <- rownames(input_data_notcorr)
+  colnames(input_data) <- colnames(input_data_notcorr)
+  fmla <- as.formula(paste('g ~', paste0(name_cov, collapse = '+')))
+  for(i in 1:ncol(input_data_notcorr)){
+    # print(i)
+    tmp <- data.frame(g = input_data_notcorr[,i], sampleAnn[, name_cov])
+    reg <- lm(fmla, data = tmp)
+    input_data[,i] <- reg$residuals
+  }
+  print("corrected for PCs")
+  
+  print(identical(colnames(input_data), res_pval_t[, id_info]))
+  print(identical(rownames(input_data), sampleAnn$Individual_ID))
+  
+  scale_data_t <- input_data
+  res_pval_t$tissue <- tissues[id_t]
+  
+  list(scoreMat_t, scale_data_t, res_pval_t)
+  
+}
+
+scoreMat_t <- res[[1]]
+scale_data_t <- res[[2]]
+res_pval_t <- res[[3]]
+
+output <- list(inputData = scoreMat_t, scaleData = scale_data_t, res_pval = res_pval_t, cl = cluster_output$cl_best, tissues = tissues)
 
 ##########################
 #### check covariates ####
 ##########################
 
+cl <-  cluster_output$cl_best$gr
 gr_names <- sort(unique(cl))
 P <- length(gr_names)
-covDat <- sampleAnn[, !colnames(sampleAnn) %in% c('Individual_ID', 'genoSample_ID', 'Dx')]
-output$covDat = covDat
+output$covDat <- covDat
 
 test_cov <- vector(mode = 'list', length = length(gr_names))
 for(i in 1:length(gr_names)){
@@ -260,49 +253,163 @@ for(i in 1:length(gr_names)){
 test_cov <- do.call(rbind, test_cov)
 test_cov$pval_corr_overall <-  p.adjust(test_cov$pval, method = 'BH')
 
-
-output$test_cov = test_cov
-
+output$test_cov <- test_cov
 
 ####################################
 #### check features (gene/path) ####
 ####################################
 
+registerDoParallel(cores=min(ncores, length(tissues)))
 
-test_feat <- vector(mode = 'list', length = length(gr_names))
-for(i in 1:length(gr_names)){
-  
-  print(paste0('group', gr_names[i], '_vs_all'))
-  
-  # j vs all
-  gr_id <- as.factor(as.numeric(cl != gr_names[i]))
-  test_feat[[i]] <- data.frame(feat = colnames(scale_data), comp = rep(sprintf('gr%i_vs_all', gr_names[i]), ncol(scale_data)))
-  test_feat[[i]]$pval<- NA
-  test_feat[[i]]$estimates<- NA
-  test_feat[[i]]$CI_low<- NA
-  test_feat[[i]]$CI_up <- NA
-  
-  for(l in 1:ncol(scale_data)){
+test_feat_t <- foreach(id_t=1:length(tissues))%dopar%{
+                              
+# for(id_t in 1:length(tissues)){
+  test_feat <- vector(mode = 'list', length = length(gr_names))
+  for(i in 1:length(gr_names)){
     
-    print(l) 
-    tmp_data <- data.frame(f = scale_data[,l], g = gr_id)
-    tmp <- as.data.frame(wilcox_test(f~g,data = tmp_data, detailed = T))
-    test_feat[[i]]$pval[l] <- tmp$p
-    test_feat[[i]]$estimates[l] <- tmp$estimate
-    test_feat[[i]][l,c('CI_low', 'CI_up')] <- c(tmp$conf.low, tmp$conf.high)
+    print(paste0('group', gr_names[i], '_vs_all, ', tissues[id_t]))
+    
+    # j vs all
+    gr_id <- as.factor(as.numeric(cl != gr_names[i]))
+    test_feat[[i]] <- data.frame(feat = colnames(scale_data_t[[id_t]]), 
+                                 comp = rep(sprintf('gr%i_vs_all', gr_names[i]), ncol(scale_data_t[[id_t]])))
+    test_feat[[i]]$pval<- NA
+    test_feat[[i]]$estimates<- NA
+    test_feat[[i]]$CI_low<- NA
+    test_feat[[i]]$CI_up <- NA
+    
+    for(l in 1:ncol(scale_data_t[[id_t]])){
+      # print(l) 
+      tmp_data <- data.frame(f = scale_data_t[[id_t]][,l], g = gr_id)
+      tmp <- as.data.frame(wilcox_test(f~g,data = tmp_data, detailed = T))
+      test_feat[[i]]$pval[l] <- tmp$p
+      test_feat[[i]]$estimates[l] <- tmp$estimate
+      test_feat[[i]][l,c('CI_low', 'CI_up')] <- c(tmp$conf.low, tmp$conf.high)
+    }
+    
+    test_feat[[i]]$pval_corr <- p.adjust(test_feat[[i]]$pval, method = 'BH')
+    
   }
   
-  test_feat[[i]]$pval_corr <- p.adjust(test_feat[[i]]$pval, method = 'BH')
+  test_feat <- do.call(rbind, test_feat)
+  test_feat$pval_corr_overall <-  p.adjust(test_feat$pval, method = 'BH')
+  test_feat$tissue <- tissues[id_t]
+  test_feat
   
 }
 
-
-test_feat <- do.call(rbind, test_feat)
-test_feat$pval_corr_overall <-  p.adjust(test_feat$pval, method = 'BH')
-
-output$test_feat = test_feat
+output$test_feat <- test_feat_t
 
 # Save
-save(output, file = sprintf('%s%sOriginal_%sCluster%s_featAssociation.RData', outFold, type_data, type_data_cluster, type_cluster))
+save(output, file = sprintf('%s%sOriginal_corrPCs_%sCluster%s_featAssociation.RData', outFold, type_data, type_data_cluster, type_cluster))
 
 
+####################################################################################
+
+if(type_data == 'tscore'){
+  
+  ### combine in loci ###
+  # tissue specific
+  geneInfo_t <- tissue_spec_loci <- list()
+  
+  for(id_t in 1:length(tissues)){
+    
+    tmp <- read.table(geneInfoFile[id_t], h=T, stringsAsFactors = F, sep = '\t')
+    geneInfo_t[[id_t]] <- tmp[match(output$res_pval[[id_t]]$ensembl_gene_id, tmp$ensembl_gene_id),]
+    geneInfo_t[[id_t]]$tissue <- tissues[id_t]
+    
+    tmp_feat <- output$test_feat[[id_t]]
+    tmp_feat <- tmp_feat[tmp_feat$pval_corr <= pvalcorr_thr,]
+    tmp_info <- geneInfo_t[[id_t]][geneInfo_t[[id_t]]$external_gene_name %in% tmp_feat$feat, ] 
+    tmp_info$Zstat <- output$res_pval[[id_t]][match(tmp_info$ensembl_gene_id,output$res_pval[[id_t]]$ensembl_gene_id),id_pval-1]
+    # divide per chr
+    chr_id <- unique(tmp_info$chrom)
+    tmp_info_chr <- lapply(chr_id, function(x) tmp_info[tmp_info$chrom == x,])
+    
+    tmp_loci <- list()
+    for(j in 1:length(chr_id)){
+      # print(j)
+      tmp_loci[[j]] <- merge_locus_pos(tmp_info_chr[[j]], tissue = tissues[id_t])
+    }  
+    
+    tmp_loci <- do.call(rbind, tmp_loci)
+    
+    tmp_loci$comp_sign <- NA
+    tmp_loci$best_WMW_gene <- NA
+    tmp_loci$best_WMW_est <- NA
+    tmp_loci$best_WMW_pvalue <- NA
+    
+    # for each loci, find groups that are significantly different
+    for(l in 1:nrow(tmp_loci)){
+      genes <- strsplit(tmp_loci$gene[l], split = ',')[[1]]
+      tmp_gr <- sapply(unique(tmp_feat$comp[tmp_feat$feat %in% genes]), 
+                       function(x) strsplit(x, split = '_vs_all')[[1]][1])
+      tmp_gr <- sort(tmp_gr)
+      tmp_loci$comp_sign[l] <-  paste0(tmp_gr, collapse = ',') 
+      tmp_WMW <- lapply(names(tmp_gr), function(x) 
+        tmp_feat[tmp_feat$comp == x & tmp_feat$feat %in% genes,])
+      # find common genes in all the groups
+      genes_update <- names(which(table(unlist(lapply(tmp_WMW, function(x) x$feat))) == length(tmp_gr)))
+      if(length(genes_update)>0){
+        tmp_WMW <- lapply(tmp_WMW, function(x) x[x$feat %in% genes_update, ])
+        tmp_WMW_all <- do.call(rbind, tmp_WMW)
+        tmp_loci$best_WMW_gene[l] <- tmp_WMW_all$feat[which.max(abs(tmp_WMW_all$estimates))]
+        tmp_loci$best_WMW_est[l] <- paste0(round(sapply(tmp_WMW, function(x) x$estimates[x$feat == tmp_loci$best_WMW_gene[l]]),digits = 5), collapse = ',') 
+        tmp_loci$best_WMW_pvalue[l] <- paste0(sapply(tmp_WMW, function(x) x$pval[x$feat == tmp_loci$best_WMW_gene[l]]), collapse = ',')
+      }else{
+        tmp_WMW <- lapply(names(tmp_gr), function(x) tmp_feat[tmp_feat$comp == x & tmp_feat$feat %in% genes,])
+        tmp_loci$best_WMW_gene[l] <- paste0(sapply(tmp_WMW, function(x) x$feat[which.max(abs(x$estimates))]), collapse = ',')
+        tmp_loci$best_WMW_est[l] <-  paste0(round(sapply(tmp_WMW, function(x) x$estimates[which.max(abs(x$estimates))]),digits = 5), collapse = ',') 
+        tmp_loci$best_WMW_pvalue[l] <-  paste0(sapply(tmp_WMW, function(x) x$pval[which.min(x$pval)]), collapse = ',')
+      }
+    }
+    
+    tissue_spec_loci[[id_t]] <- tmp_loci
+    
+  }
+  
+  tissue_spec_loci <- do.call(rbind, tissue_spec_loci)
+  # save
+  write.table(x = tissue_spec_loci, file = sprintf('%s%s_corrPCs_%s_cluster%s_summary_geneLoci_tissueSpec.txt',outFold, type_data, type_input, type_cluster), 
+              col.names = T, row.names = F, sep = '\t', quote = F)
+  
+  # all tissues
+  test_feat_tot <- do.call(rbind, output$test_feat)
+  test_feat_tot$new_id <- paste(test_feat_tot$feat, test_feat_tot$tissue, sep = '_')
+  
+  geneInfo_tot <- do.call(rbind, geneInfo_t)
+  geneInfo_tot$new_id <- paste(geneInfo_tot$external_gene_name, geneInfo_tot$tissue, sep = '_')
+  
+  res_pval_tot <- do.call(rbind, output$res_pval)
+  res_pval_tot$new_id <- paste(res_pval_tot$external_gene_name, res_pval_tot$tissue, sep = '_')
+  
+  # all tissues
+  tmp_feat <- test_feat_tot[test_feat_tot$pval_corr <= pvalcorr_thr,]
+  tmp_info <- geneInfo_tot[geneInfo_tot$external_gene_name %in% tmp_feat$feat, ] 
+  tmp_info$Zstat <- res_pval_tot[match(tmp_info$new_id,res_pval_tot$new_id),id_pval-1]
+  
+  # divide per chr
+  chr_id <- unique(tmp_info$chrom)
+  tmp_info_chr <- lapply(chr_id, function(x) tmp_info[tmp_info$chrom == x,])
+  
+  tmp_loci <- list()
+  for(j in 1:length(chr_id)){
+    # print(j)
+    tmp_loci[[j]] <- merge_locus_pos(tmp_info_chr[[j]], tissue = 'combined')
+  }  
+  
+  alltissues_loci <- do.call(rbind, tmp_loci)
+  alltissues_loci$comp_sign <- NA
+  # for each loci, find groups that are significantly different
+  for(i in 1:nrow(alltissues_loci)){
+    genes <- strsplit(alltissues_loci$gene[i], split = ',')[[1]]
+    tmp_gr <- sapply(unique(tmp_feat$comp[tmp_feat$feat %in% genes]), function(x) strsplit(x, split = '_vs_all')[[1]][1])
+    alltissues_loci$comp_sign[i] <-  paste0(tmp_gr, collapse = ',') 
+  }
+  alltissues_loci <- alltissues_loci[order(factor(alltissues_loci$chrom, levels = paste0('chr', 1:22)), alltissues_loci$start), ]
+  
+  # save
+  write.table(x = alltissues_loci, file = sprintf('%s%s_corrPCs_%s_cluster%s_summary_geneLoci_allTissues.txt',outFold, type_data, type_input, type_cluster), 
+              col.names = T, row.names = F, sep = '\t', quote = F)
+  
+}
