@@ -17,6 +17,16 @@ cluster_PGmethod_corrPCs_run.R
 ### associate clustering with endophenotype:
 cluster_associatePhenoGLM_run.R
 
+### associate clustering with molecular features (genes/pathwayScores):
+It initially corrects for PCs, uses wilcoxon test and combined in loci/macrogroups
+
+cluster_associateFeat_corrPCs_run.R
+
+### Predict on external cohort
+Corrects for new cohort PCs before projecting clustering
+
+cluster_PGmethod_corrPCs_predict_run.R
+
 ***
 ***
 
