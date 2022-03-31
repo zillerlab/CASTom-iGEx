@@ -22,10 +22,17 @@ It initially corrects for PCs, uses wilcoxon test and combined in loci/macrogrou
 
 cluster_associateFeat_corrPCs_run.R
 
+### treatment response
+cluster_treatmentResponseAnalysis_run.R
+
 ### Predict on external cohort
 Corrects for new cohort PCs before projecting clustering
 
 cluster_PGmethod_corrPCs_predict_run.R
+
+Evaluate cluster on external cohort: additional phenotype, percentage of repr, n. of loci
+
+cluster_predict_evaluate_run.R
 
 ***
 ***
