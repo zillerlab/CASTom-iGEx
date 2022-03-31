@@ -21,6 +21,9 @@ cluster_associatePhenoGLM_run.R
 It initially corrects for PCs, uses wilcoxon test and combined in loci/macrogroups
 
 cluster_associateFeat_corrPCs_run.R
+filter_pathway_jaccard_sim_run.R (filter pathways based on overlap and min/max number of genes)
+cluster_associatePath_corrPCs_run.R (merge GO and Reactome)
+
 
 ### treatment response
 cluster_treatmentResponseAnalysis_run.R
@@ -44,4 +47,6 @@ cluster_predict_evaluate_run.R
 
 ### Clustering
 cluster_PGmethod_multipleCohorts_run.R
+
+
 
