@@ -38,7 +38,7 @@ cluster_predict_evaluate_run.R
 
 
 ## Gene-RS computation and clustering differences
-- compute_risk_score_run.R
+- compute_risk_score_corrPCs_run.R
 - evaluate_risk_score_run.R
 - plot_evaluate_risk_score_run.R (Figures/)
 - cluster_associatePhenoGLM_run.R (as before)
