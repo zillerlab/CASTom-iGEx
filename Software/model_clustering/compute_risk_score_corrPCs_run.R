@@ -124,7 +124,7 @@ print(mem_used())
 
 
 #### filter features based on estimated correlation #####
-if(corr_thr < 1){
+if(sqcorr_thr < 1){
   
   corr_feat <- get(load(corrFile)) # corrFile estimated based on res_pval, otherwise more intersection/change needed
   corr_feat <- corr_feat$cor
@@ -247,10 +247,10 @@ for(j in 1:length(pvalresFile)){
 risk_score <- do.call(cbind, risk_score)
 sampleAnn_score <- cbind(sampleAnn_score, risk_score)
 
-write.table(sampleAnn_score, file = sprintf('%s%s_corrThr%s_risk_score_relatedPhenotypes.txt', outFold, type_data, as.character(corr_thr)), col.names = T, row.names = F, sep = '\t', quote = F)
+write.table(sampleAnn_score, file = sprintf('%s%s_corr2Thr%s_risk_score_relatedPhenotypes.txt', outFold, type_data, as.character(sqcorr_thr)), col.names = T, row.names = F, sep = '\t', quote = F)
 
 
 tmp <- res_pval[[1]][match(colnames(input_data), res_pval[[1]][,id_info]),c(id_info, id_geno_summ)]
-write.table(tmp, file = sprintf('%s%s_features_risk_score_corrThr%s.txt', outFold, type_data, as.character(corr_thr)), col.names = T, row.names = F, sep = '\t', quote = F)
+write.table(tmp, file = sprintf('%s%s_features_risk_score_corr2Thr%s.txt', outFold, type_data, as.character(sqcorr_thr)), col.names = T, row.names = F, sep = '\t', quote = F)
 
 
