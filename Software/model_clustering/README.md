@@ -1,4 +1,4 @@
-# Cases stratification based on imputed gene expression
+ # Cases stratification based on imputed gene expression
 CASTom-iGEx (Module 3) is a command-line tool that uses gene-level T-scores scaled by their association with trait of interest to cluster patients using a graph-based clustering technique. These groups are then tested for association with endophenotype differences and genes/pathway scores as well as group-specific treatment response when data available. If no clinical information are present, plausible differences in endophenotypes are detected with the approximation of gene risk-scores. Two versions are available dependening of data structure (single or multiple cohorts). 
 
 ## Input Files
@@ -20,10 +20,9 @@ cluster_associatePhenoGLM_run.R
 ### associate clustering with molecular features (genes/pathwayScores):
 It initially corrects for PCs, uses wilcoxon test and combined in loci/macrogroups
 
-cluster_associateFeat_corrPCs_run.R
-filter_pathway_jaccard_sim_run.R (filter pathways based on overlap and min/max number of genes)
-cluster_associatePath_corrPCs_run.R (merge GO and Reactome)
-
+- cluster_associateFeat_corrPCs_run.R
+- filter_pathway_jaccard_sim_run.R (filter pathways based on overlap and min/max number of genes)
+- cluster_associatePath_corrPCs_run.R (merge GO and Reactome)
 
 ### treatment response
 cluster_treatmentResponseAnalysis_run.R
@@ -36,6 +35,14 @@ cluster_PGmethod_corrPCs_predict_run.R
 Evaluate cluster on external cohort: additional phenotype, percentage of repr, n. of loci
 
 cluster_predict_evaluate_run.R
+
+
+## Gene-RS computation and clustering differences
+- compute_risk_score_run.R
+- evaluate_risk_score_run.R
+- plot_evaluate_risk_score_run.R (Figures/)
+- cluster_associatePhenoGLM_run.R (as before)
+- compare_endophenotypeAnalysis_clusterRiskScore_run.R (Figures/)
 
 ***
 ***
