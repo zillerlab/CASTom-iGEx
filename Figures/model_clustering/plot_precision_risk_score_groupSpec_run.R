@@ -87,7 +87,20 @@ for(j in 1:length(thr_measure)){
 df_repr <- do.call(rbind, df_repr)
 df_repr$tissue <- factor(df_repr$tissue, levels = tissues)
 
-thr <- max(sapply(tissues, function(x) min(df_repr$thr_measure[df_repr$precision == 1 & df_repr$tissue == x], na.rm  = T)))
+# thr <- max(sapply(tissues, function(x) min(df_repr$thr_measure[df_repr$precision == 1 & df_repr$tissue == x], na.rm  = T)))
+thr <- sapply(tissues, function(x) min(df_repr$thr_measure[df_repr$precision ==1 & df_repr$tissue == x], 
+                                           na.rm  = T))
+if(any(!is.finite(thr))){
+  tissue_rep <- tissues[!is.finite(thr)]
+  new_thr <- sapply(tissue_rep, function(x) min(df_repr$thr_measure[df_repr$precision == 0 & df_repr$tissue == x], 
+                                         na.rm  = T))
+  thr <- c(new_thr, thr[is.finite(thr)])
+}
+
+thr <- max(thr)
+print(paste0('THR CRM-measure for plot: ',thr))
+
+
 tmp <- subset(df_repr, thr_measure <= thr)
 pl1 <- ggplot(data =  tmp,aes(x = thr_measure, y = precision, color = tissue, group = tissue))+
   geom_point(alpha = 0.7)+
