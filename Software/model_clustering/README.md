@@ -41,8 +41,9 @@ cluster_predict_evaluate_run.R
 - compute_risk_score_corrPCs_run.R
 - evaluate_risk_score_run.R
 - plot_evaluate_risk_score_run.R (Figures/)
-- cluster_associatePhenoGLM_run.R (as before)
+- cluster_associatePhenoGLM_run.R/cluster_associatePhenoGLM_multipleCohorts_metaAnalysis_run.R (as before)
 - compare_endophenotypeAnalysis_clusterRiskScore_run.R (Figures/)
+- plot_precision_risk_score_groupSpec_run.R (Figures/)
 
 ***
 ***
