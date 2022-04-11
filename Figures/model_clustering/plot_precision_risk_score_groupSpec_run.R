@@ -107,7 +107,7 @@ df_repr$tissue <- factor(df_repr$tissue, levels = c(tissues, "All tissues"))
 
 # thr <- max(sapply(tissues, function(x) min(df_repr$thr_measure[df_repr$precision == 1 & df_repr$tissue == x], na.rm  = T)))
 thr <- sapply(c(tissues, "All tissues"), function(x) min(df_repr$thr_measure[df_repr$precision ==1 & df_repr$tissue == x], 
-                                       na.rm  = T))
+                                                         na.rm  = T))
 if(any(!is.finite(thr))){
   tissue_rep <- c(tissues, "All tissues")[!is.finite(thr)]
   new_thr <- sapply(tissue_rep, function(x) min(df_repr$thr_measure[df_repr$precision == 0 & df_repr$tissue == x], 
@@ -118,12 +118,15 @@ if(any(!is.finite(thr))){
 thr <- max(thr)
 print(paste0('THR CRM-measure for plot: ',thr))
 
-
 tmp <- subset(df_repr, thr_measure <= thr)
+write.table(file = sprintf('%sriskScores_clusterCases_group_relatedPheno_npheno_and_precision.txt', outFold), 
+            x = df_repr, col.names = T, row.names = F, sep = '\t', quote = F)
+
+
 pl1 <- ggplot(data =  tmp,aes(x = thr_measure, y = precision, color = tissue, group = tissue))+
   geom_point(alpha = 0.7)+
   geom_line(alpha = 0.7, size = 0.8)+
-  xlab('F-stat * |beta|')+ylab('Precision\nsame beta sign')+ 
+  xlab('CRM = F-stat * |beta|')+ylab('Precision')+ 
   theme_bw()+theme(legend.position = 'right', plot.title = element_text(hjust = 0.5), 
                    legend.text = element_text(size = 7),  legend.title = element_text(size = 8), legend.key.size = unit(0.3, "cm"))+
   guides(color=guide_legend(title = ''))+
@@ -132,17 +135,68 @@ pl1 <- ggplot(data =  tmp,aes(x = thr_measure, y = precision, color = tissue, gr
 pl2 <- ggplot(data =  tmp,aes(x = thr_measure, y = n_pheno_thr, color = tissue, group = tissue))+
   geom_point(alpha = 0.7)+
   geom_line(alpha = 0.7, size = 0.8)+
-  xlab('F-stat * |beta|')+ylab('n. phenotypes')+ 
+  xlab('CRM = F-stat * |beta|')+ylab('n. phenotypes')+ 
   theme_bw()+theme(legend.position = 'right', plot.title = element_text(hjust = 0.5), 
                    legend.text = element_text(size = 7),  legend.title = element_text(size = 8), legend.key.size = unit(0.3, "cm"))+
   guides(color=guide_legend(title = ''))+
   scale_color_manual(values = c(color_tissues$color, 'grey20'))
 
 tot_pl <- ggarrange(plotlist = list(pl1, pl2), ncol=2, nrow=1, align = 'h', common.legend = T, legend = 'right')
+ggsave(filename = sprintf('%sriskScores_clusterCases_group_relatedPheno_npheno_and_precision_allTandTissues.png', outFold), plot = tot_pl, width = 9, height = 4.5, dpi = 500)
+ggsave(filename = sprintf('%sriskScores_clusterCases_group_relatedPheno_npheno_and_precision_allTandTissues.pdf', outFold), plot = tot_pl, width = 9, height = 4.5, dpi = 500, compress = F)
+
+
+## only tissue:
+tmp <- subset(df_repr, thr_measure <= thr)
+pl1 <- ggplot(data =  subset(tmp, tissue != 'All tissues'), 
+              aes(x = thr_measure, y = precision, color = tissue, group = tissue))+
+  geom_point(alpha = 0.7)+
+  geom_line(alpha = 0.7, size = 0.8)+
+  xlab('CRM = F-stat * |beta|')+ylab('Precision')+ 
+  theme_bw()+theme(legend.position = 'right', plot.title = element_text(hjust = 0.5), 
+                   legend.text = element_text(size = 7),  legend.title = element_text(size = 8), legend.key.size = unit(0.3, "cm"))+
+  guides(color=guide_legend(title = ''))+
+  scale_color_manual(values = c(color_tissues$color))
+
+pl2 <- ggplot(data =  subset(tmp, tissue != 'All tissues'), 
+              aes(x = thr_measure, y = n_pheno_thr, color = tissue, group = tissue))+
+  geom_point(alpha = 0.7)+
+  geom_line(alpha = 0.7, size = 0.8)+
+  xlab('CRM = F-stat * |beta|')+ylab('n. phenotypes')+ 
+  theme_bw()+theme(legend.position = 'right', plot.title = element_text(hjust = 0.5), 
+                   legend.text = element_text(size = 7),  legend.title = element_text(size = 8), legend.key.size = unit(0.3, "cm"))+
+  guides(color=guide_legend(title = ''))+
+  scale_color_manual(values = c(color_tissues$color))
+
+tot_pl <- ggarrange(plotlist = list(pl1, pl2), ncol=2, nrow=1, align = 'h', common.legend = T, legend = 'right')
 ggsave(filename = sprintf('%sriskScores_clusterCases_group_relatedPheno_npheno_and_precision.png', outFold), plot = tot_pl, width = 9, height = 4.5, dpi = 500)
 ggsave(filename = sprintf('%sriskScores_clusterCases_group_relatedPheno_npheno_and_precision.pdf', outFold), plot = tot_pl, width = 9, height = 4.5, dpi = 500, compress = F)
 
-write.table(file = sprintf('%sriskScores_clusterCases_group_relatedPheno_npheno_and_precision.txt', outFold), 
-            x = df_repr, col.names = T, row.names = F, sep = '\t', quote = F)
+
+## all tissues only
+tmp <- subset(df_repr, thr_measure <= thr)
+pl1 <- ggplot(data =  subset(tmp, tissue == 'All tissues'), 
+              aes(x = thr_measure, y = precision, color = tissue, group = tissue))+
+  geom_point(alpha = 0.7)+
+  geom_line(alpha = 0.7, size = 0.8)+
+  xlab('CRM = F-stat * |beta|')+ylab('Precision')+ 
+  theme_bw()+theme(legend.position = 'right', plot.title = element_text(hjust = 0.5), 
+                   legend.text = element_text(size = 7),  legend.title = element_text(size = 8), legend.key.size = unit(0.3, "cm"))+
+  guides(color=guide_legend(title = ''))+
+  scale_color_manual(values = 'grey20')
+
+pl2 <- ggplot(data =  subset(tmp, tissue == 'All tissues'), 
+              aes(x = thr_measure, y = n_pheno_thr, color = tissue, group = tissue))+
+  geom_point(alpha = 0.7)+
+  geom_line(alpha = 0.7, size = 0.8)+
+  xlab('CRM = F-stat * |beta|')+ylab('n. phenotypes')+ 
+  theme_bw()+theme(legend.position = 'right', plot.title = element_text(hjust = 0.5), 
+                   legend.text = element_text(size = 7),  legend.title = element_text(size = 8), legend.key.size = unit(0.3, "cm"))+
+  guides(color=guide_legend(title = ''))+
+  scale_color_manual(values = 'grey20')
+
+tot_pl <- ggarrange(plotlist = list(pl1, pl2), ncol=2, nrow=1, align = 'h', common.legend = T, legend = 'right')
+ggsave(filename = sprintf('%sriskScores_clusterCases_group_relatedPheno_npheno_and_precision_allT.png', outFold), plot = tot_pl, width = 9, height = 4.5, dpi = 500)
+ggsave(filename = sprintf('%sriskScores_clusterCases_group_relatedPheno_npheno_and_precision_allT.pdf', outFold), plot = tot_pl, width = 9, height = 4.5, dpi = 500, compress = F)
 
 
