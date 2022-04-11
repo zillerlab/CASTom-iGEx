@@ -50,7 +50,7 @@ cluster_predict_evaluate_run.R
 
 ## Workflow (multiple cohorts)
 ### Detect outliers
-- detect_outliers_multipleCohorts_run.R
+- detect_outliers_corrPCs_multipleCohorts_run.R
 - combine_outliers_cluster_run.R
 
 ### Clustering
