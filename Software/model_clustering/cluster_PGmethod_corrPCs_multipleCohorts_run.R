@@ -202,44 +202,40 @@ element_rm <- clumping_features(res_pval=res_pval,
                                 id_pval = id_pval, 
                                 corr_thr = corr_thr)
 print(paste(length(element_rm),'features removed due to high correlation'))
-rm(scoreMat_tot)
 
-# correct each cohort for PCs and remove correlated genes
-input_data <- list()
-for(c_id in 1:length(name_cohorts)){
-  
-  print(name_cohorts[c_id])
-  
-  scoreMat[[c_id]] <- scoreMat[[c_id]][, !colnames(scoreMat[[c_id]]) %in% element_rm]
-  input_data_notcorr <- scale(scoreMat[[c_id]])
-  attr(input_data_notcorr, "scaled:scale") <- NULL
-  attr(input_data_notcorr, "scaled:center") <- NULL
-  
-  # remove PCs1-10 for each genes
-  input_data[[c_id]] <- matrix(ncol = ncol(input_data_notcorr), nrow = nrow(input_data_notcorr))
-  rownames(input_data[[c_id]]) <- rownames(input_data_notcorr)
-  colnames(input_data[[c_id]]) <- colnames(input_data_notcorr)
-  
-  name_cov <- setdiff(colnames(sampleAnn[[c_id]]),
-                      c('Individual_ID', 'genoSample_ID', 'Dx', 'Sex', 'Age', 'Temp_ID', 'cohort'))
-  fmla <- as.formula(paste('g ~', paste0(name_cov, collapse = '+')))
-  for(i in 1:ncol(input_data_notcorr)){
-    #print(i)
-    tmp <- data.frame(g = input_data_notcorr[,i], sampleAnn[[c_id]][, name_cov])
-    reg <- lm(fmla, data = tmp)
-    input_data[[c_id]][,i] <- reg$residuals
-  }
-  print("corrected for PCs")
-  
-}
-
-input_data <- do.call(rbind, input_data)
 sampleAnn_list <- sampleAnn
-sampleAnn <- do.call(rbind, sampleAnn_list)
-
+sampleAnn <- do.call(rbind, sampleAnn)
+scoreMat_tot <- scoreMat_tot[, !colnames(scoreMat_tot) %in% element_rm]
+# remove sample that have NAs
+id_s <- rowSums(is.na(scoreMat_tot)) == 0
+if(!all(id_s)){scoreMat_tot <- scoreMat_tot[id_s, ]}
 # match to have the same samples and same order with annotation
-sampleAnn <- sampleAnn[match(rownames(input_data), sampleAnn$Individual_ID), ]
+sampleAnn <- sampleAnn[match(rownames(scoreMat_tot), sampleAnn$Temp_ID), ]
 sampleAnn$cohort_id <- as.numeric(as.factor(sampleAnn$cohort))
+
+## correct for PCs ##
+input_data_notcorr <- scale(scoreMat_tot)
+attr(input_data_notcorr, "scaled:scale") <- NULL
+attr(input_data_notcorr, "scaled:center") <- NULL
+
+# remove PCs1-10 for each genes
+input_data <- matrix(ncol = ncol(input_data_notcorr), nrow = nrow(input_data_notcorr))
+rownames(input_data) <- rownames(input_data_notcorr)
+colnames(input_data) <- colnames(input_data_notcorr)
+
+name_cov <- setdiff(colnames(sampleAnn),
+                    c('Individual_ID', 'genoSample_ID', 'Dx', 'Sex',
+                      'Age', 'Temp_ID', 'cohort', 'cohort_id'))
+fmla <- as.formula(paste('g ~', paste0(name_cov, collapse = '+')))
+
+for(i in 1:ncol(input_data_notcorr)){
+  # print(i)
+  tmp <- data.frame(g = input_data_notcorr[,i], sampleAnn[, name_cov])
+  reg <- lm(fmla, data = tmp)
+  input_data[,i] <- reg$residuals
+}
+print("corrected for PCs")
+
 res_pval <- res_pval[match(colnames(input_data), res_pval[, id_info]),]
 
 if(type_input == 'zscaled'){
@@ -248,12 +244,44 @@ if(type_input == 'zscaled'){
   colnames(input_data) <- res_pval[, id_info]
 }
 
+## compute umap and plot cohort ##
+# plot: UMAP
+n_comp_umap <- 2
+n_neigh_umap <- 30
+min_dist_umap <- 0.01
+seed_umap <- 67
+
+custom.settings = umap.defaults
+custom.settings$min_dist = min_dist_umap
+custom.settings$n_components = n_comp_umap
+custom.settings$n_neighbors = n_neigh_umap
+custom.settings$random_state <- seed_umap
+
+umap_res <- umap::umap(input_data, custom.settings)
+df_umap <- data.frame(component_1=umap_tot$layout[,1], 
+                      component_2=umap_tot$layout[,2], 
+                      cohort = factor(sampleAnn$cohort))
+
+pl_umap <- ggplot(df_umap, 
+                  aes(x = component_1, y = component_2, color = cohort))+
+  geom_point(size = 0.05, alpha = 0.8)+
+  xlab('UMAP component 1')+ ylab('UMAP component 2')+
+  theme_bw() +
+  theme(legend.position = 'right')
+
+ggsave(filename = sprintf('%s%s_corrPCs_%s_cluster%s_PGmethod_%smetric_umap_cohort.png', 
+                          outFold, type_data, type_input, type_cluster, type_sim), 
+       width = 6, height = 4, plot = pl_umap, device = 'png', dpi = 200)
+
+print('UMAP computed and plotted')
+
 ###############################################################
 ## pheno graph clustering:
 # specific for cluster with low computational power (LISA PGC)
 # 1) Euclidian distance
 if(nrow(sampleAnn)>10000){
-  ed_dist <- big.matrix(ncol = nrow(sampleAnn) , nrow = nrow(sampleAnn), type = "double", init = 0, dimnames = NULL, shared = F)
+  ed_dist <- big.matrix(ncol = nrow(sampleAnn) , nrow = nrow(sampleAnn), 
+                        type = "double", init = 0, dimnames = NULL, shared = F)
   # build by rows
   fun_eucl <- function(x,y){
     sum((x-y)^2)
@@ -284,8 +312,9 @@ for(i in 1:length(kNN_par)){
   print(PG_cl[[i]]$info)
   # cluster depend on PC?
   id <- PG_cl[[i]]$cl$membership
-  # test only for cohort, additional covariate must be adjusted for cohort info
-  df <- cbind(data.frame(cl = id), cohort = sampleAnn[,colnames(sampleAnn) %in% c('cohort')])
+  # test only for cohort and PCs (they are computed combining all cohorts)
+  df <- cbind(data.frame(cl = id), 
+              cohort = sampleAnn[,colnames(sampleAnn) %in% c('cohort', name_cov)])
   test_cov[[i]] <- data.frame(cov_id = colnames(df)[-(1)])
   test_cov[[i]]$test_type <- test_cov[[i]]$statistic <- test_cov[[i]]$pval <- NA
   for(j in 1:(ncol(df)-1)){
@@ -321,7 +350,8 @@ if(type_cluster == 'All'){
     # test fisher for each group
     cl_id <- sort(unique(PG_cl[[i]]$cl$membership))
     df_perc[[i]] <- data.frame(gr = rep(cl_id,2), Dx = c(rep(0,nrow(perc)), rep(1,nrow(perc))), 
-                               perc = as.vector(perc), count = as.vector(table(PG_cl[[i]]$cl$membership, sampleAnn$Dx)))
+                               perc = as.vector(perc), 
+                               count = as.vector(table(PG_cl[[i]]$cl$membership, sampleAnn$Dx)))
     df_perc_test[[i]] <- data.frame(gr = c(cl_id, 'all'), 
                                     fisher_test = c(sapply(cl_id, function(x) fisher.test(table(PG_cl[[i]]$cl$membership == x, sampleAnn$Dx))$p.value), 
                                                     chisq.test(table(PG_cl[[i]]$cl$membership, sampleAnn$Dx))$p.value))
@@ -332,6 +362,7 @@ output <- list(best_k = opt_k, cl_res = PG_cl, test_cov = test_cov, info_tune = 
                cl_best = data.frame(id = sampleAnn$Individual_ID, gr = PG_cl[[which.max(info_hyperParam$DB_mean)]]$cl$membership))
 output$Dx_perc <- list(perc = df_perc, test = df_perc_test)
 output$samples_id <- rownames(input_data)
+
 # most significant elements
 test_diff <- data.frame(id = colnames(input_data), pval = apply(input_data, 2, function(x) kruskal.test(x = x, g = factor(output$cl_best$gr))$p.value))
 test_diff$pval_corr <- p.adjust(test_diff$pval, method = 'BH')
@@ -361,52 +392,28 @@ output$sampleInfo <- sampleAnn
 output$ed_dist <- ed_dist[,]
 output$sampleOutliers <- list(sample = rm_samples)
 
-### plot: UMAP
-n_comp_umap <- 2
-n_neigh_umap <- opt_k
-min_dist_umap <- 0.01
-seed_umap <- 67
-
-custom.settings = umap.defaults
-custom.settings$min_dist = min_dist_umap
-custom.settings$n_components = n_comp_umap
-custom.settings$n_neighbors = n_neigh_umap
-custom.settings$random_state <- seed_umap
-
-umap_res <- umap::umap(input_data, custom.settings)
-df <- data.frame(component_1=umap_res$layout[,1], component_2=umap_res$layout[,2], 
-                 gr = output$cl_best$gr, cohort = output$sampleInfo$cohort)
-df$gr <- factor(df$gr)
-P <- length(unique(df$gr))
+# plot umap clustering
+df_umap$gr <- factor(output$cl_best$gr)
+P <- length(unique(df_umap$gr))
 gr_color <- pal_d3(palette = 'category20')(P)
 
 # save
-output$umap <- df
+output$umap <- df_umap
 save(output, file = sprintf('%s%s_corrPCs_%s_cluster%s_PGmethod_%smetric.RData', 
                             outFold, type_data, type_input, type_cluster, type_sim))
 
 # group
-tot_pl <- ggplot(df, aes(x = component_1, y = component_2, color = gr))+
+tot_pl <- ggplot(df_umap, aes(x = component_1, y = component_2, color = gr))+
   geom_point(size = 0.05, alpha = 0.8)+
   xlab('UMAP component 1')+ ylab('UMAP component 2')+
   scale_color_manual(values = gr_color)+
   theme_bw()+theme(legend.position = 'right')
-width_pl <- 4
+width_pl <- 4.5
 
 ggsave(filename = sprintf('%s%s_corrPCs_%s_cluster%s_PGmethod_%smetric_umap.png', 
                           outFold, type_data, type_input, type_cluster, type_sim), 
        dpi=200, width = width_pl, height = 4, plot = tot_pl, device = 'png')
 
-# cohort
-tot_pl <- ggplot(df, aes(x = component_1, y = component_2, color = cohort))+
-  geom_point(size = 0.05, alpha = 0.8)+
-  xlab('UMAP component 1')+ ylab('UMAP component 2')+
-  theme_bw()+theme(legend.position = 'right')
-width_pl <- 5
-
-ggsave(filename = sprintf('%s%s_corrPCs_%s_cluster%s_PGmethod_%smetric_umap_cohort.png', 
-                          outFold, type_data, type_input, type_cluster, type_sim), 
-       dpi=200, width = width_pl, height = 4, plot = tot_pl, device = 'png')
 
 
 
