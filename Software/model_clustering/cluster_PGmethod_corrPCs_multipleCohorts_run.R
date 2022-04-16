@@ -18,19 +18,18 @@ options(bitmapType = 'cairo', device = 'png')
 
 
 parser <- ArgumentParser(description="clustering using PG method")
-parser$add_argument("--inputFile", type = "character", default = 'NA', nargs = '*', help = "file to be loaded (predicted tscore or pathScore)")
+parser$add_argument("--inputFile", type = "character",  nargs = '*', help = "file to be loaded (predicted tscore or pathScore)")
 parser$add_argument("--genes_to_filter", type = "character", default = NULL, help = "additional file to filter genes")
 parser$add_argument("--name_cohorts", type = "character", nargs = '*', help = "name of the single cohorts")
 parser$add_argument("--sampleAnnFile", type = "character", nargs = '*', help = "file with samples to be used")
-parser$add_argument("--sampleOutFile", type = "character", default = 'NA', help = "file with samples to be excluded")
-parser$add_argument("--geneRegionFile", type = "character", default='NA', help = "used if tscore and exclude_MHC")
+parser$add_argument("--sampleOutFile", type = "character", default = NULL, help = "file with samples to be excluded")
+parser$add_argument("--geneRegionFile", type = "character", default = NULL, help = "used if tscore and exclude_MHC")
 parser$add_argument("--tissues_name", type = "character", help = "name tissue")
-parser$add_argument("--color_file", type = "character", help = "file with color based on phenotype")
 parser$add_argument("--exclude_MHC", type = "logical", default = F, help = "if true, MHC region excluded (only ossible for tscore)")
 # parser$add_argument("--covDatFile", type = "character", default = 'NA', nargs = '*', help = "additional cov to test")
 parser$add_argument("--type_cluster", type = "character", default = 'All', help = "All, Cases, Controls")
 parser$add_argument("--split_tot", type = "integer", default = 0, help = "if 0 then inpuntFile load alone, otherwise splitted version")
-parser$add_argument("--pvalresFile", type = "character", default = 'NA', help = "file with pvalue results")
+parser$add_argument("--pvalresFile", type = "character",  help = "file with pvalue results")
 parser$add_argument("--pval_id", type = "integer", default = 0, help = "id to be used on pvalue file")
 parser$add_argument("--corr_thr", type = "double", default = -1, help = "correlation among features threshold")
 parser$add_argument("--functR", type = "character", help = "functions to be used")
@@ -47,7 +46,6 @@ genes_to_filter <- args$genes_to_filter
 pvalresFile <- args$pvalresFile
 sampleOutFile <- args$sampleOutFile
 tissues_name <- args$tissues_name
-color_file <- args$color_file
 pval_id <- args$pval_id
 inputFile <- args$inputFile
 exclude_MHC <- args$exclude_MHC
@@ -145,7 +143,7 @@ if(!is.null(genes_to_filter)){
 ### load score data ###
 sampleAnn <- vector(mode = 'list', length = length(name_cohorts))
 scoreMat <- vector(mode = 'list', length = length(name_cohorts))
-if(file.exists(sampleOutFile)){
+if(file.exists(sampleOutFile) & !is.null(sampleOutFile)){
   rm_samples <- read.table(sampleOutFile, header = T, stringsAsFactors = F, sep = '\t')
 }else{
   rm_samples <- NULL
