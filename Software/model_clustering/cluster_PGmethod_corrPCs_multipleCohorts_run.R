@@ -143,7 +143,8 @@ if(!is.null(genes_to_filter)){
 ### load score data ###
 sampleAnn <- vector(mode = 'list', length = length(name_cohorts))
 scoreMat <- vector(mode = 'list', length = length(name_cohorts))
-if(file.exists(sampleOutFile) & !is.null(sampleOutFile)){
+
+if(!is.null(sampleOutFile)){
   rm_samples <- read.table(sampleOutFile, header = T, stringsAsFactors = F, sep = '\t')
 }else{
   rm_samples <- NULL
@@ -204,9 +205,6 @@ print(paste(length(element_rm),'features removed due to high correlation'))
 sampleAnn_list <- sampleAnn
 sampleAnn <- do.call(rbind, sampleAnn)
 scoreMat_tot <- scoreMat_tot[, !colnames(scoreMat_tot) %in% element_rm]
-# remove sample that have NAs
-id_s <- rowSums(is.na(scoreMat_tot)) == 0
-if(!all(id_s)){scoreMat_tot <- scoreMat_tot[id_s, ]}
 # match to have the same samples and same order with annotation
 sampleAnn <- sampleAnn[match(rownames(scoreMat_tot), sampleAnn$Temp_ID), ]
 sampleAnn$cohort_id <- as.numeric(as.factor(sampleAnn$cohort))
