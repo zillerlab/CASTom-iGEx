@@ -14,6 +14,7 @@ suppressPackageStartupMessages(library(pheatmap))
 suppressPackageStartupMessages(library(RColorBrewer))
 suppressPackageStartupMessages(library(bigmemory))
 suppressPackageStartupMessages(library(ggsci))
+suppressPackageStartupMessages(library(sva))
 options(bitmapType = 'cairo', device = 'png')
 
 
@@ -231,14 +232,28 @@ for(i in 1:ncol(input_data_notcorr)){
   input_data[,i] <- reg$residuals
 }
 print("corrected for PCs")
-
 res_pval <- res_pval[match(colnames(input_data), res_pval[, id_info]),]
+
+## batch integration via combat ##
+batch <- sampleAnn$cohort
+rownames(sampleAnn) <- sampleAnn$Individual_ID
+modcombat <- model.matrix(~1, data=sampleAnn)
+combat_corrected <- ComBat(dat = t(input_data), 
+                           batch=batch, 
+                           mod=modcombat,
+                           par.prior=TRUE, 
+                           prior.plots=FALSE)
+combat_corrected <- t(combat_corrected)
+print("cohorts integrated via combat")
+input_data <- combat_corrected
+colnames(input_data) <- res_pval[,id_info] 
 
 if(type_input == 'zscaled'){
   input_data <- sapply(1:ncol(input_data), function(x) 
     input_data[, x]*res_pval[res_pval[,id_info] == colnames(input_data)[x], id_pval-1])
   colnames(input_data) <- res_pval[, id_info]
 }
+print("genes zscaled")
 
 ## compute umap and plot cohort ##
 # plot: UMAP

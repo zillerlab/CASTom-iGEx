@@ -159,6 +159,18 @@ for(c_id in 1:length(name_cohorts)){
   scoreMat[[c_id]] <- load_output$scoreMat
   sampleAnn[[c_id]] <- load_output$sampleAnn
   
+  # remove sample that have NAs
+  id_s <- rowSums(is.na(scoreMat[[c_id]])) == 0
+  if(!all(id_s)){scoreMat[[c_id]] <- scoreMat[[c_id]][id_s,]}
+  # remove outliers
+  if(!is.null(rm_samples)){
+    scoreMat[[c_id]] <- scoreMat[[c_id]][!rownames(scoreMat[[c_id]]) %in%  rm_samples$Temp_ID, ]
+  }
+  sampleAnn[[c_id]] <- sampleAnn[[c_id]][match(rownames(scoreMat[[c_id]]), sampleAnn[[c_id]]$Individual_ID), ]
+  
+  print(dim(scoreMat[[c_id]]))
+  print(dim(sampleAnn[[c_id]]))
+  
 }
 
 try(if(any(!sapply(scoreMat, function(x) all(colnames(x) %in% res_pval[, id_info])))) 
@@ -175,47 +187,36 @@ element_rm <- clumping_features(res_pval=res_pval,
                                 id_pval = id_pval, 
                                 corr_thr = corr_thr)
 print(paste(length(element_rm),'features removed due to high correlation'))
-rm(scoreMat_tot)
 
-# correct each cohort for PCs and remove correlated genes
-input_data <- list()
-for(c_id in 1:length(name_cohorts)){
-  
-  print(name_cohorts[c_id])
-  
-  scoreMat[[c_id]] <- scoreMat[[c_id]][, !colnames(scoreMat[[c_id]]) %in% element_rm]
-  input_data_notcorr <- scale(scoreMat[[c_id]])
-  attr(input_data_notcorr, "scaled:scale") <- NULL
-  attr(input_data_notcorr, "scaled:center") <- NULL
-  
-  # remove PCs1-10 for each genes
-  input_data[[c_id]] <- matrix(ncol = ncol(input_data_notcorr), nrow = nrow(input_data_notcorr))
-  rownames(input_data[[c_id]]) <- rownames(input_data_notcorr)
-  colnames(input_data[[c_id]]) <- colnames(input_data_notcorr)
-  
-  name_cov <- setdiff(colnames(sampleAnn[[c_id]]),
-                      c('Individual_ID', 'genoSample_ID', 'Dx', 'Sex', 'Age', 'Temp_ID', 'cohort'))
-  fmla <- as.formula(paste('g ~', paste0(name_cov, collapse = '+')))
-  for(i in 1:ncol(input_data_notcorr)){
-    # print(i)
-    tmp <- data.frame(g = input_data_notcorr[,i], sampleAnn[[c_id]][, name_cov])
-    reg <- lm(fmla, data = tmp)
-    input_data[[c_id]][,i] <- reg$residuals
-  }
-  print("corrected for PCs")
-  
-}
-
-input_data <- do.call(rbind, input_data)
-# remove sample that have NAs
-id_s <- rowSums(is.na(input_data)) == 0
-if(!all(id_s)){input_data <- input_data[id_s, ]}
 sampleAnn_list <- sampleAnn
-sampleAnn <- do.call(rbind, sampleAnn_list)
-
+sampleAnn <- do.call(rbind, sampleAnn)
+scoreMat_tot <- scoreMat_tot[, !colnames(scoreMat_tot) %in% element_rm]
 # match to have the same samples and same order with annotation
-sampleAnn <- sampleAnn[match(rownames(input_data), sampleAnn$Temp_ID), ]
+sampleAnn <- sampleAnn[match(rownames(scoreMat_tot), sampleAnn$Temp_ID), ]
 sampleAnn$cohort_id <- as.numeric(as.factor(sampleAnn$cohort))
+
+## correct for PCs ##
+input_data_notcorr <- scale(scoreMat_tot)
+attr(input_data_notcorr, "scaled:scale") <- NULL
+attr(input_data_notcorr, "scaled:center") <- NULL
+
+# remove PCs1-10 for each genes
+input_data <- matrix(ncol = ncol(input_data_notcorr), nrow = nrow(input_data_notcorr))
+rownames(input_data) <- rownames(input_data_notcorr)
+colnames(input_data) <- colnames(input_data_notcorr)
+
+name_cov <- setdiff(colnames(sampleAnn),
+                    c('Individual_ID', 'genoSample_ID', 'Dx', 'Sex',
+                      'Age', 'Temp_ID', 'cohort', 'cohort_id'))
+fmla <- as.formula(paste('g ~', paste0(name_cov, collapse = '+')))
+
+for(i in 1:ncol(input_data_notcorr)){
+  # print(i)
+  tmp <- data.frame(g = input_data_notcorr[,i], sampleAnn[, name_cov])
+  reg <- lm(fmla, data = tmp)
+  input_data[,i] <- reg$residuals
+}
+print("corrected for PCs")
 res_pval <- res_pval[match(colnames(input_data), res_pval[, id_info]),]
 
 if(type_input == 'zscaled'){
@@ -240,12 +241,13 @@ custom.settings$random_state <- seed_umap
 umap_tot <- umap::umap(input_data, custom.settings)
 id_out <- unique(unlist(apply(umap_tot$layout, 2, function(x) which(abs(x - median(x)) > (6 * sd(x))))))
 sampleAnn_out <- NULL
-df_umap_tot <- NULL
 
+df_umap_tot <- data.frame(component_1=umap_tot$layout[,1], component_2=umap_tot$layout[,2], 
+                          outlier = rep('no', nrow(umap_tot$layout)), cohort = sampleAnn$cohort)
 if(length(id_out)>0){
   
   print(sprintf('remove outliers (%s)', length(id_out)))
-  df_umap_tot <- data.frame(component_1=umap_tot$layout[,1], component_2=umap_tot$layout[,2], outlier = rep('no', nrow(umap_tot$layout)))
+  
   df_umap_tot$outlier[id_out] <- 'yes'
   df_umap_tot$outlier <- factor(df_umap_tot$outlier, levels = c('yes', 'no'))
   
@@ -265,5 +267,12 @@ if(length(id_out)>0){
 }else{
   print('no samples to be removed')
 }
+
+# save umap output
+write.table(df_umap_tot, 
+            file = sprintf('%s%s_corrPCs_%s_cluster%s_PGmethod_umap.txt', 
+                           outFold, type_data, type_input, type_cluster), 
+            col.names = T, row.names = F, sep = '\t', quote = F)
+
 
 
