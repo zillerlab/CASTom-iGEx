@@ -54,7 +54,9 @@ cluster_predict_evaluate_run.R
 - combine_outliers_cluster_run.R
 
 ### Clustering
-cluster_PGmethod_multipleCohorts_run.R
+cluster_PGmethod_corrPCs_multipleCohorts_run.R
 
+### Predict on external cohort
+cluster_PGmethod_corrPCs_predict_run.R
 
 
