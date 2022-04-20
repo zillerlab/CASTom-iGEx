@@ -12,17 +12,16 @@ suppressPackageStartupMessages(library(umap))
 suppressPackageStartupMessages(library(igraph))
 suppressPackageStartupMessages(library(Matrix))
 suppressPackageStartupMessages(library(SparseM))
-suppressPackageStartupMessages(library(SNFtool))
 suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(RColorBrewer))
 suppressPackageStartupMessages(library(pheatmap))
-suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(ggsci))
+suppressPackageStartupMessages(library(SNFtool))
 options(bitmapType = 'cairo', device = 'png')
 
 parser <- ArgumentParser(description="predict cluster probability for new samples")
 parser$add_argument("--sampleAnnNew_file", type = "character", help = "")
-parser$add_argument("--sampleAnn_file", type = "character", help = "")
+parser$add_argument("--name_cohort", type = "character", help = "")
 parser$add_argument("--type_cluster", type = "character",default = 'All', help = "All, Cases, Controls")
 parser$add_argument("--type_data", type = "character", help = "pathway or tscore")
 parser$add_argument("--inputFile", type = "character", help = "input files (scores)")
@@ -35,7 +34,7 @@ parser$add_argument("--outFold", type="character", help = "Output file [basename
 
 args <- parser$parse_args()
 inputFile <- args$inputFile
-sampleAnn_file <- args$sampleAnn_file
+name_cohort <- args$name_cohort
 sampleAnnNew_file <- args$sampleAnnNew_file
 clustFile <- args$clustFile
 functR <- args$functR
@@ -64,9 +63,16 @@ outFold <- args$outFold
 
 source(functR)
 
-sampleAnn <- read.table(sampleAnn_file, h=T, stringsAsFactors = F)
 sampleAnn_new <- read.table(sampleAnnNew_file, h=T, stringsAsFactors = F)
 name_cov <- setdiff(colnames(sampleAnn_new),c('Individual_ID', 'genoSample_ID', 'Dx', 'Sex', 'Age'))
+if(!is.null(name_cohort)){
+  sampleAnn_new$cohort <- name_cohort
+}
+
+# load model
+clust_res <- get(load(clustFile))
+cl <- clust_res$cl_best
+sampleAnn <- clust_res$sampleInfo
 
 if(type_cluster == 'Cases'){
   sampleAnn <- sampleAnn[sampleAnn$Dx == 1,]
@@ -81,13 +87,8 @@ if(type_cluster == 'Cases'){
   }
 }
 
-# load model
-clust_res <- get(load(clustFile))
-cl <- clust_res$cl_best
-common_samples <- intersect(cl$id, sampleAnn$Individual_ID)
-cl <- cl[match(common_samples, cl$id),]
-sampleAnn <- sampleAnn[match(common_samples, sampleAnn$Individual_ID),]
-sampleAnn_tot <- rbind(sampleAnn[, intersect(colnames(sampleAnn), colnames(sampleAnn_new))], sampleAnn_new[, intersect(colnames(sampleAnn), colnames(sampleAnn_new))])
+sampleAnn_tot <- rbind(sampleAnn[, intersect(colnames(sampleAnn), colnames(sampleAnn_new))], 
+                       sampleAnn_new[, intersect(colnames(sampleAnn), colnames(sampleAnn_new))])
 
 res_pval <- clust_res$res_pval
 if(type_data == 'tscore'){
@@ -149,6 +150,7 @@ if(type_input == 'zscaled'){
 
 data_tot <- rbind(clust_res$input_data, input_data)
 print(identical(rownames(data_tot), sampleAnn_tot$Individual_ID))
+
 #### project new data clustering ####
 # compute total ED
 ed_dist <-  dist2(as.matrix(data_tot),as.matrix(data_tot))
@@ -183,7 +185,8 @@ df_gr_mean$id <- df_gr_sd$id <- df_gr_cv$id <- colnames(input_data)
 output$gr_input <- list(mean = df_gr_mean, sd = df_gr_sd, cv = df_gr_cv)
 
 # save
-save(output, file = sprintf('%s%s_corrPCs_%s_predictCluster%s_PGmethod_HKmetric.RData',  outFold, type_data, type_input, type_cluster))
+save(output, file = sprintf('%s%s_corrPCs_%s_predictCluster%s_PGmethod_HKmetric.RData',  
+                            outFold, type_data, type_input, type_cluster))
 
 ### plot UMAP and project new samples ###
 n_comp_umap <- 2
@@ -200,7 +203,10 @@ custom.settings$transform_state <- seed_umap+10
 
 umap_res <- umap::umap(clust_res$input_data, custom.settings)
 
-df_old <- data.frame(component_1=umap_res$layout[,1], component_2=umap_res$layout[,2], gr = clust_res$cl_best$gr)
+df_old <- data.frame(component_1=umap_res$layout[,1], 
+                     component_2=umap_res$layout[,2],
+                     gr = clust_res$cl_best$gr)
+
 df_old$gr <- factor(df_old$gr)
 df_old$type <- 'model'
 # predict
@@ -211,7 +217,7 @@ df_new$gr <- factor(df_new$gr)
 df_new$type <- 'predict'
 df <- rbind(df_old, df_new)
 df$type <- factor(df$type, levels = c('predict', 'model'))
-P <- length(unique(df_new$gr))
+P <- length(unique(df_old$gr)) # new could be not complete in prediction
 gr_color <- pal_d3(palette = 'category20')(P)
 
 tot_pl <- ggplot(df, aes(x = component_1, y = component_2, color = gr, alpha = type))+
@@ -219,7 +225,7 @@ tot_pl <- ggplot(df, aes(x = component_1, y = component_2, color = gr, alpha = t
   scale_alpha_manual(values = c(1, 0.05))+
   scale_color_manual(values = gr_color)+
   theme_bw()+theme(legend.position = 'right')
-width_pl <- 4
+width_pl <- 4.5
 
 ggsave(filename = sprintf('%s%s_corrPCs_%s_predictCluster%s_PGmethod_HKmetric_umap.png',  outFold, type_data, type_input, type_cluster), width = width_pl, height = 4, plot = tot_pl, device = 'png')
 ggsave(filename = sprintf('%s%s_corrPCs_%s_predictCluster%s_PGmethod_HKmetric_umap.pdf',  outFold, type_data, type_input, type_cluster), width = width_pl, height = 4, plot = tot_pl, device = 'pdf')
