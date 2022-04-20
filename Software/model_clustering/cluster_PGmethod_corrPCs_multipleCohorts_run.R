@@ -310,7 +310,7 @@ for(i in 1:length(kNN_par)){
   id <- PG_cl[[i]]$cl$membership
   # test only for cohort and PCs (they are computed combining all cohorts)
   df <- cbind(data.frame(cl = id), 
-              cohort = sampleAnn[,colnames(sampleAnn) %in% c('cohort', name_cov)])
+              sampleAnn[,colnames(sampleAnn) %in% c('cohort', name_cov)])
   test_cov[[i]] <- data.frame(cov_id = colnames(df)[-(1)])
   test_cov[[i]]$test_type <- test_cov[[i]]$statistic <- test_cov[[i]]$pval <- NA
   for(j in 1:(ncol(df)-1)){
@@ -354,8 +354,10 @@ if(type_cluster == 'All'){
   }
 }
 
-output <- list(best_k = opt_k, cl_res = PG_cl, test_cov = test_cov, info_tune = info_hyperParam, feat = colnames(input_data), res_pval = res_pval,
-               cl_best = data.frame(id = sampleAnn$Individual_ID, gr = PG_cl[[which.max(info_hyperParam$DB_mean)]]$cl$membership))
+output <- list(best_k = opt_k, cl_res = PG_cl, test_cov = test_cov, 
+               info_tune = info_hyperParam, feat = colnames(input_data), res_pval = res_pval,
+               cl_best = data.frame(id = sampleAnn$Individual_ID, 
+                                    gr = PG_cl[[which.max(info_hyperParam$DB_mean)]]$cl$membership))
 output$Dx_perc <- list(perc = df_perc, test = df_perc_test)
 output$samples_id <- rownames(input_data)
 
@@ -398,6 +400,15 @@ output$umap <- df_umap
 save(output, file = sprintf('%s%s_corrPCs_%s_cluster%s_PGmethod_%smetric.RData', 
                             outFold, type_data, type_input, type_cluster, type_sim))
 
+# save reduced output:
+output_red <- list(cl_best = output$cl_best,
+                   samples_id = output$samples_id, 
+                   feat = output$feat, 
+                   test_cov = output$test_cov)
+
+save(output_red, file = sprintf('%s%s_corrPCs_%s_cluster%s_PGmethod_%smetric_minimal.RData', 
+                            outFold, type_data, type_input, type_cluster, type_sim))
+
 # group
 tot_pl <- ggplot(df_umap, aes(x = component_1, y = component_2, color = gr))+
   geom_point(size = 0.05, alpha = 0.8)+
@@ -409,7 +420,6 @@ width_pl <- 4.5
 ggsave(filename = sprintf('%s%s_corrPCs_%s_cluster%s_PGmethod_%smetric_umap.png', 
                           outFold, type_data, type_input, type_cluster, type_sim), 
        dpi=200, width = width_pl, height = 4, plot = tot_pl, device = 'png')
-
 
 
 

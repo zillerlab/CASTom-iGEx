@@ -162,10 +162,6 @@ for(c_id in 1:length(name_cohorts)){
   # remove sample that have NAs
   id_s <- rowSums(is.na(scoreMat[[c_id]])) == 0
   if(!all(id_s)){scoreMat[[c_id]] <- scoreMat[[c_id]][id_s,]}
-  # remove outliers
-  if(!is.null(rm_samples)){
-    scoreMat[[c_id]] <- scoreMat[[c_id]][!rownames(scoreMat[[c_id]]) %in%  rm_samples$Temp_ID, ]
-  }
   sampleAnn[[c_id]] <- sampleAnn[[c_id]][match(rownames(scoreMat[[c_id]]), sampleAnn[[c_id]]$Individual_ID), ]
   
   print(dim(scoreMat[[c_id]]))
