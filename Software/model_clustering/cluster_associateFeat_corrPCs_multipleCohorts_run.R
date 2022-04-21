@@ -25,6 +25,7 @@ parser <- ArgumentParser(description="Find relevant genes for a cluster comparis
 parser$add_argument("--sampleAnnFile", type = "character", nargs = '*', help = "file with samples to be used")
 parser$add_argument("--clusterFile", type = "character", help = "file with clustering structure")
 parser$add_argument("--split_tot", type = "integer", default = 0, help = "if 0 then inpuntFile load alone, otherwise splitted version")
+parser$add_argument("--name_cohorts", type = "character", nargs = '*',  help = "")
 parser$add_argument("--inputFold", type = "character", nargs = '*',  help = "Fold (for each tissue) to load data")
 parser$add_argument("--additional_name_file", type = "character",  help = "additinal string to lead data")
 parser$add_argument("--tissues", type = "character", nargs = '*', help = "tissues name")
@@ -43,6 +44,7 @@ parser$add_argument("--ncores", type = "integer", default = 5, help = "n, cores 
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
 args <- parser$parse_args()
+name_cohorts <- args$name_cohorts
 split_tot <- args$split_tot
 sampleAnnFile <- args$sampleAnnFile
 inputFold <- args$inputFold
@@ -129,7 +131,7 @@ for(c_id in 1:length(name_cohorts)){
   
   print(name_cohorts[c_id])
   
-  sampleAnn[[c_id]] <- read.table(sampleAnnFile[[c_id]], h = T, stringsAsFactors = F)
+  sampleAnn[[c_id]] <- read.table(sampleAnnFile[c_id], h = T, stringsAsFactors = F)
   if(type_cluster == 'Cases'){
     sampleAnn[[c_id]] <- sampleAnn[[c_id]][sampleAnn[[c_id]]$Dx == 1,]
   }else{
