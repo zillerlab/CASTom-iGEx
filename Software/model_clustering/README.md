@@ -59,4 +59,10 @@ cluster_PGmethod_corrPCs_multipleCohorts_run.R
 ### Predict on external cohort
 cluster_PGmethod_corrPCs_predict_run.R
 
+### associate clustering with molecular features (genes/pathwayScores):
+- cluster_associateFeat_corrPCs_multipleCohorts_run.R
+- filter_pathway_jaccard_sim_run.R (filter pathways based on overlap and min/max number of genes)
+- cluster_associatePath_corrPCs_multipleCohort_run.R (merge GO and Reactome)
+
+
 
