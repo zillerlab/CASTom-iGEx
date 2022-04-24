@@ -153,96 +153,103 @@ name_cov <- setdiff(colnames(sampleAnn_tot),
                     c('Individual_ID', 'genoSample_ID', 'Dx', 'Sex',
                       'Age', 'Temp_ID', 'cohort', 'cohort_id'))
 
+registerDoParallel(cores=min(c(ncores, length(tissues))))
+print(getDoParWorkers())
+
 # res <- list()
 # load score matrix, load pval matrix, rescale for p-value
-registerDoParallel(cores=min(ncores, length(tissues)))
 
 res <- foreach(id_t=1:length(tissues), .combine='comb', 
                .multicombine=TRUE, 
                .init=list(list(), list(), list()))%dopar%{
-                 
-                 #for(id_t in 1:length(tissues)){
-                 
-                  # load pval res
-                 res_pval <- get(load(pvalresFile[id_t]))
-                 if(type_data == 'tscore'){
-                   res_pval <- res_pval$tscore[[pval_id]]
-                 }else{
-                   if(type_data == 'path_Reactome'){
-                     res_pval <- res_pval$pathScore_reactome[[pval_id]]
-                   }else{
-                     if(type_data == 'path_GO'){
-                       res_pval <- res_pval$pathScore_GO[[pval_id]]
-                     }else{
-                       stop('unknown pathway called')
-                     }
-                   }
-                 }
-                 
-                 # recompute pvalue if ngenes_tscore > 1
-                 if(min_genes_path > 1 & grepl('path',type_data)){
-                   res_pval <- res_pval[res_pval$ngenes_tscore >= min_genes_path, ]
-                   res_pval[,id_pval+1] <- qvalue(res_pval[,id_pval])$qvalues
-                   res_pval[,id_pval+2] <- p.adjust(res_pval[,id_pval], method = 'BH')
-                 }
-                 
-                 #### load input matrix ####
-                 scoreMat <- list()
-                 for(c_id in 1:length(name_cohorts)){
-                   
-                   name_file <- paste0(inputFold[id_t], name_cohorts[c_id], additional_name_file)
-                   load_output <- load_input_matrix(name_file, 
-                                                    sampleAnn[[c_id]], 
-                                                    res_pval, 
-                                                    split_tot, 
-                                                    id_info)
-                   
-                   scoreMat[[c_id]] <- load_output$scoreMat
-                 }
-                 
-                 res_pval_t <- load_output$res_pval
-                 scoreMat_t <- do.call(rbind, scoreMat)
-                 # sampleAnn_t <- sampleAnn_tot[match(rownames(scoreMat_t),sampleAnn_tot$Temp_ID), ]
-                 
-                 if(!identical(res_pval_t[, id_info], colnames(scoreMat_t)) | 
-                    !identical(sampleAnn_tot$Temp_ID, rownames(scoreMat_t))){stop("wrong ordering")}
-                 
-                 input_data_notcorr <- scale(scoreMat_t)
-                 attr(input_data_notcorr, "scaled:scale") <- NULL
-                 attr(input_data_notcorr, "scaled:center") <- NULL
-                 
-                 # remove PCs1-10 for each genes
-                 input_data <- matrix(ncol = ncol(input_data_notcorr), nrow = nrow(input_data_notcorr))
-                 rownames(input_data) <- rownames(input_data_notcorr)
-                 colnames(input_data) <- colnames(input_data_notcorr)
-                 fmla <- as.formula(paste('g ~', paste0(name_cov, collapse = '+')))
-                 for(i in 1:ncol(input_data_notcorr)){
-                   # print(i)
-                   tmp <- data.frame(g = input_data_notcorr[,i], sampleAnn_tot[, name_cov])
-                   reg <- lm(fmla, data = tmp)
-                   input_data[,i] <- reg$residuals
-                 }
-                 print("corrected for PCs")
-                 
-                 print(identical(colnames(input_data), res_pval_t[, id_info]))
-                 print(identical(rownames(input_data), sampleAnn_tot$Individual_ID))
-                 
-                 scale_data_t <- input_data
-                 res_pval_t$tissue <- tissues[id_t]
-                 list(scoreMat_t, scale_data_t, res_pval_t)
-                 
-                 # res[[id_t]] <- list(scoreMat_t, scale_data_t, res_pval_t)
-                 
+
+#for(id_t in 1:length(tissues)){
+  print(tissues[id_t])
+  # load pval res
+  res_pval <- get(load(pvalresFile[id_t]))
+  if(type_data == 'tscore'){
+    res_pval <- res_pval$tscore[[pval_id]]
+  }else{
+    if(type_data == 'path_Reactome'){
+      res_pval <- res_pval$pathScore_reactome[[pval_id]]
+    }else{
+      if(type_data == 'path_GO'){
+        res_pval <- res_pval$pathScore_GO[[pval_id]]
+      }else{
+        stop('unknown pathway called')
+      }
+    }
+  }
+  
+  # recompute pvalue if ngenes_tscore > 1
+  if(min_genes_path > 1 & grepl('path',type_data)){
+    res_pval <- res_pval[res_pval$ngenes_tscore >= min_genes_path, ]
+    res_pval[,id_pval+1] <- qvalue(res_pval[,id_pval])$qvalues
+    res_pval[,id_pval+2] <- p.adjust(res_pval[,id_pval], method = 'BH')
+  }
+  
+  #### load input matrix ####
+  scoreMat <- list()
+  for(c_id in 1:length(name_cohorts)){
+    print(name_cohorts[c_id])
+    
+    name_file <- paste0(inputFold[id_t], name_cohorts[c_id], additional_name_file)
+    load_output <- load_input_matrix(name_file, 
+                                     sampleAnn[[c_id]], 
+                                     res_pval, 
+                                     split_tot, 
+                                     id_info)
+    
+    scoreMat[[c_id]] <- load_output$scoreMat
+  }
+  
+  res_pval_t <- load_output$res_pval
+  scoreMat_t <- do.call(rbind, scoreMat)
+  # sampleAnn_t <- sampleAnn_tot[match(rownames(scoreMat_t),sampleAnn_tot$Temp_ID), ]
+  
+  if(!identical(res_pval_t[, id_info], colnames(scoreMat_t)) | 
+     !identical(sampleAnn_tot$Temp_ID, rownames(scoreMat_t))){stop("wrong ordering")}
+  
+  input_data_notcorr <- scale(scoreMat_t)
+  attr(input_data_notcorr, "scaled:scale") <- NULL
+  attr(input_data_notcorr, "scaled:center") <- NULL
+  
+  # remove PCs1-10 for each genes
+  input_data <- matrix(ncol = ncol(input_data_notcorr), nrow = nrow(input_data_notcorr))
+  rownames(input_data) <- rownames(input_data_notcorr)
+  colnames(input_data) <- colnames(input_data_notcorr)
+  fmla <- as.formula(paste('g ~', paste0(name_cov, collapse = '+')))
+  for(i in 1:ncol(input_data_notcorr)){
+    # print(i)
+    tmp <- data.frame(g = input_data_notcorr[,i], sampleAnn_tot[, name_cov])
+    reg <- lm(fmla, data = tmp)
+    input_data[,i] <- reg$residuals
+  }
+  print("corrected for PCs")
+  
+  print(identical(colnames(input_data), res_pval_t[, id_info]))
+  print(identical(rownames(input_data), sampleAnn_tot$Individual_ID))
+  
+  scale_data_t <- input_data
+  res_pval_t$tissue <- tissues[id_t]
+  list(scoreMat_t, scale_data_t, res_pval_t)
+  
+  # res[[id_t]] <- list(scoreMat_t, scale_data_t, res_pval_t)
+  
 }
 
 scoreMat_t <- res[[1]]
 scale_data_t <- res[[2]]
 res_pval_t <- res[[3]]
 
+#scoreMat_t <- lapply(res, function(x) x[[1]])
+#scale_data_t <- lapply(res, function(x) x[[2]])
+#res_pval_t <- lapply(res, function(x) x[[3]])
+
 output <- list(inputData = scoreMat_t, scaleData = scale_data_t, 
                res_pval = res_pval_t, cl = cluster_output$cl_best, 
                tissues = tissues)
-
+rm(res)
 ##########################
 #### check covariates ####
 ##########################
@@ -303,10 +310,10 @@ output$test_cov <- test_cov
 #### check features (gene/path) ####
 ####################################
 
-registerDoParallel(cores=min(ncores, length(tissues)))
+#clust_doPar <- makeCluster(min(ncores, length(tissues)), type="MPI")
+#clusterEvalQ(clust_doPar, library(rstatix))
 
 test_feat_t <- foreach(id_t=1:length(tissues))%dopar%{
-  
   # for(id_t in 1:length(tissues)){
   test_feat <- vector(mode = 'list', length = length(gr_names))
   for(i in 1:length(gr_names)){
@@ -322,8 +329,7 @@ test_feat_t <- foreach(id_t=1:length(tissues))%dopar%{
     test_feat[[i]]$CI_low<- NA
     test_feat[[i]]$CI_up <- NA
     
-    # for(l in 1:ncol(scale_data_t[[id_t]])){
-    for(l in 1:10){
+    for(l in 1:ncol(scale_data_t[[id_t]])){
       # print(l) 
       tmp_data <- data.frame(f = scale_data_t[[id_t]][,l], g = gr_id)
       tmp <- as.data.frame(wilcox_test(f~g,data = tmp_data, detailed = T))
