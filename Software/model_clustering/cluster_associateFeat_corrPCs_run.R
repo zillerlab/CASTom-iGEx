@@ -62,22 +62,26 @@ ncores <- args$ncores
 outFold <- args$outFold
 
 ###################################################################################################################
-# tissues <- c('Liver', 'Adipose_Subcutaneous')
-# inputFile <- sprintf('OUTPUT_GTEx/predict_CAD/%s/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/predictedTscores_splitGenes', tissues)
-# split_tot <- 100
-# sampleAnnFile <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/covariateMatrix_CADHARD_All_phenoAssoc.txt'
-# clusterFile <- 'OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/update_corrPCs/tscore_corrPCs_zscaled_clusterCases_PGmethod_HKmetric.RData'
+# tissues <- read.table('OUTPUT_GTEx/Tissue_PGCgwas_red', h=F, stringsAsFactors = F)$V1
+# inputFile <- c('OUTPUT_CMC/predict_PGC/200kb/scz_boco_eur/devgeno0.01_testdevgeno0/predictedTscores.txt',
+#                sprintf('OUTPUT_GTEx/predict_PGC/%s/200kb/PGC_GWAS_bin1e-2/scz_boco_eur/devgeno0.01_testdevgeno0/predictedTscores.txt', tissues))
+# split_tot <- 0
+# sampleAnnFile <- 'INPUT_DATA/Covariates/scz_boco_eur.covariateMatrix_old.txt'
+# clusterFile <- 'OUTPUT_CMC/predict_PGC/200kb/scz_boco_eur/devgeno0.01_testdevgeno0/update_corrPCs/matchUKBB_filt0.1_tscore_corrPCs_zscaled_predictClusterCases_PGmethod_HKmetric.RData'
 # type_cluster <- 'Cases'
 # type_data <- 'tscore'
 # type_data_cluster <- 'tscore'
 # type_sim <- 'HK'
 # min_genes_path <- 2
 # pval_id <- 1
-# pvalresFile <- sprintf('OUTPUT_GTEx/predict_CAD/%s/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/pval_CAD_pheno_covCorr.RData', tissues)
+# pvalresFile <- c('OUTPUT_all/Meta_Analysis_SCZ/DLPC_CMC/pval_Dx_pheno_covCorr.RData',
+#                  sprintf('OUTPUT_all/Meta_Analysis_SCZ/%s/pval_Dx_pheno_covCorr.RData', tissues))
 # outFold <- 'OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/'
-# functR <- '/psycl/g/mpsziller/lucia/castom-igex/Software/model_clustering/clustering_functions.R'
+# functR <- '/home/luciat/castom-igex/Software/model_clustering/clustering_functions.R'
 # type_input <- 'zscaled'
-# geneInfoFile <- sprintf('OUTPUT_GTEx/train_GTEx/%s/200kb/CAD_GWAS_bin5e-2/resPrior_regEval_allchr.txt', tissues)
+# geneInfoFile <- c('OUTPUT_CMC/train_CMC/200kb/resPrior_regEval_allchr.txt',
+#                   sprintf('OUTPUT_GTEx/train_GTEx/%s/200kb/PGC_GWAS_bin1e-2/resPrior_regEval_allchr.txt', tissues))
+# tissues <- c('DLPC_CMC', tissues)
 ####################################################################################################################
 
 source(functR)
@@ -96,6 +100,17 @@ if(!'samples_id' %in% names(cluster_output)){
 }
 if(!'cl_best' %in% names(cluster_output)){
   cluster_output$cl_best <- cluster_output$cl_new
+}
+
+cl <-  cluster_output$cl_best$gr
+gr_names <- sort(unique(cl))
+
+if(any(table(cl) < 3)){
+  rm_gr <- names(which(table(cl) < 3))
+  cluster_output$cl_best <- cluster_output$cl_best[!cluster_output$cl_best$gr %in% rm_gr, ]
+  cluster_output$samples_id <- cluster_output$cl_best$id
+  cl <-  cluster_output$cl_best$gr
+  gr_names <- sort(unique(cl))
 }
 
 if(type_data == 'tscore'){
@@ -128,85 +143,87 @@ identical(sampleAnn$Individual_ID, cluster_output$samples_id)
 
 # load score matrix, load pval matrix, rescale for p-value
 registerDoParallel(cores=min(ncores, length(tissues)))
+print(getDoParWorkers())
+#res <- list()
 
 res <- foreach(id_t=1:length(tissues), .combine='comb', 
                .multicombine=TRUE, 
                .init=list(list(), list(), list()))%dopar%{
-
-# for(id_t in 1:length(tissues)){
-  
-  # load pval res
-  res_pval <- get(load(pvalresFile[id_t]))
-  if(type_data == 'tscore'){
-    res_pval <- res_pval$tscore[[pval_id]]
-  }else{
-    if(type_data == 'path_Reactome'){
-      res_pval <- res_pval$pathScore_reactome[[pval_id]]
-    }else{
-      if(type_data == 'path_GO'){
-        res_pval <- res_pval$pathScore_GO[[pval_id]]
-      }else{
-        stop('unknown pathway called')
-      }
-    }
-  }
-  
-  # recompute pvalue if ngenes_tscore > 1
-  if(min_genes_path > 1 & grepl('path',type_data)){
-    res_pval <- res_pval[res_pval$ngenes_tscore >= min_genes_path, ]
-    res_pval[,id_pval+1] <- qvalue(res_pval[,id_pval])$qvalues
-    res_pval[,id_pval+2] <- p.adjust(res_pval[,id_pval], method = 'BH')
-  }
-  
-  #### load input matrix ####
-  load_output <- load_input_matrix(inputFile = inputFile[id_t], 
-                                   sampleAnn = sampleAnn, 
-                                   res_pval = res_pval, 
-                                   split_tot = split_tot, 
-                                   id_info = id_info)
-  
-  scoreMat_t <- load_output$scoreMat
-  res_pval_t <- load_output$res_pval
-  
-  input_data_notcorr <- scale(scoreMat_t)
-  attr(input_data_notcorr, "scaled:scale") <- NULL
-  attr(input_data_notcorr, "scaled:center") <- NULL
-  
-  # remove PCs1-10 for each genes
-  input_data <- matrix(ncol = ncol(input_data_notcorr), nrow = nrow(input_data_notcorr))
-  rownames(input_data) <- rownames(input_data_notcorr)
-  colnames(input_data) <- colnames(input_data_notcorr)
-  fmla <- as.formula(paste('g ~', paste0(name_cov, collapse = '+')))
-  for(i in 1:ncol(input_data_notcorr)){
-    # print(i)
-    tmp <- data.frame(g = input_data_notcorr[,i], sampleAnn[, name_cov])
-    reg <- lm(fmla, data = tmp)
-    input_data[,i] <- reg$residuals
-  }
-  print("corrected for PCs")
-  
-  print(identical(colnames(input_data), res_pval_t[, id_info]))
-  print(identical(rownames(input_data), sampleAnn$Individual_ID))
-  
-  scale_data_t <- input_data
-  res_pval_t$tissue <- tissues[id_t]
-  
-  list(scoreMat_t, scale_data_t, res_pval_t)
-  
-}
+                 
+#                 for(id_t in 1:length(tissues)){
+                 print(tissues[id_t])
+                 # load pval res
+                 res_pval <- get(load(pvalresFile[id_t]))
+                 if(type_data == 'tscore'){
+                   res_pval <- res_pval$tscore[[pval_id]]
+                 }else{
+                   if(type_data == 'path_Reactome'){
+                     res_pval <- res_pval$pathScore_reactome[[pval_id]]
+                   }else{
+                     if(type_data == 'path_GO'){
+                       res_pval <- res_pval$pathScore_GO[[pval_id]]
+                     }else{
+                       stop('unknown pathway called')
+                     }
+                   }
+                 }
+                 
+                 # recompute pvalue if ngenes_tscore > 1
+                 if(min_genes_path > 1 & grepl('path',type_data)){
+                   res_pval <- res_pval[res_pval$ngenes_tscore >= min_genes_path, ]
+                   res_pval[,id_pval+1] <- qvalue(res_pval[,id_pval])$qvalues
+                   res_pval[,id_pval+2] <- p.adjust(res_pval[,id_pval], method = 'BH')
+                 }
+                 
+                 #### load input matrix ####
+                 load_output <- load_input_matrix(inputFile = inputFile[id_t], 
+                                                  sampleAnn = sampleAnn, 
+                                                  res_pval = res_pval, 
+                                                  split_tot = split_tot, 
+                                                  id_info = id_info)
+                 
+                 scoreMat_t <- load_output$scoreMat
+                 res_pval_t <- load_output$res_pval
+                 
+                 input_data_notcorr <- scale(scoreMat_t)
+                 attr(input_data_notcorr, "scaled:scale") <- NULL
+                 attr(input_data_notcorr, "scaled:center") <- NULL
+                 
+                 # remove PCs1-10 for each genes
+                 input_data <- matrix(ncol = ncol(input_data_notcorr), nrow = nrow(input_data_notcorr))
+                 rownames(input_data) <- rownames(input_data_notcorr)
+                 colnames(input_data) <- colnames(input_data_notcorr)
+                 fmla <- as.formula(paste('g ~', paste0(name_cov, collapse = '+')))
+                 for(i in 1:ncol(input_data_notcorr)){
+                   # print(i)
+                   tmp <- data.frame(g = input_data_notcorr[,i], sampleAnn[, name_cov])
+                   reg <- lm(fmla, data = tmp)
+                   input_data[,i] <- reg$residuals
+                 }
+                 print("corrected for PCs")
+                 
+                 print(identical(colnames(input_data), res_pval_t[, id_info]))
+                 print(identical(rownames(input_data), sampleAnn$Individual_ID))
+                 
+                 scale_data_t <- input_data
+                 res_pval_t$tissue <- tissues[id_t]
+                 # res[[id_t]] <- list(scoreMat_t, scale_data_t, res_pval_t)
+                 list(scoreMat_t, scale_data_t, res_pval_t)
+                 
+               }
 
 scoreMat_t <- res[[1]]
 scale_data_t <- res[[2]]
 res_pval_t <- res[[3]]
 
-output <- list(inputData = scoreMat_t, scaleData = scale_data_t, res_pval = res_pval_t, cl = cluster_output$cl_best, tissues = tissues)
+output <- list(inputData = scoreMat_t, scaleData = scale_data_t, 
+               res_pval = res_pval_t, cl = cluster_output$cl_best, 
+               tissues = tissues)
 
 ##########################
 #### check covariates ####
 ##########################
 
-cl <-  cluster_output$cl_best$gr
-gr_names <- sort(unique(cl))
 P <- length(gr_names)
 output$covDat <- covDat
 
@@ -262,8 +279,8 @@ output$test_cov <- test_cov
 registerDoParallel(cores=min(ncores, length(tissues)))
 
 test_feat_t <- foreach(id_t=1:length(tissues))%dopar%{
-                              
-# for(id_t in 1:length(tissues)){
+  
+  # for(id_t in 1:length(tissues)){
   test_feat <- vector(mode = 'list', length = length(gr_names))
   for(i in 1:length(gr_names)){
     
@@ -413,3 +430,4 @@ if(type_data == 'tscore'){
               col.names = T, row.names = F, sep = '\t', quote = F)
   
 }
+

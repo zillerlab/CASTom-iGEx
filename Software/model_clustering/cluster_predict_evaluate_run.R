@@ -18,6 +18,7 @@ suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(MASS))
 suppressPackageStartupMessages(library(lmtest))
 suppressPackageStartupMessages(library(ggsci))
+suppressPackageStartupMessages(library(tidyverse))
 options(bitmapType = 'cairo', device = 'png')
 
 parser <- ArgumentParser(description="predict cluster probability for new samples")
@@ -53,19 +54,19 @@ geneLoci_summ <- args$geneLoci_summ
 outFold <- args$outFold
 
 ###################################################################################################################
-# functR <- '/psycl/g/mpsziller/lucia/castom-igex/Software/model_clustering/clustering_functions.R'
-# cohort_name = c(paste0('German', 1:5), c('MG', 'WTCCC', 'LURIC', 'CG'))
+# functR <- '/home/luciat/castom-igex/Software/model_clustering/clustering_functions.R'
+# cohort_name = 'scz_boco_eur'
 # type_data <- 'tscore_corrPCs'
 # type_input <- 'zscaled'
 # type_cluster <- 'Cases'
-# clustFile_new <- sprintf('OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/%s/devgeno0.01_testdevgeno0/CAD_HARD_clustering/update_corrPCs/tscore_corrPCs_zscaled_predictClusterCases_PGmethod_HKmetric.RData', cohort_name)
-# clustFile <- 'OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/update_corrPCs/tscore_corrPCs_zscaled_clusterCases_PGmethod_HKmetric.RData'
-# tissues_name <- 'Liver'
+# clustFile_new <- 'OUTPUT_CMC/predict_PGC/200kb/scz_boco_eur/devgeno0.01_testdevgeno0/update_corrPCs/matchUKBB_filt0.1_tscore_corrPCs_zscaled_predictClusterCases_PGmethod_HKmetric.RData'
+# clustFile <- 'OUTPUT_CMC/predict_PGC/200kb/Meta_Analysis_SCZ/devgeno0.01_testdevgeno0/update_corrPCs/matchUKBB_filt0.1_tscore_corrPCs_zscaled_clusterCases_PGmethod_HKmetric.RData'
+# tissues_name <- 'DLPC_CMC'
 # phenoNew_file <-  ''
 # outFold <- ''
-# featRel_model <- 'OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/update_corrPCs/tscoreOriginal_corrPCs_tscoreClusterCases_featAssociation.RData'
-# featRel_predict <- sprintf('OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/%s/devgeno0.01_testdevgeno0/CAD_HARD_clustering/update_corrPCs/tscoreOriginal_corrPCs_tscoreClusterCases_featAssociation.RData', cohort_name)
-# geneLoci_summ <- 'OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/update_corrPCs/tscore_corrPCs_zscaled_clusterCases_summary_geneLoci_allTissues.txt'
+# featRel_model <- 'OUTPUT_CMC/predict_PGC/200kb/Meta_Analysis_SCZ/devgeno0.01_testdevgeno0/update_corrPCs/matchUKBB_filt0.1_tscoreOriginal_corrPCs_tscoreClusterCases_featAssociation.RData'
+# featRel_predict <- 'OUTPUT_CMC/predict_PGC/200kb/scz_boco_eur/devgeno0.01_testdevgeno0/update_corrPCs/matchUKBB_filt0.1_tscoreOriginal_corrPCs_tscoreClusterCases_featAssociation.RData'
+# geneLoci_summ <- 'OUTPUT_CMC/predict_PGC/200kb/Meta_Analysis_SCZ/devgeno0.01_testdevgeno0/update_corrPCs/matchUKBB_filt0.1_tscore_corrPCs_zscaled_clusterCases_summary_geneLoci_allTissues.txt'
 # #################################################################################################################
 
 source(functR)
@@ -106,30 +107,38 @@ df_perc_loci <- list()
 
 for(i in 1:length(cohort_name)){
   print(cohort_name[i])
-  tmp <- get(load(clustFile_new[i])) 
+  tmp <- get(load(clustFile_new[i]))
+  
+  if(any(table(tmp$cl_new$gr) < 3)){
+    rm_gr <- names(which(table(tmp$cl_new$gr) < 3))
+    tmp$cl_new <- tmp$cl_new[!tmp$cl_new$gr %in% rm_gr, ]
+    tmp$samples_id <- tmp$cl_new$id
+    tmp$sampleAnn <- tmp$sampleAnn[match(tmp$samples_id, tmp$sampleAnn$Individual_ID),]
+    tmp$data_new <- tmp$data_new[match(tmp$samples_id, rownames(tmp$data_new)),]
+  }
   
   sampleAnn_new[[i]] <- tmp$sampleAnn
-
   clust_new[[i]] <- tmp$cl_new
   data_new[[i]] <- tmp$data_new
   mean_gr_new[[i]] <- tmp$gr_input$mean
   
   df_new[[i]] <- data.frame(dataset = rep(cohort_name[i], P), type = rep('predict', P), gr = df$gr)
   df_new[[i]]$n <- sapply(sort(unique(clust$gr)), function(x) length(which(clust_new[[i]]$gr == x)))
-  df_new[[i]]$percentage <- sapply(sort(unique(clust$gr)), function(x) length(which(clust_new[[i]]$gr == x))/nrow(clust_new[[i]]))
+  df_new[[i]]$percentage <- sapply(sort(unique(clust$gr)), 
+                                   function(x) length(which(clust_new[[i]]$gr == x))/nrow(clust_new[[i]]))
   
-  df_corr[[i]] <- data.frame(dataset = rep(cohort_name[i], P), 
-                             gr = df$gr, corr = rep(NA, P), 
-                             pvalue = rep(NA, P), CI_low= rep(NA, P),  CI_up= rep(NA, P))
-  df_corr[[i]] <- df_corr[[i]][df_corr[[i]]$gr %in% colnames(mean_gr_new[[i]]), ]
-  df_corr[[i]]$corr <- sapply(df$gr[df$gr %in% colnames(mean_gr_new[[i]])], 
-                              function(x) cor.test(mean_gr_new[[i]][,x], mean_gr[,x])$estimate)
-  df_corr[[i]]$pvalue <- sapply(df$gr[df$gr %in% colnames(mean_gr_new[[i]])], 
-                                function(x) cor.test(mean_gr_new[[i]][,x], mean_gr[,x])$p.value)
-  df_corr[[i]]$CI_low <- sapply(df$gr[df$gr %in% colnames(mean_gr_new[[i]])], 
-                                function(x) cor.test(mean_gr_new[[i]][,x], mean_gr[,x])$conf.int[1])
-  df_corr[[i]]$CI_up <- sapply(df$gr[df$gr %in% colnames(mean_gr_new[[i]])], 
-                               function(x) cor.test(mean_gr_new[[i]][,x], mean_gr[,x])$conf.int[2])
+  # df_corr[[i]] <- data.frame(dataset = rep(cohort_name[i], P), 
+  #                            gr = df$gr, corr = rep(NA, P), 
+  #                            pvalue = rep(NA, P), CI_low= rep(NA, P),  CI_up= rep(NA, P))
+  # df_corr[[i]] <- df_corr[[i]][df_corr[[i]]$gr %in% colnames(mean_gr_new[[i]]), ]
+  # df_corr[[i]]$corr <- sapply(df$gr[df$gr %in% colnames(mean_gr_new[[i]])], 
+  #                             function(x) cor.test(mean_gr_new[[i]][,x], mean_gr[,x])$estimate)
+  # df_corr[[i]]$pvalue <- sapply(df$gr[df$gr %in% colnames(mean_gr_new[[i]])], 
+  #                               function(x) cor.test(mean_gr_new[[i]][,x], mean_gr[,x])$p.value)
+  # df_corr[[i]]$CI_low <- sapply(df$gr[df$gr %in% colnames(mean_gr_new[[i]])], 
+  #                               function(x) cor.test(mean_gr_new[[i]][,x], mean_gr[,x])$conf.int[1])
+  # df_corr[[i]]$CI_up <- sapply(df$gr[df$gr %in% colnames(mean_gr_new[[i]])], 
+  #                              function(x) cor.test(mean_gr_new[[i]][,x], mean_gr[,x])$conf.int[2])
   
   if(!is.null(featRel_predict)){
     
@@ -144,12 +153,16 @@ for(i in 1:length(cohort_name)){
     comp_new <- sort(unique(featRel_new$comp))
     # compute spearman correlation
     df_corr_rel[[i]] <- data.frame(dataset = rep(cohort_name[i], P), 
-                                   gr = df$gr, corr = rep(NA, P), pvalue = rep(NA, P))
-    df_corr_rel[[i]] <- df_corr_rel[[i]][df_corr_rel[[i]]$gr %in% colnames(mean_gr_new[[i]]), ]
+                                   gr = df$gr, corr = rep(NA, P), pvalue = rep(NA, P), 
+                                   nfeat = NA)
+    df_corr_rel[[i]] <- df_corr_rel[[i]][df_corr_rel[[i]]$gr %in% df_new[[i]]$gr[df_new[[i]]$percentage> 0], ]
     df_corr_rel[[i]]$corr <- sapply(comp[comp %in% comp_new], 
-                                    function(x) cor.test(featRel_new$estimates[featRel_new$comp == x], tmp$estimates[tmp$comp == x], method = 'spearman')$estimate)
+                                    function(x) cor.test(featRel_new$estimates[featRel_new$comp == x], 
+                                                         tmp$estimates[tmp$comp == x], method = 'spearman')$estimate)
     df_corr_rel[[i]]$pvalue <- sapply(comp[comp %in% comp_new], 
-                                      function(x) cor.test(featRel_new$estimates[featRel_new$comp == x], tmp$estimates[tmp$comp == x], method = 'spearman')$p.value)
+                                      function(x) cor.test(featRel_new$estimates[featRel_new$comp == x], 
+                                                           tmp$estimates[tmp$comp == x], method = 'spearman')$p.value)
+    df_corr_rel[[i]]$nfeat <- unname(table(tmp$comp))
   }
   
   if(!is.null(geneLoci_summ)){
@@ -236,7 +249,7 @@ pl <- ggplot(df_corr_tot, aes(x = dataset, y = corr, fill = gr, group = gr))+
   coord_cartesian(ylim = c(ifelse(min(df_corr_tot$corr)<0.6, 0, 0.6),1)) +
   ylab(sprintf('correlation mean scores\nwith %s (model)', model_name))+ 
   theme(legend.position = 'right', axis.title.x = element_blank(), 
-  axis.text.x = element_text(angle = 45, hjust = 1))+
+        axis.text.x = element_text(angle = 45, hjust = 1))+
   scale_fill_manual(values = gr_color)
 # scale_shape_manual(values=c(1, 19))+
 ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationMeanGroups_prediction_model%s.png', outFold, type_data, type_input, type_cluster, model_name), width = w, height = 3.5, plot = pl, device = 'png')
@@ -256,7 +269,7 @@ if(!is.null(featRel_model)){
     ylab(sprintf('Spearman corr. from WMW estimates\nwith %s (model)', model_name))+ 
     theme(legend.position = 'right', axis.title.x = element_blank(),
           axis.text.x = element_text(angle = 45, hjust = 1))+
-    scale_fill_manual(values = gr_color)
+    scale_fill_manual(values = gr_color[levels(df_corr_rel$gr) %in% as.character(df_corr_rel$gr)])
   # scale_shape_manual(values=c(1, 19))+
   ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationSpear_WMWestSign_Groups_prediction_model%s.png', outFold, type_data, type_input, type_cluster, model_name), width = w, height = 3.5, plot = pl, device = 'png')
   ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationSpear_WMWestSign_Groups_prediction_model%s.pdf', outFold, type_data, type_input, type_cluster, model_name), width = w, height = 3.5, plot = pl, device = 'pdf')
@@ -492,5 +505,4 @@ if(any(sapply(phenoNew_file, file.exists))){
   output <- list(bin_reg = tot_bin_reg, cl = clust_new, phenoDat = phenoDat_new, phenoInfo = phenoInfo_new)
   save(output, file = sprintf('%s%s_%s_cluster%s_phenoAssociationGLM_prediction_model%s.RData', outFold, type_data, type_input, type_cluster, model_name))
 }
-
 
