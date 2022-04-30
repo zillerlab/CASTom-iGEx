@@ -67,7 +67,7 @@ outFold <- args$outFold
 # featRel_model <- 'OUTPUT_CMC/predict_PGC/200kb/Meta_Analysis_SCZ/devgeno0.01_testdevgeno0/update_corrPCs/matchUKBB_filt0.1_tscoreOriginal_corrPCs_tscoreClusterCases_featAssociation.RData'
 # featRel_predict <- 'OUTPUT_CMC/predict_PGC/200kb/scz_boco_eur/devgeno0.01_testdevgeno0/update_corrPCs/matchUKBB_filt0.1_tscoreOriginal_corrPCs_tscoreClusterCases_featAssociation.RData'
 # geneLoci_summ <- 'OUTPUT_CMC/predict_PGC/200kb/Meta_Analysis_SCZ/devgeno0.01_testdevgeno0/update_corrPCs/matchUKBB_filt0.1_tscore_corrPCs_zscaled_clusterCases_summary_geneLoci_allTissues.txt'
-# #################################################################################################################
+#################################################################################################################
 
 source(functR)
 
@@ -239,21 +239,21 @@ ggsave(filename = sprintf('%s%s_%s_cluster%s_percentageGropus_prediction_model%s
 ggsave(filename = sprintf('%s%s_%s_cluster%s_percentageGropus_prediction_model%s.pdf', outFold, type_data, type_input, type_cluster, model_name), width = w, height = 3.5, plot = pl, device = 'pdf')
 
 ###
-df_corr_tot$dataset <-factor(df_corr_tot$dataset, levels = cohort_name)
-df_corr_tot$gr <- factor(df_corr_tot$gr, levels = paste0('gr_', sort(unique(clust$gr))))
-
-pl <- ggplot(df_corr_tot, aes(x = dataset, y = corr, fill = gr, group = gr))+
-  geom_bar(stat = 'identity',width = 0.7, color = 'black', alpha = 0.7, position = position_dodge())+
-  geom_errorbar(aes(ymin=CI_low, ymax=CI_up), width=.2, position=position_dodge(.75))+
-  theme_bw()+ 
-  coord_cartesian(ylim = c(ifelse(min(df_corr_tot$corr)<0.6, 0, 0.6),1)) +
-  ylab(sprintf('correlation mean scores\nwith %s (model)', model_name))+ 
-  theme(legend.position = 'right', axis.title.x = element_blank(), 
-        axis.text.x = element_text(angle = 45, hjust = 1))+
-  scale_fill_manual(values = gr_color)
-# scale_shape_manual(values=c(1, 19))+
-ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationMeanGroups_prediction_model%s.png', outFold, type_data, type_input, type_cluster, model_name), width = w, height = 3.5, plot = pl, device = 'png')
-ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationMeanGroups_prediction_model%s.pdf', outFold, type_data, type_input, type_cluster, model_name), width = w, height = 3.5, plot = pl, device = 'pdf')
+# df_corr_tot$dataset <-factor(df_corr_tot$dataset, levels = cohort_name)
+# df_corr_tot$gr <- factor(df_corr_tot$gr, levels = paste0('gr_', sort(unique(clust$gr))))
+# 
+# pl <- ggplot(df_corr_tot, aes(x = dataset, y = corr, fill = gr, group = gr))+
+#   geom_bar(stat = 'identity',width = 0.7, color = 'black', alpha = 0.7, position = position_dodge())+
+#   geom_errorbar(aes(ymin=CI_low, ymax=CI_up), width=.2, position=position_dodge(.75))+
+#   theme_bw()+ 
+#   coord_cartesian(ylim = c(ifelse(min(df_corr_tot$corr)<0.6, 0, 0.6),1)) +
+#   ylab(sprintf('correlation mean scores\nwith %s (model)', model_name))+ 
+#   theme(legend.position = 'right', axis.title.x = element_blank(), 
+#         axis.text.x = element_text(angle = 45, hjust = 1))+
+#   scale_fill_manual(values = gr_color)
+# # scale_shape_manual(values=c(1, 19))+
+# ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationMeanGroups_prediction_model%s.png', outFold, type_data, type_input, type_cluster, model_name), width = w, height = 3.5, plot = pl, device = 'png')
+# ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationMeanGroups_prediction_model%s.pdf', outFold, type_data, type_input, type_cluster, model_name), width = w, height = 3.5, plot = pl, device = 'pdf')
 
 ###
 if(!is.null(featRel_model)){
