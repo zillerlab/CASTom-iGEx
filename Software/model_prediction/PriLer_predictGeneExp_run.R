@@ -13,6 +13,7 @@ parser$add_argument("--genoDat_file", type = "character", help = "directory with
 parser$add_argument("--covDat_file", type = "character", help = "directory with sample info for new genotype data, keep only this samples")
 parser$add_argument("--InfoFold", type = "character", help = "path to fold with additional info (e.g. snp-gene dist matrix)")
 parser$add_argument("--cis_thres", type = "integer", default = 200000, help = "window (in bp) to compute distance from gene and snps [default %(default)s]")
+parser$add_argument("--no_zip", type="logical",default = F, help = "if true final results not zipped")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
 args <- parser$parse_args()
@@ -21,6 +22,7 @@ genoDat_file <- args$genoDat_file
 covDat_file <- args$covDat_file
 cis_thres <- args$cis_thres
 InfoFold <- args$InfoFold
+no_zip <- args$no_zip
 outFold <- args$outFold
 
 #####################################################################
@@ -84,7 +86,7 @@ pExp_fin <- cbind(geneInfo, pExp)
 
 # save
 write.table(file = sprintf('%spredictedExpression.txt', outFold), x = pExp_fin, col.names = T, row.names = F, sep  = '\t', quote  = F)
-system(paste("gzip",sprintf('%spredictedExpression.txt', outFold)))
+if(!no_zip){system(paste("gzip",sprintf('%spredictedExpression.txt', outFold)))}
 
 
 
