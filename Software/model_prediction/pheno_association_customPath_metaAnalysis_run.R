@@ -1,4 +1,4 @@
-#### code written by Lucia Trastulla, e-mail: lucia_trastulla@psych.mpg.de ####
+#!/usr/bin/env Rscript
 # meta - analysis across different cohorts
 
 options(stringsAsFactors=F)
@@ -12,12 +12,12 @@ parser$add_argument("--pathwayStructure_file", type = "character", help = "custo
 parser$add_argument("--res_cohorts", type="character", nargs = '*', help = "RData file with the phenotype association results")
 parser$add_argument("--phenoDatFile_cohorts", type="character", nargs = '*', help = "file with the phenotype info for each cohort")
 parser$add_argument("--name_cohort", type="character", nargs = '*', help = "names of the cohorts")
-parser$add_argument("--cov_corr", type = "logical",default = F,  help = "if T column in covDat_file are use to correct association (excluded Dx and IDs)")
+parser$add_argument("--cov_corr", type = "logical",default = F,  help = "if T column in covDat_file are use to correct association (excluded Dx and IDs) [default %(default)s]")
 parser$add_argument("--phenoName", type="character",  help = "phenotype group name considered")
-parser$add_argument("--thr_het", type = "double", default = 0.001, help = "threshold for random effect model")
-parser$add_argument("--lambda_pi1", type = "double", default = 0.5, help = "lambda parameter to compute pi1")
+parser$add_argument("--thr_het", type = "double", default = 0.001, help = "threshold for random effect model [default %(default)s]")
+parser$add_argument("--lambda_pi1", type = "double", default = 0.5, help = "lambda parameter to compute pi1 [default %(default)s]")
 parser$add_argument("--geneSetName", type = "character", help = "name pathway custom")
-parser$add_argument("--abs_tscore", type = "logical", default = F, help = "if true also the pathway using absolute values of tscore is computed")
+parser$add_argument("--abs_tscore", type = "logical", default = F, help = "if true also the pathway using absolute values of tscore is computed [default %(default)s]")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
 args <- parser$parse_args()

@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 # load specific pathway object and compute pathway score for them
 
 options(stringsAsFactors=F)
@@ -12,7 +13,7 @@ parser$add_argument("--pathwayStruct_file", type = "character", help = "List of 
 parser$add_argument("--tscore_file", type = "character", help = "already computed tscore")
 parser$add_argument("--sampleAnn_file", type = "character", help = "file with sample info for new genotype data, must contain Dx column (0 controls 1 cases)")
 parser$add_argument("--geneSetName", type = "character", help = "name pathway custom")
-parser$add_argument("--abs_tscore", type = "logical", default = F, help = "if true also the pathway using absolute values of tscore is computed")
+parser$add_argument("--abs_tscore", type = "logical", default = F, help = "if T also the pathway using absolute values of tscore is computed [default %(default)s]")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
 args <- parser$parse_args()

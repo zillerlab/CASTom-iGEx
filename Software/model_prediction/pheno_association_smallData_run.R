@@ -1,4 +1,4 @@
-#### code written by Lucia Trastulla, e-mail: lucia_trastulla@psych.mpg.de ####
+#!/usr/bin/env Rscript
 # v3: save also beta, se, zcores, phenotype already processed
 
 options(stringsAsFactors=F)
@@ -19,14 +19,14 @@ parser <- ArgumentParser(description="Gene and Pathwasy association analysis")
 parser$add_argument("--reactome_file", type = "character", help = "reactome pathway anntation (.gmt)")
 parser$add_argument("--GOterms_file", type = "character", help = "GO pathway anntation (.RData)")
 parser$add_argument("--sampleAnn_file", type = "character", help = "file with sample info for new genotype data")
-parser$add_argument("--thr_reliableGenes", type = "double", nargs = '*', default = c(0.01, 0), help = "threshold for reliable genes: dev_geno_tot and test_dev_geno")
+parser$add_argument("--thr_reliableGenes", type = "double", nargs = '*', default = c(0.01, 0), help = "threshold for reliable genes: dev_geno_tot and test_dev_geno  [default %(default)s]")
 parser$add_argument("--inputFold", type = "character", help = "Folde with results from pathway analysis")
 parser$add_argument("--covDat_file", type = "character", nargs = '*', help = "file with sample info for new genotype data, associated to phenoDat_file")
 parser$add_argument("--phenoDat_file", type = "character", nargs = '*', help = "file(s) with individual_ID to match and phenotype to test association, associated to covDat_file")
 parser$add_argument("--names_file", type = "character", nargs = '*', help = "for each couple of covDat/phenoDat file, associated name")
 parser$add_argument("--phenoAnn_file", type = "character", help = "file with phenotype annotation (used to determine the type of regression)")
-parser$add_argument("--cov_corr", type = "logical", default = T,  help = "if T column in covDat_file are use to correct association (excluded Dx and IDs)")
-parser$add_argument("--ncores", type = "integer", default = 0, help = "number of cores for the parallelization (over genes, if zero not parallelized)")
+parser$add_argument("--cov_corr", type = "logical", default = T,  help = "if T column in covDat_file are use to correct association (excluded Dx and IDs)  [default %(default)s]")
+parser$add_argument("--ncores", type = "integer", default = 0, help = "number of cores for the parallelization (over genes, if zero not parallelized)  [default %(default)s]")
 parser$add_argument("--geneAnn_file", type = "character", help = "file with gene info from train, to be filtered")
 parser$add_argument("--functR", type = "character", help = "Rscript with functions to be used")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")

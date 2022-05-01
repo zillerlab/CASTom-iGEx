@@ -1,4 +1,4 @@
-#### code written by Lucia Trastulla, e-mail: lucia_trastulla@psych.mpg.de ####
+#!/usr/bin/env Rscript
 # save beta, se, zcores, phenotype already processed, use custom pathway structure
 
 options(stringsAsFactors=F)
@@ -21,13 +21,13 @@ parser$add_argument("--covDat_file", type = "character", nargs = '*', help = "fi
 parser$add_argument("--phenoDat_file", type = "character", nargs = '*', help = "file(s) with individual_ID to match and phenotype to test association, associated to covDat_file")
 parser$add_argument("--names_file", type = "character", nargs = '*', help = "for each couple of covDat/phenoDat file, associated name")
 parser$add_argument("--phenoAnn_file", type = "character", help = "file with phenotype annotation (used to determine the type of regression)")
-parser$add_argument("--cov_corr", type = "logical",default = F,  help = "if T column in covDat_file are use to correct association (excluded Dx and IDs)")
-parser$add_argument("--ncores", type = "integer", default = 0, help = "number of cores for the parallelization (over genes, if zero not parallelized)")
+parser$add_argument("--cov_corr", type = "logical",default = F,  help = "if T column in covDat_file are use to correct association (excluded Dx and IDs) [default %(default)s]")
+parser$add_argument("--ncores", type = "integer", default = 0, help = "number of cores for the parallelization (over genes, if zero not parallelized) [default %(default)s]")
 parser$add_argument("--geneAnn_file", type = "character", help = "file with gene info from train, to be filtered")
 parser$add_argument("--functR", type = "character", help = "Rscript with functions to be used")
 parser$add_argument("--geneSetName", type = "character", help = "name pathway custom")
-parser$add_argument("--abs_tscore", type = "logical", default = F, help = "if true also the pathway using absolute values of tscore is computed")
-parser$add_argument("--not_rm_samepath", type = "logical", default = F, help = "if true do not remove common pathways")
+parser$add_argument("--abs_tscore", type = "logical", default = F, help = "if true also the pathway using absolute values of tscore is computed [default %(default)s]")
+parser$add_argument("--not_rm_samepath", type = "logical", default = F, help = "if true do not remove common pathways [default %(default)s]")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
 args <- parser$parse_args()
