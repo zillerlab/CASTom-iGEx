@@ -13,12 +13,14 @@ suppressPackageStartupMessages(library(ggpubr))
 suppressPackageStartupMessages(library(pheatmap))
 suppressPackageStartupMessages(library(RColorBrewer))
 suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(rlist))
 options(bitmapType = 'cairo', device = 'png')
 
 
 parser <- ArgumentParser(description="clustering using PG method")
 parser$add_argument("--PCs_input_file", type = "character", default = 'NA', help = "file to be loaded")
 parser$add_argument("--sampleAnnFile", type = "character", help = "file with samples to be used")
+parser$add_argument("--sampleOutFile", type = "character", default = NULL, help = "file with samples to be excluded")
 parser$add_argument("--type_cluster", type = "character", default = 'All', help = "All, Cases, Controls")
 parser$add_argument("--functR", type = "character", help = "functions to be used")
 parser$add_argument("--type_sim", type = "character", default = 'HK', help = "HK or ED")
@@ -28,6 +30,7 @@ parser$add_argument("--outFold", type="character", help = "Output file [basename
 args <- parser$parse_args()
 PCs_input_file <- args$PCs_input_file
 covDatFile <- args$covDatFile
+sampleOutFile <- args$sampleOutFile
 sampleAnnFile <- args$sampleAnnFile
 type_cluster <- args$type_cluster
 functR <- args$functR
@@ -36,12 +39,13 @@ kNN_par <- args$kNN_par
 outFold <- args$outFold
 
 #####################################################################################################################
-# PCs_input_file <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/PCs1-40_UKBB.RData'
-# sampleAnnFile <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/covariateMatrix_CADHARD_All.txt'
+# PCs_input_file <- 'INPUT_DATA/Covariates/C1-20_PGC_clustering.RData'
+# sampleAnnFile <- 'INPUT_DATA/Covariates/samples_PCs_clustering.txt'
+# sampleOutFile  <- 'OUTPUT_all/matchUKBB_samples_to_remove_outliersUMAP_tscore_corrPCs_zscaled_clusterCases.txt'
 # type_cluster <- 'Cases'
 # type_sim <- 'HK'
-# outFold <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/'
-# functR <- '/psycl/g/mpsziller/lucia/castom-igex/Software/model_clustering/clustering_functions.R'
+# outFold <- 'INPUT_DATA/Covariates/'
+# functR <- '/home/luciat/castom-igex/Software/model_clustering/clustering_functions.R'
 # kNN_par <- 30
 #####################################################################################################################
 
@@ -58,6 +62,11 @@ if(type_cluster == 'Cases'){
     if(type_cluster != 'All')
       stop('type_cluster must be either Cases or Controls or All')
   }
+}
+
+if(!is.null(sampleOutFile)){
+  rm_samples <- read.table(sampleOutFile, header = T, stringsAsFactors = F, sep = '\t')
+  sampleAnn <- sampleAnn[!sampleAnn$Individual_ID %in% rm_samples$Individual_ID,]
 }
 
 PCs_input <- get(load(PCs_input_file))
@@ -80,11 +89,13 @@ PG_cl <- vector(mode = 'list', length = length(kNN_par))
 test_cov <- vector(mode = 'list', length = length(kNN_par))
 for(i in 1:length(kNN_par)){
   
-  PG_cl[[i]] <- fun_cl(kNN = kNN_par[i], score = input_data, type_Dx = type_cluster, sample_info=sampleAnn, euclDist=ed_dist)
+  PG_cl[[i]] <- fun_cl(kNN = kNN_par[i], score = input_data, type_Dx = type_cluster, 
+                       sample_info=sampleAnn, euclDist=ed_dist)
   print(PG_cl[[i]]$info)
   # cluster depend on PC?
   id <- PG_cl[[i]]$cl$membership
-  df <- cbind(data.frame(cl = id), sampleAnn[,! colnames(sampleAnn) %in% c('Individual_ID', 'Dx', 'genoSample_ID')])
+  df <- cbind(data.frame(cl = id), sampleAnn[,! colnames(sampleAnn) %in% 
+                                               c('Individual_ID', 'Dx', 'genoSample_ID', 'cohort_id')])
   test_cov[[i]] <- data.frame(cov_id = colnames(df)[-(1)])
   test_cov[[i]]$test_type <- test_cov[[i]]$statistic <- test_cov[[i]]$pval <- NA
   for(j in 1:(ncol(df)-1)){
@@ -190,66 +201,61 @@ if(type_cluster == 'All'){
   tot_pl <- ggarrange(plotlist = list(tot_pl, pl_extra), ncol = 2, nrow = 1, align='h')
   width_pl <- 8
 }
-ggsave(filename = sprintf('%sPCs_cluster%s_PGmethod_%smetric_umap.png', outFold, type_cluster, type_sim), width = width_pl, height = 4, plot = tot_pl, device = 'png')
-ggsave(filename = sprintf('%sPCs_cluster%s_PGmethod_%smetric_umap.pdf', outFold, type_cluster, type_sim), width = width_pl, height = 4, plot = tot_pl, device = 'pdf')
+ggsave(filename = sprintf('%sPCs_cluster%s_PGmethod_%smetric_umap.png', outFold, type_cluster, type_sim),
+       width = width_pl, height = 4, plot = tot_pl, device = 'png')
 
-df$Gender <- factor(sampleAnn$Gender)
-df$Batch <- factor(sampleAnn$Batch)
-df$Array <- factor(sampleAnn$Array)
-df$Centre <- factor(sampleAnn$initial_assessment_centre)
-df$Age <- sampleAnn$Age
-
-myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
-sc <- scale_colour_gradientn(colours = myPalette(100), limits=c(min(sampleAnn$Age), max(sampleAnn$Age)))
-
-pl1 <- ggplot(df, aes(x = component_1, y=component_2, color = Gender))+
-  geom_point(size = 0.03)+ggtitle('Gender')+
-  theme_bw()+theme(legend.position = 'none')
-pl2 <- ggplot(df, aes(x = component_1, y=component_2, color = Batch))+
-  geom_point(size = 0.03)+ggtitle('Batch')+
-  theme_bw()+theme(legend.position = 'none')
-pl3 <- ggplot(df, aes(x = component_1, y=component_2, color = Array))+
-  geom_point(size = 0.03)+ggtitle('Array')+
-  theme_bw()+theme(legend.position = 'none')
-pl4 <- ggplot(df, aes(x = component_1, y=component_2, color = Centre))+
-  geom_point(size = 0.03)+ggtitle('Centre')+
-  theme_bw()+theme(legend.position = 'none')
-pl5 <- ggplot(df, aes(x = component_1, y=component_2, color = Age))+
-  geom_point(size = 0.03)+ggtitle('Age')+sc+
-  theme_bw()+theme(legend.position = 'right')
-tot_pl <- ggarrange(plotlist = list(pl1, pl2, pl3, pl4, pl5), ncol = 3, nrow = 2)
-ggsave(filename = sprintf('%sPCs_cluster%s_PGmethod_%smetric_umap_cov.png', outFold, type_cluster, type_sim), width = 12, height = 8, plot = tot_pl, device = 'png')
-ggsave(filename = sprintf('%sPCs_cluster%s_PGmethod_%smetric_umap_cov.pdf', outFold, type_cluster, type_sim), width = 12, height = 8, plot = tot_pl, device = 'pdf')
-
-### plot: heatmap
-file_name <- sprintf('%sPCs_cluster%s_PGmethod_%smetric', outFold, type_cluster, type_sim)
-tmp <- test_diff[test_diff$pval_corr < 0.05,]
-if(nrow(tmp)>50){
-  keep_feat <- test_diff[order(test_diff$pval)[1:50],]
-}else{
-  keep_feat <- tmp
+pl <- list()
+if('Gender' %in% colnames(sampleAnn)){
+  df$Gender <- factor(sampleAnn$Gender)
+  tmp <- ggplot(df, aes(x = component_1, y=component_2, color = Gender))+
+    geom_point(size = 0.03)+ggtitle('Gender')+
+    theme_bw()+theme(legend.position = 'none')
+  pl <- list.append(pl, tmp)
+}
+if('Batch' %in% colnames(sampleAnn)){
+  df$Batch <- factor(sampleAnn$Batch)
+  tmp <- ggplot(df, aes(x = component_1, y=component_2, color = Batch))+
+    geom_point(size = 0.03)+ggtitle('Batch')+
+    theme_bw()+theme(legend.position = 'none')
+  pl <- list.append(pl, tmp)
+}
+if('Array' %in% colnames(sampleAnn)){
+  df$Array <- factor(sampleAnn$Array)
+  tmp <- ggplot(df, aes(x = component_1, y=component_2, color = Array))+
+    geom_point(size = 0.03)+ggtitle('Array')+
+    theme_bw()+theme(legend.position = 'none')
+  pl <- list.append(pl, tmp)
+}
+if('Centre' %in% colnames(sampleAnn)){
+  df$Centre <- factor(sampleAnn$Centre)
+  tmp <- ggplot(df, aes(x = component_1, y=component_2, color = Centre))+
+    geom_point(size = 0.03)+ggtitle('Centre')+
+    theme_bw()+theme(legend.position = 'none')
+  pl <- list.append(pl, tmp)
+}
+if('Age' %in% colnames(sampleAnn)){
+  df$Age <- sampleAnn$Centre
+  myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
+  sc <- scale_colour_gradientn(colours = myPalette(100), 
+                               limits=c(min(sampleAnn$Age), max(sampleAnn$Age)))
+  tmp <- ggplot(df, aes(x = component_1, y=component_2, color = Age))+
+    geom_point(size = 0.03)+ggtitle('Age')+sc+
+    theme_bw()+theme(legend.position = 'right')
+  pl <- list.append(pl, tmp)
+}
+if('cohort' %in% colnames(sampleAnn)){
+  df$cohort <- factor(sampleAnn$cohort)
+  tmp <- ggplot(df, aes(x = component_1, y=component_2, color = cohort))+
+    geom_point(size = 0.03)+ggtitle('Cohort')+
+    theme_bw()+theme(legend.position = 'right')
+  pl <- list.append(pl, tmp)
 }
 
-pheat_pl(mat = input_data[,keep_feat$id], type_mat = 'PCs', cl = output$cl_best, height_pl = 7, width_pl = 5, 
-         outFile = paste0(file_name, '_heatmap'))
+ncol_pl <- floor(length(pl)/2)
+nrow_pl <- floor(length(pl)/ncol_pl)
 
-
-# mat <- output$gr_input$cv[output$gr_input$cv$id %in%  keep_feat$id, ]
-# width_pl <- 7
-# if(type_data == 'path_GO'){
-#   mat$id <- res_pval$path[match(mat$id, res_pval[, id_info])]
-#   width_pl <- 9
-#   print(str(mat))
-# }
-# if(type_data == 'path_Reactome'){
-#   width_pl <- 9
-# }
-# 
-# # remove duplicated
-# mat <- mat[!duplicated(mat$id),]
-# mat$tissue <- tissues_name
-# 
-# pheat_pl_gr(mat, type_mat = type_data, height_pl = 7, width_pl = width_pl, color_df = color_tissues, outFile = paste0(file_name, '_heatmap_gr'))
-
+tot_pl <- ggarrange(plotlist = pl, ncol = ncol_pl, nrow = nrow_pl)
+ggsave(filename = sprintf('%sPCs_cluster%s_PGmethod_%smetric_umap_cov.png', outFold, type_cluster, type_sim),
+       width = 4*ncol_pl, height = 4*nrow_pl, plot = tot_pl, device = 'png')
 
 

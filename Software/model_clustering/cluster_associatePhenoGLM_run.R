@@ -47,26 +47,27 @@ rescale_pheno <- args$rescale_pheno
 outFold <- args$outFold
 
 ####################################################################################################################
-# sampleAnnFile <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/covariateMatrix_CADHARD_All_phenoAssoc_withMedication.txt'
-# phenoDatFile <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/phenotypeMatrix_CADHARD_All_phenoAssoc_withMedication.txt'
-# phenoDescFile <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/phenotypeDescription_withMedication.txt'
-# clusterFile <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/PCs_clusterCases_PGmethod_HKmetric.RData'
+# phenoDatFile <- 'OUTPUT_CMC/predict_PGC/200kb/Meta_Analysis_SCZ/devgeno0.01_testdevgeno0/update_corrPCs/matchUKBB_tscore_corr2Thr0.1_risk_score_relatedPhenotypes.txt.gz'
+# phenoDescFile <- '/home/luciat/UKBB_SCZrelated/phenotypeDescription_rsSCZ.txt'
+# sampleAnnFile <- 'INPUT_DATA/Covariates/PCs_cluster/samples_PCs_clustering.txt'
+# clusterFile <- 'OUTPUT_CMC/predict_PGC/200kb/Meta_Analysis_SCZ/devgeno0.01_testdevgeno0/update_corrPCs/matchUKBB_tscore_corrPCs_zscaled_clusterCases_PGmethod_HKmetric_minimal.RData'
 # type_cluster <- 'Cases'
-# type_data <- 'PCs'
+# type_data <- 'tscore_corrPCs_'
 # type_sim <- 'HK'
-# outFold <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/'
-# functR <- '/psycl/g/mpsziller/lucia/priler_project/Software/model_clustering/clustering_functions.R'
-# type_input <- 'original'
-# rescale_pheno = T
+# outFold <- './'
+# functR <- '/home/luciat/castom-igex/Software/model_clustering/clustering_functions.R'
+# type_input <- 'zscaled'
 ###################################################################################################################
 
 source(functR)
 
-phenoDat <- fread(phenoDatFile, h=T, stringsAsFactor = F, data.table = F)
+if(substr(phenoDatFile, nchar(phenoDatFile)-2, nchar(phenoDatFile)) == '.gz'){
+  phenoDat <- read.table(gzfile(phenoDatFile), h=T, stringsAsFactor = F, check.names = F)
+}else{
+  phenoDat <- fread(phenoDatFile, h=T, stringsAsFactor = F, data.table = F)
+}
 sampleAnn <- read.table(sampleAnnFile, h=T, stringsAsFactors = F, check.names = F)
 cluster_output <- get(load(clusterFile))
-
-sampleAnn <- read.table(sampleAnnFile, h=T, stringsAsFactors = F, check.names = F)
 
 if(type_cluster == 'Cases'){
   sampleAnn <- sampleAnn[sampleAnn$Dx == 1,]
@@ -79,7 +80,12 @@ if(type_cluster == 'Cases'){
   }
 }
 
-identical(sampleAnn$Individual_ID, cluster_output$samples_id)
+if(!identical(sampleAnn$Individual_ID, cluster_output$samples_id)){
+  print('match sample and cluster sample order')
+  common_samples <- intersect(cluster_output$cl_best$id, sampleAnn$Individual_ID)
+  sampleAnn <- sampleAnn[match(common_samples, sampleAnn$Individual_ID),]
+  cluster_output$cl_best <- cluster_output$cl_best[match(common_samples, cluster_output$cl_best$id),]
+}
 
 phenoDat <- phenoDat[match(sampleAnn$Individual_ID, phenoDat$Individual_ID),]
 phenoDat <- phenoDat[, -1, drop = F]
@@ -125,14 +131,21 @@ output <- list(phenoDat = phenoDat, phenoInfo = phenoInfo, cl = cluster_output$c
 #######################################
 #### binary regression (gi vs gj) #####
 #######################################
+
 gr_names <- sort(unique(cl))
 P <- length(gr_names)
-covDat <- sampleAnn[, !colnames(sampleAnn) %in% c('Individual_ID', 'genoSample_ID', 'Dx')]
+covDat <- sampleAnn[, !colnames(sampleAnn) %in% c('Individual_ID', 'genoSample_ID', 'Dx', 
+                                                  'cohort', 'cohort_id')]
 if(type_data == 'PCs'){
-  covDat <- covDat[, !colnames(covDat) %in% c(paste0('PC', 1:10), paste0('C', 1:10))]
+  covDat <- covDat[, !colnames(covDat) %in% c(paste0('PC', 1:10), paste0('C', 1:20))]
 }
-fmla  <- as.formula(paste('pheno~gr_id+', paste0(colnames(covDat), collapse = '+')))
-output$covDat = covDat
+output$covDat <- covDat
+
+if(ncol(covDat) > 0){
+  fmla  <- as.formula(paste('pheno~gr_id+', paste0(colnames(covDat), collapse = '+')))
+}else{
+  fmla  <- as.formula('pheno~gr_id')
+}
 
 bin_reg <- vector(mode = 'list', length = length(gr_names)-1)
 for(i in 1:(length(gr_names)-1)){
@@ -141,7 +154,9 @@ for(i in 1:(length(gr_names)-1)){
   
   # j vs all
   pheno_case_tmp <- lapply(gr_names[i:length(gr_names)], function(x) phenoDat[cl == x,,drop = F])
-  covDat_tmp <- lapply(gr_names[i:length(gr_names)], function(x) covDat[cl == x,,drop = F])
+  if(ncol(covDat) > 0){
+    covDat_tmp <- lapply(gr_names[i:length(gr_names)], function(x) covDat[cl == x,,drop = F])
+  }
   bin_reg[[i]] <-  vector(mode = 'list', length = length(pheno_case_tmp)-1)
   
   for(j in 2:length(pheno_case_tmp)){
@@ -173,12 +188,18 @@ for(i in 1:(length(gr_names)-1)){
         new <- new[, !colnames(new) %in% id_rm, drop = F]
       }
     }
-
-    new_cov <- rbind(covDat_tmp[[1]], covDat_tmp[[j]])
+    
+    if(ncol(covDat) > 0){new_cov <- rbind(covDat_tmp[[1]], covDat_tmp[[j]])}
     res_glm <- matrix(nrow = ncol(new), ncol = 7)
     for(l in 1:ncol(new)){
       type_pheno <- phenoInfo$transformed_type[paste0('p',phenoInfo$pheno_id) == colnames(new)[l]]
-      tmp_dat <- cbind(data.frame(pheno = new[, l], gr_id = gr_id), new_cov)
+      
+      if(ncol(covDat) > 0){
+        tmp_dat <- cbind(data.frame(pheno = new[, l], gr_id = gr_id), new_cov)  
+      }else{
+        tmp_dat <- data.frame(pheno = new[, l], gr_id = gr_id)
+      }
+      
       res_glm[l,] <- compute_reg_endopheno(mat = tmp_dat, fmla = fmla, type_pheno = type_pheno)
     }
     colnames(res_glm) <- c('beta', 'se_beta', 'z', 'pvalue', 'OR_or_Beta', 'CI_low', 'CI_up')
@@ -213,12 +234,6 @@ output <- list(phenoDat = phenoDat, phenoInfo = phenoInfo, cl = cluster_output$c
 #### binary regression (gi vs all) #####
 ########################################
 
-gr_names <- sort(unique(cl))
-P <- length(gr_names)
-covDat <- sampleAnn[, !colnames(sampleAnn) %in% c('Individual_ID', 'genoSample_ID', 'Dx')]
-fmla  <- as.formula(paste('pheno~gr_id+', paste0(colnames(covDat), collapse = '+')))
-output$covDat = covDat
-
 bin_reg <- vector(mode = 'list', length = length(gr_names))
 for(i in 1:length(gr_names)){
   
@@ -226,8 +241,10 @@ for(i in 1:length(gr_names)){
   
   # j vs all
   pheno_case_tmp <- list(phenoDat[cl == gr_names[i],, drop = F], phenoDat[cl != gr_names[i],, drop = F])
-  covDat_tmp <- list(covDat[cl == gr_names[i],,drop = F], covDat[cl != gr_names[i],,drop = F]) 
   
+  if(ncol(covDat) > 0){
+    covDat_tmp <- list(covDat[cl == gr_names[i],,drop = F], covDat[cl != gr_names[i],,drop = F]) 
+  }
   new <- do.call(rbind, pheno_case_tmp)
   colnames(new) <- paste0('p', colnames(new))
   gr_id <- factor(c(rep(1, nrow(pheno_case_tmp[[1]])), rep(0, nrow(pheno_case_tmp[[2]]))))
@@ -245,22 +262,26 @@ for(i in 1:length(gr_names)){
   }
   # remove phenotype categorical ordinal with less than 10 base 
   # class in each pairwise group (or viceversa)
-     
+  
   id_o <- intersect(colnames(new),
-                      paste0('p',phenoInfo$pheno_id[phenoInfo$transformed_type %in% c('CAT_ORD')]))
+                    paste0('p',phenoInfo$pheno_id[phenoInfo$transformed_type %in% c('CAT_ORD')]))
   if(length(id_o)>0){
     id_rm <- remove_pheno_ordinal(pheno_df = new[, id_o, drop = F], group = gr_id, thr = 10)
     if(length(id_rm)>0){
       new <- new[, !colnames(new) %in% id_rm, drop = F]
     }
   }
-
-  new_cov <- do.call(rbind, covDat_tmp)
+  
+  if(ncol(covDat) > 0){new_cov <- do.call(rbind, covDat_tmp)}
   res_glm <- matrix(nrow = ncol(new), ncol = 7)
   for(l in 1:ncol(new)){
     print(l)  
     type_pheno <- phenoInfo$transformed_type[paste0('p',phenoInfo$pheno_id) == colnames(new)[l]]
-    tmp_dat <- cbind(data.frame(pheno = new[, l], gr_id = gr_id), new_cov)
+    if(ncol(covDat) > 0){
+      tmp_dat <- cbind(data.frame(pheno = new[, l], gr_id = gr_id), new_cov)
+    }else{
+      tmp_dat <- data.frame(pheno = new[, l], gr_id = gr_id)
+    }
     res_glm[l,] <- compute_reg_endopheno(mat = tmp_dat, fmla = fmla, type_pheno = type_pheno)
   }
   
@@ -284,6 +305,6 @@ tot_bin_reg$pval_corr_overall <-  p.adjust(tot_bin_reg$pvalue, method = 'BY')
 write.table(x = tot_bin_reg, sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation_GLM.txt', outFold, type_data, type_input, type_cluster, type_sim), col.names = T, row.names = F, sep = '\t', quote = F)
 
 output$bin_reg = tot_bin_reg
-
 save(output, file = sprintf('%s%s_%s_cluster%s_PGmethod_%smetric_phenoAssociation_GLM.RData', outFold, type_data, type_input, type_cluster, type_sim))
+
 
