@@ -64,5 +64,9 @@ cluster_PGmethod_corrPCs_predict_run.R
 - filter_pathway_jaccard_sim_run.R (filter pathways based on overlap and min/max number of genes)
 - cluster_associatePath_corrPCs_multipleCohort_run.R (merge GO and Reactome)
 
+### compute gene-RS 
+- compute_risk_score_corrPCs_multipleCohorts_run.R (across all cohort together)
+- cluster_associatePhenoGLM_run.R (evaluate group differences)
+
 
 
