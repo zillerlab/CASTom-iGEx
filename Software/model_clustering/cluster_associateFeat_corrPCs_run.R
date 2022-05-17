@@ -337,6 +337,8 @@ if(type_data == 'tscore'){
     
     tmp_feat <- output$test_feat[[id_t]]
     tmp_feat <- tmp_feat[tmp_feat$pval_corr <= pvalcorr_thr,]
+    ## remove Y_RNA if any (repeated in different locations of the genome)
+    #tmp_feat <- tmp_feat[!tmp_feat$feat %in% c('Y_RNA'),]
     tmp_info <- geneInfo_t[[id_t]][geneInfo_t[[id_t]]$external_gene_name %in% tmp_feat$feat, ] 
     tmp_info$Zstat <- output$res_pval[[id_t]][match(tmp_info$ensembl_gene_id,output$res_pval[[id_t]]$ensembl_gene_id),id_pval-1]
     # divide per chr
@@ -402,7 +404,10 @@ if(type_data == 'tscore'){
   
   # all tissues
   tmp_feat <- test_feat_tot[test_feat_tot$pval_corr <= pvalcorr_thr,]
-  tmp_info <- geneInfo_tot[geneInfo_tot$external_gene_name %in% tmp_feat$feat, ] 
+  # # remove Y_RNA if any (repeated in different locations of the genome)
+  # tmp_feat <- tmp_feat[!tmp_feat$feat %in% c('Y_RNA'),]
+
+  tmp_info <- geneInfo_tot[geneInfo_tot$new_id %in% tmp_feat$new_id, ] 
   tmp_info$Zstat <- res_pval_tot[match(tmp_info$new_id,res_pval_tot$new_id),id_pval-1]
   
   # divide per chr
