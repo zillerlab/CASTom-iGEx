@@ -15,7 +15,6 @@ parser$add_argument("--InfoFold", type = "character", help = "path to fold with 
 parser$add_argument("--cis_thres", type = "integer", default = 200000, help = "window (in bp) to compute distance from gene and snps [default %(default)s]")
 parser$add_argument("--no_zip", type="logical",default = F, help = "if true final results not zipped [default %(default)s]")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
-parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 parser$add_argument("--genoInfo_model_file", type="character", help = "directory with genotype info data to use for the prediction")
 parser$add_argument("--genoInfo_file", type="character", help = "directory with genotype info data from the model, MUST match the trained model")
 
