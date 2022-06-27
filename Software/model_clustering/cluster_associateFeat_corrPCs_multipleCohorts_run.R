@@ -437,7 +437,8 @@ if(type_data == 'tscore'){
   
   # all tissues
   tmp_feat <- test_feat_tot[test_feat_tot$pval_corr <= pvalcorr_thr,]
-  tmp_info <- geneInfo_tot[geneInfo_tot$external_gene_name %in% tmp_feat$feat, ] 
+  # tmp_info <- geneInfo_tot[geneInfo_tot$external_gene_name %in% tmp_feat$feat, ]
+  tmp_info <- geneInfo_tot[geneInfo_tot$new_id %in% tmp_feat$new_id, ]  
   tmp_info$Zstat <- res_pval_tot[match(tmp_info$new_id,res_pval_tot$new_id),id_pval-1]
   
   # divide per chr
