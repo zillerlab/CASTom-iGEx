@@ -140,7 +140,8 @@ if(sqcorr_thr < 1){
   element_rm <- clumping_features(res_pval = tmp, id_info = id_info, 
                                   corr_feat = corr_feat, 
                                   id_pval = id_geno_summ, 
-                                  corr_thr = sqrt(sqcorr_thr))
+                                  corr_thr = sqrt(sqcorr_thr), 
+                                  decr_order = T)
   
   scoreMat <- scoreMat[, match(common_feat, colnames(scoreMat))] 
   input_data_notcorr <- scoreMat[, !colnames(scoreMat) %in% element_rm]
