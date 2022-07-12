@@ -91,10 +91,11 @@ load_input_matrix <- function(inputFile, sampleAnn, res_pval, split_tot, id_info
 }
 
 ## clumping ##
-clumping_features <- function(res_pval, id_info, corr_feat, id_pval, corr_thr){
-
+clumping_features <- function(res_pval, id_info, corr_feat, id_pval, corr_thr, decr_order = F){
+  
   feat_info <- res_pval[,c(id_info, id_pval)]
-  feat_info <- feat_info[order(feat_info[,2], decreasing = F), ]
+  feat_info <- feat_info[order(feat_info[,2], decreasing = decr_order), ]
+  
   corr_feat <- corr_feat[match(feat_info[,1], rownames(corr_feat)), 
                          match(feat_info[,1], colnames(corr_feat))]
   element_rm <- c()
@@ -105,7 +106,11 @@ clumping_features <- function(res_pval, id_info, corr_feat, id_pval, corr_thr){
     
     id <- which(abs(corr_feat[,list_feat[1]])>corr_thr)
     if(length(id)>1){
-      element_rm <- c(element_rm, names(id)[-which.max(feat_info[match(names(id),feat_info[,1]), 2])])
+      if(!decr_order){
+        element_rm <- c(element_rm, names(id)[-which.min(feat_info[match(names(id),feat_info[,1]), 2])])
+      }else{
+        element_rm <- c(element_rm, names(id)[-which.max(feat_info[match(names(id),feat_info[,1]), 2])])
+      }
     }
     list_feat <- list_feat[!list_feat %in% names(id)]
     # print(length(list_feat))
