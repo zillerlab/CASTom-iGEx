@@ -165,7 +165,8 @@ if(sqcorr_thr < 1){
   element_rm <- clumping_features(res_pval = tmp, id_info = id_info, 
                                   corr_feat = corr_feat, 
                                   id_pval = id_geno_summ, 
-                                  corr_thr = sqrt(sqcorr_thr))
+                                  corr_thr = sqrt(sqcorr_thr), 
+                                  decr_order = T)
   
   scoreMat_tot <- scoreMat_tot[, match(common_feat, colnames(scoreMat_tot))] 
   input_data_notcorr <- scoreMat_tot[, !colnames(scoreMat_tot) %in% element_rm]
