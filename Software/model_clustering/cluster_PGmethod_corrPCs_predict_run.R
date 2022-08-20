@@ -18,7 +18,8 @@ suppressPackageStartupMessages(library(SNFtool))
 options(bitmapType = 'cairo', device = 'png')
 
 parser <- ArgumentParser(description="predict cluster probability for new samples")
-parser$add_argument("--sampleAnnNew_file", type = "character", help = "")
+parser$add_argument("--sampleAnnNew_file", type = "character", help = "sample annotation file new data")
+parser$add_argument("--sampleAnn_file", type = "character", default = NULL, help = "sample annotation file model data")
 parser$add_argument("--name_cohort", type = "character", help = "")
 parser$add_argument("--type_cluster", type = "character",default = 'All', help = "All, Cases, Controls")
 parser$add_argument("--type_data", type = "character", help = "pathway or tscore")
@@ -33,6 +34,7 @@ parser$add_argument("--outFold", type="character", help = "Output file [basename
 args <- parser$parse_args()
 inputFile <- args$inputFile
 name_cohort <- args$name_cohort
+sampleAnn_file <- args$sampleAnn_file
 sampleAnnNew_file <- args$sampleAnnNew_file
 clustFile <- args$clustFile
 functR <- args$functR
@@ -46,18 +48,18 @@ outFold <- args$outFold
 
 ###################################################################################################################
 # sampleAnn_file <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/covariateMatrix_CADHARD_All.txt'
-# sampleAnnNew_file <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/INPUT_DATA_GTEx/CAD/Covariates/CG/covariateMatrix.txt'
+# sampleAnnNew_file <- 'Results/PriLer/SHIP-TREND_gPC_SHIP_2022_27_withSex.txt'
 # functR <- '/psycl/g/mpsziller/lucia/castom-igex/Software/model_clustering/clustering_functions.R'
 # type_data <- 'tscore'
 # type_input <- 'zscaled'
 # type_cluster <- 'Cases'
 # clustFile <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/update_corrPCs/tscore_corrPCs_zscaled_clusterCases_PGmethod_HKmetric.RData'
-# outFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/CG/devgeno0.01_testdevgeno0/CAD_HARD_clustering/update_corrPCs/'
+# outFold <- 'Results/PriLer/Liver/'
 # tissues_name <- 'Liver'
-# color_file <- '/psycl/g/mpsziller/lucia/castom-igex/Figures/color_tissues.txt'
 # split_tot = 0
-# inputFile <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/CG/devgeno0.01_testdevgeno0/predictedTscores.txt'
-# ###################################################################################################################
+# inputFile <- 'Results/PriLer/Liver/predictedTscores.txt'
+# name_cohort <- 'SHIP-TREND'
+###################################################################################################################
 
 source(functR)
 
@@ -70,7 +72,12 @@ if(!is.null(name_cohort)){
 # load model
 clust_res <- get(load(clustFile))
 cl <- clust_res$cl_best
-sampleAnn <- clust_res$sampleInfo
+if(is.null(sampleAnn_file)){
+  sampleAnn <- clust_res$sampleInfo # not always available
+}else{
+  sampleAnn <- read.table(sampleAnn_file, h=T, stringsAsFactors = F)
+  sampleAnn <- sampleAnn[match(clust_res$samples_id, sampleAnn$Individual_ID),]
+}
 
 if(type_cluster == 'Cases'){
   sampleAnn <- sampleAnn[sampleAnn$Dx == 1,]
@@ -90,8 +97,6 @@ if(type_cluster == 'Cases'){
   }
 }
 
-sampleAnn_tot <- rbind(sampleAnn[, intersect(colnames(sampleAnn), colnames(sampleAnn_new))], 
-                       sampleAnn_new[, intersect(colnames(sampleAnn), colnames(sampleAnn_new))])
 
 res_pval <- clust_res$res_pval
 if(type_data == 'tscore'){
@@ -124,6 +129,10 @@ load_output <- load_input_matrix(inputFile = inputFile,
 
 scoreMat <- load_output$scoreMat
 sampleAnn_new <- load_output$sampleAnn
+
+# unique sample df
+sampleAnn_tot <- rbind(sampleAnn[, intersect(colnames(sampleAnn), colnames(sampleAnn_new))], 
+                       sampleAnn_new[, intersect(colnames(sampleAnn), colnames(sampleAnn_new))])
 
 print(identical(colnames(scoreMat), res_pval[, id_info]))
 
@@ -165,7 +174,11 @@ res_pred <- project_clust_PGmethod_HKsim(kNN = clust_res$best_k, score = data_to
 gr_id <- colnames(res_pred$probability)[-(1:2)]
 gr_id <- as.numeric(sapply(gr_id, function(x) strsplit(x, split='gr_')[[1]][2]))
 cl_new <- data.frame(id = res_pred$probability$Individiual_ID, gr = gr_id[apply(res_pred$probability[, -(1:2)], 1, function(x) which.max(x))])
-output <- list(probability = res_pred$probability, tot_W_sNN = res_pred$tot_W_sNN, sampleAnn = sampleAnn_new, data_new = input_data, cl_new = cl_new, res_pval=res_pval)
+output <- list(probability = res_pred$probability, 
+               tot_W_sNN = res_pred$tot_W_sNN, 
+               sampleAnn = sampleAnn_new, 
+               data_new = input_data, 
+               cl_new = cl_new, res_pval=res_pval)
 
 # compute mean for each gr
 test_diff <- clust_res$test_diff_gr
@@ -232,5 +245,6 @@ width_pl <- 4.5
 
 ggsave(filename = sprintf('%s%s_corrPCs_%s_predictCluster%s_PGmethod_HKmetric_umap.png',  outFold, type_data, type_input, type_cluster), width = width_pl, height = 4, plot = tot_pl, device = 'png')
 ggsave(filename = sprintf('%s%s_corrPCs_%s_predictCluster%s_PGmethod_HKmetric_umap.pdf',  outFold, type_data, type_input, type_cluster), width = width_pl, height = 4, plot = tot_pl, device = 'pdf')
+
 
 
