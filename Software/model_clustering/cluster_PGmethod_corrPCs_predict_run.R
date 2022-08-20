@@ -64,7 +64,7 @@ outFold <- args$outFold
 source(functR)
 
 sampleAnn_new <- read.table(sampleAnnNew_file, h=T, stringsAsFactors = F)
-name_cov <- setdiff(colnames(sampleAnn_new),c('Individual_ID', 'genoSample_ID', 'Dx', 'Sex', 'Age'))
+name_cov <- setdiff(colnames(sampleAnn_new),c('Individual_ID', 'genoSample_ID', 'Dx', 'Sex', 'Age', 'Array'))
 if(!is.null(name_cohort)){
   sampleAnn_new$cohort <- name_cohort
 }
