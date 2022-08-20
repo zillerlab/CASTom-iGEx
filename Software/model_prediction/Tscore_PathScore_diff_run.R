@@ -137,6 +137,7 @@ if(originalRNA){
 }else{
   
   sampleAnn <- read.table(covDat_file, header = T, stringsAsFactors = F,sep="\t")
+  sampleAnn$Individual_ID <- as.character(sampleAnn$Individual_ID)
   expDat <- read.table(gzfile(input_file),sep="\t",header=T,  check.names = F)
   
   id_samples <- match(sampleAnn$Individual_ID, colnames(expDat))
@@ -150,7 +151,7 @@ if(originalRNA){
   rownames(eMat) <- expDat$external_gene_name
   geneInfo <- expDat[, -id_samples]
 
-  if(!identical(sampleAnn$Individual_ID, colnames(eMat))){print('ERROR: Annotation samples and expression not matching')} 
+  if(!identical(sampleAnn$Individual_ID, colnames(eMat))){stop('ERROR: Annotation samples and expression not matching')} 
   
 }
 
