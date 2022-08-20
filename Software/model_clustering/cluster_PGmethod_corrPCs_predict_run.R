@@ -74,11 +74,16 @@ sampleAnn <- clust_res$sampleInfo
 
 if(type_cluster == 'Cases'){
   sampleAnn <- sampleAnn[sampleAnn$Dx == 1,]
-  sampleAnn_new <- sampleAnn_new[sampleAnn_new$Dx == 1,]
+  if('Dx' %in% colnames(sampleAnn_new)){
+    sampleAnn_new <- sampleAnn_new[sampleAnn_new$Dx == 1,]
+  }
 }else{
   if(type_cluster == 'Controls'){
     sampleAnn <- sampleAnn[sampleAnn$Dx == 0,]
-    sampleAnn_new <- sampleAnn_new[sampleAnn_new$Dx == 0,]
+    if('Dx' %in% colnames(sampleAnn_new)){
+      sampleAnn_new <- sampleAnn_new[sampleAnn_new$Dx == 0,]
+    }
+    
   }else{
     if(type_cluster != 'All')
       stop('type_cluster must be either Cases or Controls or All')
