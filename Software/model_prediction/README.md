@@ -26,16 +26,40 @@ From previously trained PriLer tissue-specific model (Module 1), predict gene ex
     --cis_thres (default = 200000) \
     --outFold \
     --outTrain_fold  \
-    --InfoFold
+    --InfoFold \
+    --no_zip (default F)
 ```
 *NOTE: can be splitted for subset of samples (depends on covDat_file), genes are NOT filtered*
 
 The output includes (saved in *--outFold*):
 - predictedExpression.txt.gz 
- 
-Based on data dimension, the next scripts are divided in two parts. If sample size <= 10,000 follow "Small dataset" part, otherwise "Large dataset".
+
+### Alternative: Predict gene expression on not harmonized data
+Similar as before BUT the genotype-only data is not initially harmonized with the reference panel. This scenario happens if it's necessary to use a previously trained model on a new data, however the best solution would be to initially harmonize reference pane and genotype-only data so to preoperly account for the LD structure of the available variants. Prior to this step is necessary that the genotype-only data has been filtered to include only variants from the reference panel genotype data (also having same REF and ALT annotation). The gene expression are imputed based on variants intersection.
+
+```sh
+./Priler_predictGeneExp_smallerVariantSet_run.R \
+    --genoDat_file \
+    --covDat_file \
+    --cis_thres (default = 200000) \
+    --outFold \
+    --outTrain_fold  \
+    --InfoFold \
+    --no_zip (default F) \
+    --genoInfo_model_file \
+    --genoInfo_file \
+```
+
+- *--genoInfo_file* and *--genoInfo_model_file* are the files having variant annotation of the new genotype-only dataset and from PriLer model that must include columns POS, REF and ALT. The format file include the complete path excluding the last part that should end with chr<>.txt
+- rows in *--genoDat_file* must match *--genoInfo_file*
+
+The output includes (saved in *--outFold*):
+- predictedExpression.txt.gz 
 
 ***
+Based on data dimension, the next scripts are divided in two parts. If sample size <= 10,000 follow "Small dataset" part, otherwise "Large dataset".
+***
+
 ### Small dataset: T-scores and Pathway-scores computation
 Predicted gene expression is converted into T-scores and combined into Pathway-scores. T-scores are computed using a subset of control samples (`Dx == 0`) as reference set if column `Dx` is present in *--covDat_file*, otherwise a random subset of samples is selected. 
 
