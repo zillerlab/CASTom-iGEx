@@ -17,19 +17,28 @@ load_input_matrix <- function(inputFile, sampleAnn, res_pval, split_tot, id_info
       tmp <- tmp[match(id_el, tmp[,1]),]
       res_pval <- res_pval[match(id_el, res_pval[, id_info]),]
       elementID <- tmp[,1]
-      # consider only samples in common
+      
+      # remove sample that have NAs
+      id_s <- colSums(is.na(tmp)) == 0
+      if(!all(id_s)){tmp <- tmp[,id_s]}
+
       common_samples <- intersect(sampleAnn$Individual_ID, colnames(tmp))
       sampleAnn <- sampleAnn[match(common_samples, sampleAnn$Individual_ID),]
       tmp <- tmp[, match(common_samples, colnames(tmp))]
       scoreMat <- as.matrix(t(tmp))
       colnames(scoreMat) <- elementID
+
     }else{  
       
       scoreMat <- get(load(inputFile))
       # filter out based on samples and ids
       id_el <- intersect(scoreMat[,1], res_pval[, id_info])
       scoreMat <- scoreMat[match(id_el,scoreMat[,1]), ]
-      
+
+      # remove sample that have NAs
+      id_s <- colSums(is.na(scoreMat)) == 0
+      if(!all(id_s)){scoreMat <- scoreMat[,id_s]}
+
       common_samples <- intersect(sampleAnn$Individual_ID, colnames(scoreMat))
       sampleAnn <- sampleAnn[match(common_samples, sampleAnn$Individual_ID),]
       scoreMat <- t(scoreMat[,match(common_samples,colnames(scoreMat))])
