@@ -149,8 +149,14 @@ fmla <- as.formula(paste('g ~', paste0(name_cov, collapse = '+')))
 for(i in 1:ncol(input_data_notcorr)){
   # print(i)
   tmp <- data.frame(g = input_data_notcorr[,i], sampleAnn_new[, name_cov])
-  reg <- lm(fmla, data = tmp)
-  input_data[,i] <- reg$residuals
+  if(any(is.na(tmp$g))){
+    # only needed when imputed gene expression is computed in non-harmonized data
+    # some genes might have variance zero
+    input_data[,i] <- 0
+  }else{
+    reg <- lm(fmla, data = tmp)
+    input_data[,i] <- reg$residuals
+  }
 }
 print("corrected for PCs")
 
