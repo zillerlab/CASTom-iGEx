@@ -51,7 +51,7 @@ Similar as before BUT the genotype-only data is not initially harmonized with th
 ```
 
 - *--genoInfo_file* and *--genoInfo_model_file* are the files having variant annotation of the new genotype-only dataset and from PriLer model that must include columns POS, REF and ALT. The format file include the complete path excluding the last part that should end with chr<>.txt
-- rows in *--genoDat_file* must match *--genoInfo_file*
+- rows in *--genoDat_file* must match rows in *--genoInfo_file*
 
 The output includes (saved in *--outFold*):
 - predictedExpression.txt.gz 
