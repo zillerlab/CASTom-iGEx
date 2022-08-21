@@ -113,6 +113,7 @@ if(!'cl_best' %in% names(cluster_output)){
 # }
 
 print(inputFold)
+print(pvalresFile)
 
 sampleAnn <- read.table(sampleAnnFile, h=T, stringsAsFactors = F, check.names = F)
 sampleAnn$Individual_ID <- as.character(sampleAnn$Individual_ID)
