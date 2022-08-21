@@ -304,10 +304,12 @@ for(id_t in 1:length(tissues)){
     for(l in 1:ncol(scale_data_t[[id_t]])){
       # print(l) 
       tmp_data <- data.frame(f = scale_data_t[[id_t]][,l], g = gr_id)
-      tmp <- as.data.frame(wilcox_test(f~g,data = tmp_data, detailed = T))
-      test_feat[[i]]$pval[l] <- tmp$p
-      test_feat[[i]]$estimates[l] <- tmp$estimate
-      test_feat[[i]][l,c('CI_low', 'CI_up')] <- c(tmp$conf.low, tmp$conf.high)
+      if(sd(tmp_data$g) > 0){
+        tmp <- as.data.frame(wilcox_test(f~g,data = tmp_data, detailed = T))
+        test_feat[[i]]$pval[l] <- tmp$p
+        test_feat[[i]]$estimates[l] <- tmp$estimate
+        test_feat[[i]][l,c('CI_low', 'CI_up')] <- c(tmp$conf.low, tmp$conf.high)
+      }
     }
     
     test_feat[[i]]$pval_corr <- p.adjust(test_feat[[i]]$pval, method = 'BH')
