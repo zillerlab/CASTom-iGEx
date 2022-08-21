@@ -8,7 +8,6 @@ suppressPackageStartupMessages(library(doParallel))
 suppressPackageStartupMessages(library(qvalue))
 suppressPackageStartupMessages(library(pROC))
 suppressPackageStartupMessages(library(pryr))
-suppressPackageStartupMessages(library(umap))
 suppressPackageStartupMessages(library(igraph))
 suppressPackageStartupMessages(library(Matrix))
 suppressPackageStartupMessages(library(SparseM))
@@ -127,20 +126,7 @@ for(i in 1:length(cohort_name)){
   df_new[[i]]$percentage <- sapply(sort(unique(clust$gr)), 
                                    function(x) length(which(clust_new[[i]]$gr == x))/nrow(clust_new[[i]]))
   
-  # df_corr[[i]] <- data.frame(dataset = rep(cohort_name[i], P), 
-  #                            gr = df$gr, corr = rep(NA, P), 
-  #                            pvalue = rep(NA, P), CI_low= rep(NA, P),  CI_up= rep(NA, P))
-  # df_corr[[i]] <- df_corr[[i]][df_corr[[i]]$gr %in% colnames(mean_gr_new[[i]]), ]
-  # df_corr[[i]]$corr <- sapply(df$gr[df$gr %in% colnames(mean_gr_new[[i]])], 
-  #                             function(x) cor.test(mean_gr_new[[i]][,x], mean_gr[,x])$estimate)
-  # df_corr[[i]]$pvalue <- sapply(df$gr[df$gr %in% colnames(mean_gr_new[[i]])], 
-  #                               function(x) cor.test(mean_gr_new[[i]][,x], mean_gr[,x])$p.value)
-  # df_corr[[i]]$CI_low <- sapply(df$gr[df$gr %in% colnames(mean_gr_new[[i]])], 
-  #                               function(x) cor.test(mean_gr_new[[i]][,x], mean_gr[,x])$conf.int[1])
-  # df_corr[[i]]$CI_up <- sapply(df$gr[df$gr %in% colnames(mean_gr_new[[i]])], 
-  #                              function(x) cor.test(mean_gr_new[[i]][,x], mean_gr[,x])$conf.int[2])
-  
-  if(!is.null(featRel_predict)){
+if(!is.null(featRel_predict)){
     
     comp <- sort(unique(featRel$comp))
     tmp <- get(load(featRel_predict[i]))
@@ -191,7 +177,6 @@ for(i in 1:length(cohort_name)){
 }
 
 df_tot <- rbind(df, do.call(rbind, df_new))
-df_corr_tot <- do.call(rbind, df_corr)
 if(!is.null(geneLoci_summ)){
   df_perc_loci <- do.call(rbind, df_perc_loci)
 }
@@ -204,8 +189,6 @@ if(!is.null(featRel_model)){
 write.table(df_tot, file = sprintf('%s%s_%s_cluster%s_percentageGropus_prediction_model%s.txt', outFold, type_data, type_input, type_cluster, model_name),quote = F, 
             col.names = T, row.names = T, sep = '\t')
 
-write.table(df_corr_tot, file = sprintf('%s%s_%s_cluster%s_correlationMeanGroups_prediction_model%s.txt', outFold, type_data, type_input, type_cluster, model_name),quote = F, 
-            col.names = T, row.names = T, sep = '\t')
 
 if(!is.null(featRel_model)){
   write.table(df_corr_rel, file = sprintf('%s%s_%s_cluster%s_correlationSpear_WMWestSign_Groups_prediction_model%s.txt', outFold, type_data, type_input, type_cluster, model_name),quote = F, 
@@ -225,9 +208,10 @@ df$gr <- factor(df$gr, levels = paste0('gr_', sort(unique(clust$gr))))
 gr_color <- pal_d3(palette = 'category20')(P)
 
 pl <- ggplot(df_tot, aes(x = new_id, y = percentage, color = gr, group = gr))+
-  geom_point(size = 2, ,position = position_dodge(width = 0.3))+
+  geom_point(size = 2,position = position_dodge(width = 0.3))+
   theme_bw()+ 
-  geom_segment(data = df, aes(x = 2, y = percentage, xend = length(cohort_name)+1, yend = percentage, group = gr), linetype = 2, alpha = 0.6)+
+  geom_segment(data = df, aes(x = 2, y = percentage, xend = length(cohort_name)+1, 
+                              yend = percentage, group = gr), linetype = 2, alpha = 0.6)+
   ylab('Fraction of Cases')+ 
   theme(legend.position = 'right', axis.title.x = element_blank(), 
         axis.text.x = element_text(angle = 45, hjust = 1))+
@@ -237,23 +221,6 @@ w=ifelse(length(cohort_name)==1, 3, 1+length(cohort_name)*0.6)
 
 ggsave(filename = sprintf('%s%s_%s_cluster%s_percentageGropus_prediction_model%s.png', outFold, type_data, type_input, type_cluster, model_name), width = w, height = 3.5, plot = pl, device = 'png')
 ggsave(filename = sprintf('%s%s_%s_cluster%s_percentageGropus_prediction_model%s.pdf', outFold, type_data, type_input, type_cluster, model_name), width = w, height = 3.5, plot = pl, device = 'pdf')
-
-###
-# df_corr_tot$dataset <-factor(df_corr_tot$dataset, levels = cohort_name)
-# df_corr_tot$gr <- factor(df_corr_tot$gr, levels = paste0('gr_', sort(unique(clust$gr))))
-# 
-# pl <- ggplot(df_corr_tot, aes(x = dataset, y = corr, fill = gr, group = gr))+
-#   geom_bar(stat = 'identity',width = 0.7, color = 'black', alpha = 0.7, position = position_dodge())+
-#   geom_errorbar(aes(ymin=CI_low, ymax=CI_up), width=.2, position=position_dodge(.75))+
-#   theme_bw()+ 
-#   coord_cartesian(ylim = c(ifelse(min(df_corr_tot$corr)<0.6, 0, 0.6),1)) +
-#   ylab(sprintf('correlation mean scores\nwith %s (model)', model_name))+ 
-#   theme(legend.position = 'right', axis.title.x = element_blank(), 
-#         axis.text.x = element_text(angle = 45, hjust = 1))+
-#   scale_fill_manual(values = gr_color)
-# # scale_shape_manual(values=c(1, 19))+
-# ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationMeanGroups_prediction_model%s.png', outFold, type_data, type_input, type_cluster, model_name), width = w, height = 3.5, plot = pl, device = 'png')
-# ggsave(filename = sprintf('%s%s_%s_cluster%s_correlationMeanGroups_prediction_model%s.pdf', outFold, type_data, type_input, type_cluster, model_name), width = w, height = 3.5, plot = pl, device = 'pdf')
 
 ###
 if(!is.null(featRel_model)){
@@ -505,4 +472,5 @@ if(any(sapply(phenoNew_file, file.exists))){
   output <- list(bin_reg = tot_bin_reg, cl = clust_new, phenoDat = phenoDat_new, phenoInfo = phenoInfo_new)
   save(output, file = sprintf('%s%s_%s_cluster%s_phenoAssociationGLM_prediction_model%s.RData', outFold, type_data, type_input, type_cluster, model_name))
 }
+
 
