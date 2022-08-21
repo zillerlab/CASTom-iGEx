@@ -120,9 +120,7 @@ sampleAnn <- sampleAnn[match(cluster_output$samples_id, sampleAnn$Individual_ID)
 name_cov <- setdiff(colnames(sampleAnn),c('Individual_ID', 'genoSample_ID', 'Dx', 'Sex', 'Age', 'Gender', 'Array'))
 covDat <- sampleAnn[,!colnames(sampleAnn) %in% c('Individual_ID', 'Dx', 'genoSample_ID')]
 
-identical(sampleAnn$Individual_ID, cluster_output$samples_id)
-print(str(sampleAnn$Individual_ID))
-print(str(cluster_output$samples_id))
+identical(as.character(sampleAnn$Individual_ID), as.character(cluster_output$samples_id))
 # scale_data_t <- scoreMat_t <- res_pval_t <- list()
 
 # load score matrix, load pval matrix, rescale for p-value
