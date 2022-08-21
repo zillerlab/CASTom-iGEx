@@ -134,7 +134,7 @@ if(type_data == 'tscore'){
 
 sampleAnn <- read.table(sampleAnnFile, h=T, stringsAsFactors = F, check.names = F)
 sampleAnn <- sampleAnn[match(cluster_output$samples_id, sampleAnn$Individual_ID), ]
-name_cov <- setdiff(colnames(sampleAnn),c('Individual_ID', 'genoSample_ID', 'Dx', 'Sex', 'Age', 'Gender'))
+name_cov <- setdiff(colnames(sampleAnn),c('Individual_ID', 'genoSample_ID', 'Dx', 'Sex', 'Age', 'Gender', 'Array'))
 covDat <- sampleAnn[,!colnames(sampleAnn) %in% c('Individual_ID', 'Dx', 'genoSample_ID')]
 
 identical(sampleAnn$Individual_ID, cluster_output$samples_id)
@@ -208,6 +208,8 @@ res <- foreach(id_t=1:length(tissues), .combine='comb',
                  print("corrected for PCs")
                  print(identical(colnames(input_data), res_pval_t[, id_info]))
                  print(identical(rownames(input_data), sampleAnn$Individual_ID))
+                 print(str(rownames(input_data)))
+                 print(str(sampleAnn$Individual_ID))
                  
                  scale_data_t <- input_data
                  res_pval_t$tissue <- tissues[id_t]
