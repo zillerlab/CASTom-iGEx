@@ -338,6 +338,7 @@ project_clust_PGmethod_HKsim <- function(kNN, score, data_mod, sample_info, eucl
   P <- SparseM::solve(a = L_u, b = RHS)
   prob_mat <- as.data.frame(as.matrix(P))
   colnames(prob_mat) <- paste0('gr_', sort(unique(cl_mod$gr)))
+  if(!'Dx' %in% colnames(sample_info)){sample_info$Dx <- NA}
   prob_mat <- cbind(data.frame(Individiual_ID = sample_info$Individual_ID, Dx = sample_info$Dx),prob_mat)
   
   return(list(probability = prob_mat, tot_W_sNN = W_sNN))
