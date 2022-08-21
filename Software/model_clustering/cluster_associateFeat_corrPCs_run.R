@@ -194,13 +194,18 @@ res <- foreach(id_t=1:length(tissues), .combine='comb',
                  colnames(input_data) <- colnames(input_data_notcorr)
                  fmla <- as.formula(paste('g ~', paste0(name_cov, collapse = '+')))
                  for(i in 1:ncol(input_data_notcorr)){
-                   # print(i)
-                   tmp <- data.frame(g = input_data_notcorr[,i], sampleAnn[, name_cov])
-                   reg <- lm(fmla, data = tmp)
-                   input_data[,i] <- reg$residuals
+                  # print(i)
+                  tmp <- data.frame(g = input_data_notcorr[,i], sampleAnn[, name_cov])
+                  if(any(is.na(tmp$g))){
+                    # only needed when imputed gene expression is computed in non-harmonized data
+                    # some genes might have variance zero
+                    input_data[,i] <- 0
+                  }else{
+                    reg <- lm(fmla, data = tmp)
+                    input_data[,i] <- reg$residuals
+                  }
                  }
                  print("corrected for PCs")
-                 
                  print(identical(colnames(input_data), res_pval_t[, id_info]))
                  print(identical(rownames(input_data), sampleAnn$Individual_ID))
                  
