@@ -13,7 +13,6 @@ suppressPackageStartupMessages(library(lmtest))
 suppressPackageStartupMessages(library(pryr))
 suppressPackageStartupMessages(library(Matrix))
 suppressPackageStartupMessages(library(rstatix))
-suppressPackageStartupMessages(library(umap))
 suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(ggpubr))
 suppressPackageStartupMessages(library(RColorBrewer))
@@ -116,8 +115,9 @@ if(!'cl_best' %in% names(cluster_output)){
 print(inputFold)
 
 sampleAnn <- read.table(sampleAnnFile, h=T, stringsAsFactors = F, check.names = F)
+sampleAnn$Individual_ID <- as.character(sampleAnn$Individual_ID)
 sampleAnn <- sampleAnn[match(cluster_output$samples_id, sampleAnn$Individual_ID), ]
-name_cov <- setdiff(colnames(sampleAnn),c('Individual_ID', 'genoSample_ID', 'Dx', 'Sex', 'Age', 'Gender'))
+name_cov <- setdiff(colnames(sampleAnn),c('Individual_ID', 'genoSample_ID', 'Dx', 'Sex', 'Age', 'Gender', 'Array'))
 covDat <- sampleAnn[,!colnames(sampleAnn) %in% c('Individual_ID', 'Dx', 'genoSample_ID')]
 
 identical(sampleAnn$Individual_ID, cluster_output$samples_id)
@@ -178,9 +178,15 @@ res <- foreach(id_t=1:length(tissues), .combine='comb',
                  fmla <- as.formula(paste('g ~', paste0(name_cov, collapse = '+')))
                  for(i in 1:ncol(input_data_notcorr)){
                    # print(i)
-                   tmp <- data.frame(g = input_data_notcorr[,i], sampleAnn[, name_cov])
-                   reg <- lm(fmla, data = tmp)
-                   input_data[,i] <- reg$residuals
+		   tmp <- data.frame(g = input_data_notcorr[,i], sampleAnn[, name_cov])
+		   if(any(is.na(tmp$g))){
+                    # only needed when imputed gene expression is computed in non-harmonized data
+                    # some genes might have variance zero
+                    input_data[,i] <- 0
+                   }else{
+                    reg <- lm(fmla, data = tmp)
+                    input_data[,i] <- reg$residuals
+                  }
                  }
                  print("corrected for PCs")
                  
