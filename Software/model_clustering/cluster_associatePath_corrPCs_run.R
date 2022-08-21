@@ -148,13 +148,23 @@ res <- foreach(id_t=1:length(tissues), .combine='comb',
                  res_pval2 <- res_pval2[res_pval2$path %in% path_ann$path[path_ann$name == 'GO'], ]
                  
                  #### load input matrix ####
-                 load_output_reactome <- load_input_matrix(inputFile = sprintf('%sPathway_Reactome_scores.RData', inputFold[id_t]), 
+                 if(file.exists(sprintf('%sPathway_Reactome_scores.RData', inputFold[id_t]))){
+                   pathR_file <- sprintf('%sPathway_Reactome_scores.RData', inputFold[id_t])
+                 }else{
+                   pathR_file <- sprintf('%sPathway_Reactome_scores.txt', inputFold[id_t])
+                 }
+                 load_output_reactome <- load_input_matrix(inputFile = pathR_file, 
                                                   sampleAnn = sampleAnn, 
                                                   res_pval = res_pval1, 
                                                   split_tot = 0, 
                                                   id_info = 1)
                  
-                 load_output_GO <- load_input_matrix(inputFile = sprintf('%sPathway_GO_scores.RData', inputFold[id_t]), 
+                 if(file.exists(sprintf('%sPathway_GO_scores.RData', inputFold[id_t]))){
+                   pathGO_file <- sprintf('%sPathway_GO_scores.RData', inputFold[id_t])
+                 }else{
+                   pathGO_file <- sprintf('%sPathway_GO_scores.txt', inputFold[id_t])
+                 }
+                 load_output_GO <- load_input_matrix(inputFile = pathGO_file, 
                                                            sampleAnn = sampleAnn, 
                                                            res_pval = res_pval2, 
                                                            split_tot = 0, 
