@@ -117,8 +117,10 @@ for(i in 1:length(cohort_name)){
   cl <- clust_new[[i]]$gr
   
   covDat <- sampleAnn_new[[i]][, !colnames(sampleAnn_new[[i]]) %in% c('Individual_ID', 'genoSample_ID', 'Dx')]
-  covDat <- cbind(covDat, covDat_new[[i]])
-  covDat <- covDat[, !duplicated(colnames(covDat))]
+  if(!is.null(covNew_file[[i]])){
+    covDat <- cbind(covDat, covDat_new[[i]])
+    covDat <- covDat[, !duplicated(colnames(covDat))]
+  }
   
   fmla  <- as.formula(paste('pheno~gr_id+', paste0(colnames(covDat), collapse = '+')))
   phenoDat <- phenoDat_new[[i]][, !colnames(phenoDat_new[[i]]) %in%  
