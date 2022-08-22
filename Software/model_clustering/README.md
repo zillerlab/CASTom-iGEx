@@ -36,6 +36,10 @@ Evaluate cluster on external cohort: additional phenotype, percentage of repr, n
 
 cluster_predict_evaluate_run.R
 
+Endophenotype difference for a predicted cluster, phenoInfo not available
+
+cluster_predict_associatePhenoGLM_run.R
+
 
 ## Gene-RS computation and clustering differences
 - compute_risk_score_corrPCs_run.R
