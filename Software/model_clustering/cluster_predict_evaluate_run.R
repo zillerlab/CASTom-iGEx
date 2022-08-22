@@ -23,7 +23,7 @@ options(bitmapType = 'cairo', device = 'png')
 parser <- ArgumentParser(description="predict cluster probability for new samples")
 parser$add_argument("--cohort_name", nargs = '*', type = "character", help = "")
 parser$add_argument("--model_name", type = "character", help = "")
-parser$add_argument("--phenoNew_file", nargs = '*', type = "character", help = "")
+parser$add_argument("--phenoNew_file", nargs = '*', default = NULL, type = "character", help = "")
 parser$add_argument("--type_cluster", type = "character",default = 'All', help = "All, Cases, Controls")
 parser$add_argument("--type_data", type = "character", help = "pathway or tscore")
 parser$add_argument("--clustFile", type = "character", help = "file cluster results")
@@ -32,7 +32,6 @@ parser$add_argument("--clustFile_new", type = "character", nargs = '*', help = "
 parser$add_argument("--featRel_predict", type = "character", default = NULL, nargs = '*', help = "file association features wilcoxon test")
 parser$add_argument("--functR", type = "character", help = "functions to be used")
 parser$add_argument("--type_input", type = "character", default = 'original', help = "original or zscaled")
-parser$add_argument("--tissues_name", type = "character", help = "name tissue")
 parser$add_argument("--geneLoci_summ", type = "character", default = NULL, help = "file with group summary divided per loci")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
@@ -45,7 +44,6 @@ functR <- args$functR
 type_data <- args$type_data
 type_input <- args$type_input
 type_cluster <- args$type_cluster
-tissues_name <- args$tissues_name
 phenoNew_file <- args$phenoNew_file
 featRel_predict <- args$featRel_predict
 featRel_model <- args$featRel_model
@@ -53,19 +51,21 @@ geneLoci_summ <- args$geneLoci_summ
 outFold <- args$outFold
 
 ###################################################################################################################
-# functR <- '/home/luciat/castom-igex/Software/model_clustering/clustering_functions.R'
-# cohort_name = 'scz_boco_eur'
+# fold_mod = '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/update_corrPCs/'
+# functR <- '/psycl/g/mpsziller/lucia/castom-igex/Software/model_clustering/clustering_functions.R'
+# cohort_name = 'SHIP-TREND'
 # type_data <- 'tscore_corrPCs'
 # type_input <- 'zscaled'
 # type_cluster <- 'Cases'
-# clustFile_new <- 'OUTPUT_CMC/predict_PGC/200kb/scz_boco_eur/devgeno0.01_testdevgeno0/update_corrPCs/matchUKBB_filt0.1_tscore_corrPCs_zscaled_predictClusterCases_PGmethod_HKmetric.RData'
-# clustFile <- 'OUTPUT_CMC/predict_PGC/200kb/Meta_Analysis_SCZ/devgeno0.01_testdevgeno0/update_corrPCs/matchUKBB_filt0.1_tscore_corrPCs_zscaled_clusterCases_PGmethod_HKmetric.RData'
-# tissues_name <- 'DLPC_CMC'
+# clustFile_new <- 'Results/PriLer/Liver/tscore_corrPCs_zscaled_predictClusterCases_PGmethod_HKmetric.RData'
+# clustFile <- sprintf('%stscore_corrPCs_zscaled_clusterCases_PGmethod_HKmetric.RData', fold_mod)
+# tissues_name <- 'Liver'
 # phenoNew_file <-  ''
-# outFold <- ''
-# featRel_model <- 'OUTPUT_CMC/predict_PGC/200kb/Meta_Analysis_SCZ/devgeno0.01_testdevgeno0/update_corrPCs/matchUKBB_filt0.1_tscoreOriginal_corrPCs_tscoreClusterCases_featAssociation.RData'
-# featRel_predict <- 'OUTPUT_CMC/predict_PGC/200kb/scz_boco_eur/devgeno0.01_testdevgeno0/update_corrPCs/matchUKBB_filt0.1_tscoreOriginal_corrPCs_tscoreClusterCases_featAssociation.RData'
-# geneLoci_summ <- 'OUTPUT_CMC/predict_PGC/200kb/Meta_Analysis_SCZ/devgeno0.01_testdevgeno0/update_corrPCs/matchUKBB_filt0.1_tscore_corrPCs_zscaled_clusterCases_summary_geneLoci_allTissues.txt'
+# outFold <- 'Results/PriLer/Liver/'
+# featRel_model <-  sprintf('%stscoreOriginal_corrPCs_tscoreClusterCases_featAssociation.RData', fold_mod)
+# featRel_predict <-  'Results/PriLer/Liver/tscoreOriginal_corrPCs_tscoreClusterCases_featAssociation.RData'
+# geneLoci_summ <- sprintf('%stscore_corrPCs_zscaled_clusterCases_summary_geneLoci_allTissues.txt', fold_mod)
+# model_name='UKBB'
 #################################################################################################################
 
 source(functR)
@@ -105,6 +105,7 @@ df_corr_rel <- list()
 df_perc_loci <- list()
 
 for(i in 1:length(cohort_name)){
+  
   print(cohort_name[i])
   tmp <- get(load(clustFile_new[i]))
   
@@ -126,7 +127,7 @@ for(i in 1:length(cohort_name)){
   df_new[[i]]$percentage <- sapply(sort(unique(clust$gr)), 
                                    function(x) length(which(clust_new[[i]]$gr == x))/nrow(clust_new[[i]]))
   
-if(!is.null(featRel_predict)){
+  if(!is.null(featRel_predict)){
     
     comp <- sort(unique(featRel$comp))
     tmp <- get(load(featRel_predict[i]))
@@ -157,19 +158,31 @@ if(!is.null(featRel_predict)){
     df_perc_loci[[i]] <- data.frame(dataset = rep(cohort_name[i], P), gr = df$gr)
     df_perc_loci[[i]]$nloci <- sapply(id, function(x) sum(grepl(x, geneLoci$comp_sign)))
     
+    comp <- sort(unique(featRel$comp))
+    tmp <- get(load(featRel_predict[i]))
+    featRel_new <- tmp$test_feat
+    featRel_new <- do.call(rbind, featRel_new)
+    featRel_new$new_id <- paste(featRel_new$feat, featRel_new$comp, featRel_new$tissue, sep = '_')
+    common_f <- intersect(featRel_new$new_id, featRel$new_id)
+    featRel_new <- featRel_new[match(common_f, featRel_new$new_id), ]
+    featRel_common <- featRel[match(common_f, featRel$new_id),]
+    
     for(j in 1:nrow(df)){
+      
       tmp <- geneLoci[grepl(id[j], geneLoci$comp_sign), ]
       genes <- lapply(tmp$gene, function(x) strsplit(x, split = ',')[[1]])
-      id_keep <- sapply(genes, function(x) which.min(featRel$pval[featRel$comp == comp[j] & 
-                                                                    featRel$feat %in% x]))
-      genes <- mapply(function(x, y) featRel$new_id[featRel$comp == comp[j] & featRel$feat %in% x][y], 
+      id_keep <- sapply(genes, function(x) which.min(featRel_common$pval[featRel_common$comp == comp[j] & 
+                                                                           featRel_common$feat %in% x]))
+      genes <- mapply(function(x, y) featRel_common$new_id[featRel_common$comp == comp[j] & featRel_common$feat %in% x][y], 
                       x = genes, y = id_keep)
-      tmp_mod <- featRel[match(genes, featRel$new_id), ]
+      genes <- unlist(genes)
+      if(length(genes) != df_perc_loci[[i]]$nloci[j]){df_perc_loci[[i]]$nloci[j] <- length(genes)}
+      
+      tmp_mod <- featRel_common[match(genes, featRel_common$new_id), ]
       tmp_pred <- featRel_new[match(genes, featRel_new$new_id), ]
       df_perc_loci[[i]]$nloci_rep_sign[j] <- sum(sign(tmp_pred$estimates) == sign(tmp_mod$estimates))
       df_perc_loci[[i]]$nloci_rep[j] <- sum(sign(tmp_pred$estimates) == sign(tmp_mod$estimates) 
                                             & tmp_pred$pval <= 0.05)
-      
     }
     df_perc_loci[[i]]$nperc_loci_rep_sign <- df_perc_loci[[i]]$nloci_rep_sign/df_perc_loci[[i]]$nloci
   }
@@ -184,9 +197,10 @@ if(!is.null(featRel_model)){
   df_corr_rel <- do.call(rbind,  df_corr_rel)
 }
 
-
 # save and plot
-write.table(df_tot, file = sprintf('%s%s_%s_cluster%s_percentageGropus_prediction_model%s.txt', outFold, type_data, type_input, type_cluster, model_name),quote = F, 
+write.table(df_tot, 
+            file = sprintf('%s%s_%s_cluster%s_percentageGropus_prediction_model%s.txt', 
+                           outFold, type_data, type_input, type_cluster, model_name),quote = F, 
             col.names = T, row.names = T, sep = '\t')
 
 
@@ -279,6 +293,8 @@ if(!is.null(geneLoci_summ)){
 ################
 ## gri vs grj ##
 ################
+
+if(!is.null(phenoNew_file)){
 
 if(any(sapply(phenoNew_file, file.exists))){
   suppressPackageStartupMessages(library(RNOmni))
@@ -379,6 +395,7 @@ if(any(sapply(phenoNew_file, file.exists))){
   save(output, file = sprintf('%s%s_%s_cluster%s_phenoAssociationGLMpairwise_prediction_model%s.RData', outFold, type_data, type_input, type_cluster, model_name))
 }
 
+
 ################
 ## gri vs all ##
 ################
@@ -473,4 +490,4 @@ if(any(sapply(phenoNew_file, file.exists))){
   save(output, file = sprintf('%s%s_%s_cluster%s_phenoAssociationGLM_prediction_model%s.RData', outFold, type_data, type_input, type_cluster, model_name))
 }
 
-
+}
