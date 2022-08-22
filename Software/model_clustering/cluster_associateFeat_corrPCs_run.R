@@ -286,7 +286,7 @@ registerDoParallel(cores=min(ncores, length(tissues)))
 #test_feat_t <- vector(mode = 'list', length = length(tissues))
 test_feat_t <- foreach(id_t=1:length(tissues))%dopar%{
   
-for(id_t in 1:length(tissues)){
+#for(id_t in 1:length(tissues)){
   test_feat <- vector(mode = 'list', length = length(gr_names))
   for(i in 1:length(gr_names)){
     
