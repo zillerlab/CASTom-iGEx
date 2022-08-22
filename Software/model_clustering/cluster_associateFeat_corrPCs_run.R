@@ -283,8 +283,8 @@ output$test_cov <- test_cov
 
 registerDoParallel(cores=min(ncores, length(tissues)))
 
-test_feat_t <- vector(mode = 'list', length = length(tissues))
-# test_feat_t <- foreach(id_t=1:length(tissues))%dopar%{
+#test_feat_t <- vector(mode = 'list', length = length(tissues))
+test_feat_t <- foreach(id_t=1:length(tissues))%dopar%{
   
 for(id_t in 1:length(tissues)){
   test_feat <- vector(mode = 'list', length = length(gr_names))
@@ -304,7 +304,7 @@ for(id_t in 1:length(tissues)){
     for(l in 1:ncol(scale_data_t[[id_t]])){
       print(l) 
       tmp_data <- data.frame(f = scale_data_t[[id_t]][,l], g = gr_id)
-      if(sd(tmp_data$g) > 0){
+      if(sd(tmp_data$f) > 0){
         tmp <- as.data.frame(wilcox_test(f~g,data = tmp_data, detailed = T))
         test_feat[[i]]$pval[l] <- tmp$p
         test_feat[[i]]$estimates[l] <- tmp$estimate
@@ -319,8 +319,8 @@ for(id_t in 1:length(tissues)){
   test_feat <- do.call(rbind, test_feat)
   test_feat$pval_corr_overall <-  p.adjust(test_feat$pval, method = 'BH')
   test_feat$tissue <- tissues[id_t]
-  #test_feat
-  test_feat_t[[id_t]] <- test_feat
+  test_feat
+  #test_feat_t[[id_t]] <- test_feat
 }
 
 output$test_feat <- test_feat_t
