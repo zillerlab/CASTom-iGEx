@@ -1,5 +1,3 @@
-#### code written by Lucia Trastulla, e-mail: lucia_trastulla@psych.mpg.de ####
-
 options(stringsAsFactors=F)
 options(max.print=1000)
 suppressPackageStartupMessages(library(argparse))
@@ -15,7 +13,7 @@ parser <- ArgumentParser(description="Differential pathway analysis for big samp
 
 parser$add_argument("--input_file", type = "character", nargs = '*', help = "output path prediction folder (or cov corrected data), splitted files")
 parser$add_argument("--covDat_file", type = "character", help = "file with sample info for new genotype data, must contain Dx column (0 controls 1 cases)")
-parser$add_argument("--nFolds", type="integer", default = 20, help = "number of fold for control partition")
+parser$add_argument("--nFolds", type="integer", default = 40, help = "number of fold for control partition")
 parser$add_argument("--perc_comp", type="double", default = 0.5, help = "percentage of samples used for comparison")
 parser$add_argument("--split_gene_id", type="integer", help = "split partiton for genes")
 parser$add_argument("--split_tot", type="integer", default = 100, help = "total number of partitions")
