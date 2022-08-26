@@ -16,7 +16,7 @@ parser$add_argument("--GOterms_file", type = "character", help = "GO pathway ann
 parser$add_argument("--originalRNA", type="logical", default = F, help = "if true, original RNA without filtering used [default %(default)s]")
 parser$add_argument("--thr_reliableGenes", type = "double", nargs = '*', default = c(0.01, 0), help = "threshold for reliable genes: dev_geno_tot and test_dev_geno [default %(default)s]")
 parser$add_argument("--covDat_file", type = "character", help = "file with sample info for new genotype data, must contain Dx column (0 controls 1 cases)")
-parser$add_argument("--nFolds", type="integer", default = 20, help = "number of fold for control partition [default %(default)s]")
+parser$add_argument("--nFolds", type="integer", default = 40, help = "number of fold for control partition [default %(default)s]")
 parser$add_argument("--outFold", type="character", help = "Output folder")
 
 args <- parser$parse_args()
