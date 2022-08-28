@@ -1,5 +1,5 @@
 # Imputation of gene expression, computation of individual pathway-scores and association with trait 
-CASTom-iGEx (Module 2) is a command-line tool that uses trained model to predicts gene expression from genotype-only datasets and convert them to T-scores and pathway scores. Two versions are available dependening of data dimensionality. Prediction step contains also scripts to perform association with trait of interest as well as perform mendelian randomization across traits based on based on pathway and genes association.
+CASTom-iGEx (Module 2) is a pipeline (R based) that uses trained model to predicts gene expression from genotype-only datasets and convert them to T-scores and pathway scores. Two versions are available dependening of data dimensionality. Prediction step contains also scripts to perform association with trait of interest as well as perform mendelian randomization across traits based on based on pathway and genes association.
 
 ## Input Files
 - **Genotype matrix** (*--genoDat_file*): dosages for each chromosome (compressed txt) without variants name/position (variants x samples).  *NOTE: SNPs must match with the train genotype data, file must end with chr<>_matrix.txt.gz*
