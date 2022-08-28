@@ -1,6 +1,6 @@
 # Training prediction model with PriLer
 
-PriLer (CASTom-iGEx Module 1) is a command-line tool that create model for predicting gene expression from genotype data integrating prior features on variants whose relevance is automatically learned in a machine learning set up. 
+PriLer (CASTom-iGEx Module 1) is a pipeline (R based) that create model for predicting gene expression from genotype data integrating prior features on variants whose relevance is automatically learned in a machine learning set up. 
 
 ## Input Files
 - **Gene expression matrix** (*--geneExp_file*): preprocessed gene expression (genes x samples). First column refers to gene names (ensembl annotation or HUGO nomenclature)
