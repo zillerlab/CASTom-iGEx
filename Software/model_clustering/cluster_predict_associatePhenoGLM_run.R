@@ -41,14 +41,14 @@ covNew_file <- args$covNew_file
 model_name <- args$model_name
 outFold <- args$outFold
 
-###################################################################################################################
+##################################################################################################################
 # functR <- '/psycl/g/mpsziller/lucia/castom-igex/Software/model_clustering/clustering_functions.R'
 # cohort_name = 'SHIP-TREND'
 # type_data <- 'tscore_corrPCs'
 # type_input <- 'zscaled'
 # type_cluster <- 'Cases'
 # clustFile_new <- 'Results/PriLer/Liver/tscore_corrPCs_zscaled_predictClusterCases_PGmethod_HKmetric.RData'
-# phenoNew_file <-  'Results/PriLer/pheno_test.txt'
+# phenoNew_file <-  'Results/PriLer/pheno_test_reduced.txt'
 # covNew_file <- 'Results/PriLer/SHIP-TREND_gPC_SHIP_2022_27_withSex.txt'
 # outFold <- 'Results/PriLer/Liver/'
 #################################################################################################################
@@ -94,8 +94,8 @@ for(i in 1:length(cohort_name)){
     common_samples <- intersect(common_samples, covDat_new[[i]]$Individual_ID)
     covDat_new[[i]] <- covDat_new[[i]][match(common_samples, covDat_new[[i]]$Individual_ID),]
     covDat_new[[i]] <- covDat_new[[i]][, !colnames(covDat_new[[i]]) %in% 
-                                            c('Individual_ID','RNASample_ID', 'genoSample_ID', 'Dx', 
-                                              'Age', 'Gender', 'Sex')]
+                                         c('Individual_ID','RNASample_ID', 'genoSample_ID', 'Dx', 
+                                           'Age', 'Gender', 'Sex')]
   }
   
   phenoDat_new[[i]] <- phenoDat_new[[i]][match(common_samples, phenoDat_new[[i]]$Individual_ID),]
@@ -106,13 +106,13 @@ for(i in 1:length(cohort_name)){
                                                'Gender', 'Sex','Age')]
   if('Sex' %in% colnames(sampleAnn_new[[i]])){
     sampleAnn_new[[i]]$Sex <- as.character(sampleAnn_new[[i]]$Sex)
-    }
+  }
   if('Gender' %in% colnames(sampleAnn_new[[i]])){
     sampleAnn_new[[i]]$Gender <- as.character(sampleAnn_new[[i]]$Gender)
-    }
+  }
   
   
-  
+  clust_new[[i]] <- clust_new[[i]][match(sampleAnn_new[[i]]$Individual_ID, clust_new[[i]]$id),]
   gr_names <- sort(unique(clust_new[[i]]$gr))
   cl <- clust_new[[i]]$gr
   
@@ -135,7 +135,7 @@ for(i in 1:length(cohort_name)){
     phenoDat <- phenoDat[!cl %in% rm_id,]
     cl <- cl[!cl %in% rm_id]
   }
-   
+  
   phenoInfo_new[[i]] <- data.frame(pheno_id = colnames(phenoDat))
   phenoInfo_new[[i]]$type_pheno <- 'CONTINUOUS'
   phenoInfo_new[[i]]$type_pheno[sapply(1:ncol(phenoDat), function(x) is.integer(phenoDat[,x]) & length(unique(na.omit(phenoDat[,x]))) == 2)] <- 'CAT_SINGLE_BINARY'
@@ -155,6 +155,7 @@ for(i in 1:length(cohort_name)){
     # j vs all
     pheno_case_tmp <- lapply(gr_names[k:length(gr_names)], function(x) phenoDat[cl == x,])
     covDat_tmp <- lapply(gr_names[k:length(gr_names)], function(x) covDat[cl == x,])
+    
     bin_reg[[k]] <-  vector(mode = 'list', length = length(pheno_case_tmp)-1)
     
     for(j in 2:length(pheno_case_tmp)){
@@ -169,6 +170,13 @@ for(i in 1:length(cohort_name)){
       new <- new[,!p_rm]
       
       new_cov <- rbind(covDat_tmp[[1]], covDat_tmp[[j]])
+      # remove cov with constant values
+      id_rm <- apply(new_cov, 2, function(x) length(unique(x))==1)
+      if(any(id_rm)){
+        new_cov <- new_cov[,!id_rm]
+        fmla  <- as.formula(paste('pheno~gr_id+', paste0(colnames(new_cov), collapse = '+'))) 
+      }
+      
       res_glm <- matrix(nrow = ncol(new), ncol = 7)
       for(l in 1:ncol(new)){
         type_pheno <- phenoInfo_new[[i]]$type_pheno[phenoInfo_new[[i]]$pheno_id == colnames(new)[l]]
@@ -212,6 +220,13 @@ for(i in 1:length(cohort_name)){
     new <- new[,!p_rm]
     
     new_cov <- do.call(rbind, covDat_tmp)
+    # remove cov with constant values
+    id_rm <- apply(new_cov, 2, function(x) length(unique(x))==1)
+    if(any(id_rm)){
+      new_cov <- new_cov[,!id_rm]
+      fmla  <- as.formula(paste('pheno~gr_id+', paste0(colnames(new_cov), collapse = '+'))) 
+    }
+    
     res_glm <- matrix(nrow = ncol(new), ncol = 7)
     for(l in 1:ncol(new)){
       # print(l)  
