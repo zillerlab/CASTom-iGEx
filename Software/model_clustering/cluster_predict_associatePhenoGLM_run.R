@@ -95,7 +95,7 @@ for(i in 1:length(cohort_name)){
     covDat_new[[i]] <- covDat_new[[i]][match(common_samples, covDat_new[[i]]$Individual_ID),]
     covDat_new[[i]] <- covDat_new[[i]][, !colnames(covDat_new[[i]]) %in% 
                                             c('Individual_ID','RNASample_ID', 'genoSample_ID', 'Dx', 
-                                              'Age', 'Gender', 'Sex', 'Array')]
+                                              'Age', 'Gender', 'Sex')]
   }
   
   phenoDat_new[[i]] <- phenoDat_new[[i]][match(common_samples, phenoDat_new[[i]]$Individual_ID),]
@@ -103,7 +103,7 @@ for(i in 1:length(cohort_name)){
   
   sampleAnn_new[[i]] <- sampleAnn_new[[i]][, colnames(sampleAnn_new[[i]]) %in% 
                                              c('Individual_ID', paste0('C', 1:10), paste0('PC', 1:10), 
-                                               'Gender', 'Sex','Age', 'Array')]
+                                               'Gender', 'Sex','Age')]
   if('Sex' %in% colnames(sampleAnn_new[[i]])){
     sampleAnn_new[[i]]$Sex <- as.character(sampleAnn_new[[i]]$Sex)
     }
