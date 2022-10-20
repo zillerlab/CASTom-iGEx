@@ -6,6 +6,7 @@ suppressPackageStartupMessages(library(argparse))
 suppressPackageStartupMessages(library(PGSEA))
 suppressPackageStartupMessages(library(limma))
 suppressPackageStartupMessages(library(biomaRt))
+suppressPackageStartupMessages(library(data.table))
 suppressPackageStartupMessages(library(qvalue))
 
 parser <- ArgumentParser(description="Differential pathway analysis")
@@ -29,16 +30,16 @@ thr_reliableGenes <- args$thr_reliableGenes
 nFolds <- args$nFolds
 outFold <- args$outFold
 
-# ####################################################################
-# input_file <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/CG/predictedExpression.txt.gz'
-# originalRNA <- F
-# GOterms_file <- '/mnt/lucia/refData/GOterm_geneAnnotation_allOntologies.RData'
-# reactome_file <- '/mnt/lucia/refData/ReactomePathways.gmt'
-# thr_reliableGenes <- c(0.01, 0)
-# nFolds <- 40
-# covDat_file <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/INPUT_DATA_GTEx/CAD/Covariates/CG/covariateMatrix.txt'
-# outFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/CG/devgeno0.01_testdevgeno0/'
-# ####################################################################
+####################################################################
+input_file <- '/psycl/g/mpsziller/lucia/CAD_SHIP/GENE_EXPR/Filtered_SHIP-TREND_GX_plate01-14_QuantileNormalized.log2Transformd-zz_transposed-resid-SHIP_2022_27.txt'
+originalRNA <- T
+GOterms_file <- '/psycl/g/mpsziller/lucia/castom-igex/refData/GOterm_geneAnnotation_allOntologies.RData'
+reactome_file <- '/psycl/g/mpsziller/lucia/castom-igex/refData/ReactomePathways.gmt'
+thr_reliableGenes <- c(0.01, 0)
+nFolds <- 40
+covDat_file <- '/psycl/g/mpsziller/lucia/CAD_SHIP/Results/PriLer/SHIP-TREND_gPC_SHIP_2022_27_withSex.txt'
+outFold <- '/psycl/g/mpsziller/lucia/CAD_SHIP/GENE_EXPR/'
+####################################################################
 
 #########################
 ### function needed #####
@@ -125,14 +126,22 @@ modPGSEA = function (exprs, geneSets, range=c(1,Inf), center=F, p.value=0.005, m
 if(originalRNA){
   
   sampleAnn <- read.table(covDat_file, header = T, stringsAsFactors = F, sep="\t")
-  expDat <- read.table(input_file,sep="\t",header=T, check.names = F)
+  sampleAnn$Individual_ID <- as.character(sampleAnn$Individual_ID)
+  expDat <- fread(input_file, sep="\t", header=T, check.names = F, data.table = F)
+  # keep only samples in common:
+  common_samples <- intersect(sampleAnn$Individual_ID, colnames(expDat))
+
+  # order samples matrix
+  id_samples <- match(common_samples, sampleAnn$Individual_ID)
+  sampleAnn <- sampleAnn[id_samples,]
   
-  id_samples <- match(sampleAnn$Individual_ID, colnames(expDat))
+  # order gene expression
+  id_samples <- match(common_samples, colnames(expDat))
   eMat <- as.matrix(expDat[,id_samples])
   rownames(eMat) <- expDat$external_gene_name
   geneInfo <- expDat[, -id_samples]
   
-  if(!identical(sampleAnn$Individual_ID, colnames(eMat))){print('ERROR: Annotation samples and expression not matching')} # same order
+  if(!identical(sampleAnn$Individual_ID, colnames(eMat))){stop('ERROR: Annotation samples and expression not matching')} # same order
   
 }else{
   
@@ -141,7 +150,7 @@ if(originalRNA){
   expDat <- read.table(gzfile(input_file),sep="\t",header=T,  check.names = F)
   
   id_samples <- match(sampleAnn$Individual_ID, colnames(expDat))
-
+  
   # filter genes
   expDat <- expDat[!(is.na(expDat$dev_geno) | is.na(expDat$test_dev_geno)), ]
   expDat <- expDat[expDat$dev_geno >= thr_reliableGenes[1], ]
@@ -150,7 +159,7 @@ if(originalRNA){
   eMat <- as.matrix(expDat[,id_samples])
   rownames(eMat) <- expDat$external_gene_name
   geneInfo <- expDat[, -id_samples]
-
+  
   if(!identical(sampleAnn$Individual_ID, colnames(eMat))){stop('ERROR: Annotation samples and expression not matching')} 
   
 }
@@ -277,7 +286,7 @@ tscoreTables[[1]] <- tscoreTables[[1]][is.element(tscoreTables[[1]][,1], geneInf
 
 tmp <- tscoreTables[[1]]
 colnames(tmp)[-1] <- sampleAnn$Individual_ID
-write.table(tmp,sprintf("%spredictedTscores.txt", outFold),sep="\t",row.names=F,quote=F)
+write.table(tmp,sprintf("%spredictedTscores.txt", outFold), sep="\t",row.names=F,quote=F)
 
 tmp <- sapply(colnames(tscoreTables[[1]])[-1], function(x) paste(strsplit(x,' ')[[1]][-1], collapse = " "))
 colnames(tscoreTables[[1]])[-1] <- mapply(function(x,y) paste(x, y),x= sampleAnn$Individual_ID, y=tmp)
