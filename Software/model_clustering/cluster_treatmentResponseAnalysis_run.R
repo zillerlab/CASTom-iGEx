@@ -12,7 +12,6 @@ suppressPackageStartupMessages(library(lmtest))
 suppressPackageStartupMessages(library(pryr))
 suppressPackageStartupMessages(library(Matrix))
 suppressPackageStartupMessages(library(coin))
-suppressPackageStartupMessages(library(umap))
 suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(ggpubr))
 suppressPackageStartupMessages(library(RColorBrewer))
@@ -67,6 +66,7 @@ P <- length(unique(cl_res$gr))
 covDat <- fread(covDatFile, h=T, stringsAsFactors = F, data.table = F)
 covDat <- covDat[match(res_tscore$samples_id, covDat$Individual_ID), ]
 treat_pheno <- colnames(covDat)[!colnames(covDat) %in% c('Individual_ID', 'Dx', paste0('PC',1:10), 'Age', 'Gender')]
+print(treat_pheno)
 
 phenoDat <- fread(phenoDatFile, h=T, stringsAsFactors = F, data.table = F)
 phenoDat <- phenoDat[match(res_tscore$samples_id, phenoDat$Individual_ID), ]
@@ -78,18 +78,31 @@ phenoInfo <- phenoInfo[phenoInfo$pheno_type %in% c('Arterial_stiffness', 'Blood_
 # exclude Nucleated red blood cell
 phenoInfo <- phenoInfo[!grepl('Nucleated red blood cell',phenoInfo$Field), ]
 phenoInfo <- phenoInfo[!grepl('Traffic intensity on the nearest road',phenoInfo$Field), ]
-phenoInfo_treat <- fread(phenoDescCovFile, h=T, stringsAsFactors = F, data.table = F)
-phenoInfo_treat <- rbind(phenoInfo_treat,
-                         data.frame(pheno_id = c('6153_6177_1', '6153_6177_2', '6153_6177_3'), FieldID = c('6153_6177', '6153_6177', '6153_6177'),
-                                    Field = rep('Medication for cholesterol, blood pressure or diabetes', 3), Path = rep(NA, 3), Strata  = rep(NA, 3),
-                                    Sexed = rep('Unisex', 3), Coding = rep(NA, 3), Coding_meaning = c('Cholesterol lowering medication', 'Blood pressure medication', 'Insulin'),
-                                    original_type = rep('CAT_MULTIPLE', 3), transformed_type = rep('CAT_MUL_BINARY_VAR',3), nsamples = rep(NA,3), nsamples_T= rep(NA,3),
-                                    nsamples_F= rep(NA,3), pheno_type = rep('Medication', 3)))
 
-fmla  <- as.formula(paste('pheno~', paste0(treat_pheno, collapse = '+'), '+', paste0(c(paste0('PC',1:10), 'Age', 'Gender'),  collapse = '+')))
-pheno_id <- as.character(phenoInfo$pheno_id)
-if('12144der' %in% phenoInfo_treat$pheno_id){
-  phenoInfo_treat$Coding_meaning[phenoInfo_treat$pheno_id == '12144der'] <- 'Height derived'
+if(length(treat_pheno) == 1){
+  
+  phenoInfo_treat <- fread(phenoDescCovFile, h=T, stringsAsFactors = F, data.table = F)
+  phenoInfo_treat <- phenoInfo_treat[paste0("p", phenoInfo_treat$pheno_id) %in% treat_pheno, ]
+  
+  fmla  <- as.formula(paste('pheno~', treat_pheno, '+', paste0(c(paste0('PC',1:10), 'Age', 'Gender'),  collapse = '+')))
+  pheno_id <- as.character(phenoInfo$pheno_id)
+    
+}else{
+  
+  phenoInfo_treat <- fread(phenoDescCovFile, h=T, stringsAsFactors = F, data.table = F)
+  phenoInfo_treat <- rbind(phenoInfo_treat,
+                           data.frame(pheno_id = c('6153_6177_1', '6153_6177_2', '6153_6177_3'), FieldID = c('6153_6177', '6153_6177', '6153_6177'),
+                                      Field = rep('Medication for cholesterol, blood pressure or diabetes', 3), Path = rep(NA, 3), Strata  = rep(NA, 3),
+                                      Sexed = rep('Unisex', 3), Coding = rep(NA, 3), Coding_meaning = c('Cholesterol lowering medication', 'Blood pressure medication', 'Insulin'),
+                                      original_type = rep('CAT_MULTIPLE', 3), transformed_type = rep('CAT_MUL_BINARY_VAR',3), nsamples = rep(NA,3), nsamples_T= rep(NA,3),
+                                      nsamples_F= rep(NA,3), pheno_type = rep('Medication', 3)))
+  
+  fmla  <- as.formula(paste('pheno~', paste0(treat_pheno, collapse = '+'), '+', paste0(c(paste0('PC',1:10), 'Age', 'Gender'),  collapse = '+')))
+  pheno_id <- as.character(phenoInfo$pheno_id)
+  if('12144der' %in% phenoInfo_treat$pheno_id){
+    phenoInfo_treat$Coding_meaning[phenoInfo_treat$pheno_id == '12144der'] <- 'Height derived'
+  }
+  
 }
 
 res_diff <- list()
@@ -225,5 +238,4 @@ for(i in 1:length(unique(res_tot_gr$treat_meaning))){
 }
 write.table(x = res_tot_gr, file = sprintf('%s%s_%s_cluster%s_TreatResponse_pairwise.txt',outFold, type_data, type_input, type_cluster), 
             col.names = T, row.names = F, sep = '\t', quote = F)
-
 

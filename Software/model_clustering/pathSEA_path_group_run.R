@@ -170,8 +170,12 @@ neg <- rbind(Reactome_out$neg %>% mutate(db = 'Reactome'),
 tot <- rbind(pos %>% mutate(type = 'up-reg pathways'), 
              neg %>% mutate(type = 'down-reg pathways'))
 
-tot$atc_meaning <- drug_atc$atc_name[match(substr(tot$atc_code, 1, 3), drug_atc$atc_code)]
+tot$atc_meaning3 <- drug_atc$atc_name[match(substr(tot$atc_code, 1, 3), drug_atc$atc_code)]
+tot$atc_meaning1 <- drug_atc$atc_name[match(substr(tot$atc_code, 1, 1), drug_atc$atc_code)]
+
 rownames(tot) <- 1:nrow(tot)
+
+
 
 write.table(tot, col.names = T, row.names = F, sep = '\t', quote = F, 
             file = sprintf('%spathSEA_corrPCs_tscoreCluster%s_featAssociation.txt', outFold, type_cluster))
