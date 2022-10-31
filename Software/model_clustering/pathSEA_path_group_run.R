@@ -109,12 +109,9 @@ psea_group <- function(df_names, collection, coll_name){
     print(i)
     tmp <- df_names[df_names$original %in% gr_res[[i]]$feat[gr_res[[i]]$estimates < 0],]
     id <- which(sapply(collection, function(x) x@setName) %in% tmp$updated)
-    db_filt <- collection[id]
-    # backgraound gene set
-    id_bg <- which(sapply(collection, function(x) x@setName) %in% df_names$updated)
-    db_bg <- collection[id_bg]                    
+    db_filt <- collection[id]                  
     if(length(id)>0){
-      psea <- PathSEA(rpBig, db_filt, bgsets = db_bg, collections=c(coll_name))
+      psea <- PathSEA(rpBig, db_filt, collections=c(coll_name))
       psea_out[[i]] <- psea$PathSEA[[coll_name]]
       psea_out[[i]]$gr <- i
       psea_out[[i]] <- psea_out[[i]] %>% 
@@ -133,11 +130,8 @@ psea_group <- function(df_names, collection, coll_name){
     tmp <- df_names[df_names$original %in% gr_res[[i]]$feat[gr_res[[i]]$estimates > 0],]
     id <- which(sapply(collection, function(x) x@setName) %in% tmp$updated)
     db_filt <- collection[id]
-    # backgraound gene set
-    id_bg <- which(sapply(collection, function(x) x@setName) %in% df_names$updated)
-    db_bg <- collection[id_bg] 
     if(length(id)>0){
-      psea <- PathSEA(rpBig, db_filt, bgsets = db_bg, collections=c(coll_name))
+      psea <- PathSEA(rpBig, db_filt, collections=c(coll_name))
       psea_out[[i]] <- psea$PathSEA[[coll_name]]
       psea_out[[i]]$gr <- i
       psea_out[[i]] <- psea_out[[i]] %>% 
