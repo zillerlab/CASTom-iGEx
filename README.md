@@ -11,7 +11,7 @@ across directly interpretable biological process and pathways as well as clinica
 ![](./overview.png)
 
 ## Built with
-* R (3.5.3)
+* R (>= 3.5.3)
 ### Required R packages
 - argparse 
 - biomaRt
