@@ -1,8 +1,10 @@
 # Imputation of gene expression, computation of individual pathway-scores and association with trait 
-CASTom-iGEx (Module 2) is a pipeline (R based) that uses trained model to predicts gene expression from genotype-only datasets and convert them to T-scores and pathway scores. Two versions are available dependening of data dimensionality. Prediction step contains also scripts to perform association with trait of interest as well as perform mendelian randomization across traits based on based on pathway and genes association.
+CASTom-iGEx (Module 2) is a pipeline (R based) that uses trained model to 
+1. predicts gene expression from genotype-only datasets and convert them to T-scores and pathway scores (two versions are available dependening of data dimensionality); 
+2. perform association analsysis of genes (TWAS) and pathways (PALAS) with the traits of interest.
 
 ## Input Files
-- **Genotype matrix** (*--genoDat_file*): dosages for each chromosome (compressed txt) without variants name/position (variants x samples).  *NOTE: SNPs must match with the train genotype data, file must end with chr<>_matrix.txt.gz*
+- **Genotype matrix** (*--genoDat_file*): dosages for each chromosome (compressed txt) without variants name/position (variants x samples).  *NOTE: SNPs must match (or be a subset of) the train genotype data, file must end with chr<>_matrix.txt.gz*
 - **Phenotype matrix** (*--phenoDat_file*): columns must contain `Individual_ID` plus any phenotype to test the association (phenotypes + 1 x samples). This matrix can include multiple phenotypes to be tested. 
 - **Phenotype description (*--phenoAnn_file*)**: csv file, rows refers to phenotypes to be tested. Columns must include: `pheno_id`, `FieldID`, `Field`,  `transformed_type`;  `pheno_id` is used to match columns name in Phenotype matrix, `transformed_type` is a charachter defining the type of data. Inspired by PHESANT for UKBiobank, possible values of `transformed_type` are 
     - "CONTINUOUS" (gaussian regression)
@@ -15,7 +17,7 @@ CASTom-iGEx (Module 2) is a pipeline (R based) that uses trained model to predic
 
 ## Workflow
 ### Predict gene expression
-From previously trained PriLer tissue-specific model (Module 1), predict gene expression based on genotype-only dataset
+From previously trained PriLer tissue-specific model (Module 1), predict gene expression based on genotype-only data set
 
 *--InfoFold* is the folder with gene-snp distance matrix ENSEMBL_gene_SNP_2e+5_chr<>_matrix.mtx, *--outTrain_fold* is the folder with overall results from PriLer
 
@@ -29,13 +31,13 @@ From previously trained PriLer tissue-specific model (Module 1), predict gene ex
     --InfoFold \
     --no_zip (default F)
 ```
-*NOTE: can be splitted for subset of samples (depends on covDat_file), genes are NOT filtered*
+*NOTE: can be split for subset of samples (depends on covDat_file), genes are NOT filtered*
 
 The output includes (saved in *--outFold*):
 - predictedExpression.txt.gz 
 
 ### Alternative: Predict gene expression on not harmonized data
-Similar as before BUT the genotype-only data is not initially harmonized with the reference panel. This scenario happens if it's necessary to use a previously trained model on a new data, however the best solution would be to initially harmonize reference pane and genotype-only data so to preoperly account for the LD structure of the available variants. Prior to this step is necessary that the genotype-only data has been filtered to include only variants from the reference panel genotype data (also having same REF and ALT annotation). The gene expression are imputed based on variants intersection.
+Similar as before BUT the genotype-only data is not initially harmonized with the reference panel. This scenario happens if it's necessary to use a previously trained model on a new data, however the best solution would be to initially harmonize the reference panel and the genotype-only data to properly account for the LD structure of the available variants. Prior to this step, genotype-only must be filtered to include only variants in the reference panel with the same REF and ALT annotation. The gene expression is imputed based on variants intersection.
 
 ```sh
 ./Priler_predictGeneExp_smallerVariantSet_run.R \
