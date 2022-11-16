@@ -19,5 +19,5 @@ d=sapply(tssCoords[,1],nchar)
 tssCoords=tssCoords[d<=5,]
 names(tssCoords)[c(1:4)]=c("chrom","chromstart","chromend","name")
 tssCoords[,4]=seq(1,nrow(tssCoords))
-write.table(positions,"/ziller/lucia/refData/hg19.ENSEMBL_genes_biomart.txt",sep="\t",quote=F,row.names=F)
-write.table(tssCoords,"/ziller/lucia/refData/hg19.ENSEMBL_geneTSS_biomart_correct.txt",sep="\t",quote=F,row.names=F)
+write.table(positions,"refData/hg19.ENSEMBL_genes_biomart.txt",sep="\t",quote=F,row.names=F)
+write.table(tssCoords,"refData/hg19.ENSEMBL_geneTSS_biomart_correct.txt",sep="\t",quote=F,row.names=F)
