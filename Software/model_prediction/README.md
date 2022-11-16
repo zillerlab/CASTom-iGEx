@@ -213,9 +213,5 @@ The output includes:
 
 ***
 
-### Initial filtering if datasets are not harmonized 
-
-compare_geneExp_matchedDataset_run.R
-compare_pathScore_matchedDataset_run.R
 
 
