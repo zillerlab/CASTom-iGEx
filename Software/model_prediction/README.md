@@ -16,7 +16,7 @@ CASTom-iGEx (Module 2) is a pipeline (R based) that uses trained model to
 - **Custom pathway** (*--pathwayStructure_file*): .RData file, similar to GO structure, each pathway is a list entry with `name` and `geneIds` elements. Available for WikiPathways (2019) in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/)
 
 ## Workflow
-### Predict gene expression
+### 1) Predict gene expression
 From previously trained PriLer tissue-specific model (Module 1), predict gene expression based on genotype-only data set
 
 *--InfoFold* is the folder with gene-snp distance matrix ENSEMBL_gene_SNP_2e+5_chr<>_matrix.mtx, *--outTrain_fold* is the folder with overall results from PriLer
@@ -36,7 +36,7 @@ From previously trained PriLer tissue-specific model (Module 1), predict gene ex
 The output includes (saved in *--outFold*):
 - predictedExpression.txt.gz 
 
-### Alternative: Predict gene expression on not harmonized data
+### 1') Alternative: Predict gene expression on not harmonized data
 Similar as before BUT the genotype-only data is not initially harmonized with the reference panel. This scenario happens if it's necessary to use a previously trained model on a new data, however the best solution would be to initially harmonize the reference panel and the genotype-only data to properly account for the LD structure of the available variants. Prior to this step, genotype-only must be filtered to include only variants in the reference panel with the same REF and ALT annotation. The gene expression is imputed based on variants intersection.
 
 ```sh
@@ -62,7 +62,7 @@ The output includes (saved in *--outFold*):
 Based on data dimension, the next scripts are divided in two parts. If sample size <= 10,000 follow "Small dataset" part, otherwise "Large dataset".
 ***
 
-### Small dataset: T-scores and Pathway-scores computation
+### 2) Small dataset: T-scores and Pathway-scores computation
 Predicted gene expression is converted into T-scores and combined into Pathway-scores. T-scores are computed using a subset of control samples (`Dx == 0`) as reference set if column `Dx` is present in *--covDat_file*, otherwise a random subset of samples is selected. 
 
 *--input_file* is predictedExpression.txt.gz of the previous step, 
@@ -85,7 +85,7 @@ The output includes (saved in *--outFold*):
 
 Pathway scores can include pathway made of the same genes but with different names (filtered in the association steps)
 
-### Small dataset: Pathway-scores computation for custom gene list
+### 3) Small dataset: Pathway-scores computation for custom gene list
 Based on already computed T-scores, create pathway-scores for a custom .RData object containing gene sets (example WikiPathways)
 
 *--tscore_file* is - predictedTscores.txt: gene T-scores of the previous step, *--geneSetName* custom name for gene sets databse
@@ -102,7 +102,7 @@ Based on already computed T-scores, create pathway-scores for a custom .RData ob
 The output includes (saved in *--outFold*):
 - Pathway_<*geneSetName*>_scores.txt
 
-### Small dataset: Association with phenotype of T-score and pathways
+### 4) Small dataset: Association with phenotype of T-score and pathways
 T-scores and pathway-scores are tested for association with phenotypes. The regression type depends on the nature of the phenotype (gaussin, binary and ordinal logistic). Redundant pathways composed of the same gene sets are removed keeping the one with lower number of annotated total gene. Genes/pathways are corrected for multiple testing.
 
 *--thr_reliableGenes* MUST be the same as the filtering criteria previously applied, *--inputFold* contains pathways and t-scores results, *--covDat_file* includes covariates to filter for, *--sampleAnn_file* same sample list of *covDat_file* but can exclude actual covariates, *--names_file* name for the phenotype group to be tested, *--geneAnn_file* resPrior_regEval_allchr.txt from PriLer
@@ -133,7 +133,7 @@ The output includes (saved in *--outFold*):
     - info_pathScore_GO (list, each entry refers to a phenotype): for each pathway in GO, its summary statistics and those of the genes belonging to the pathway
 
 
-### Small dataset: Association with phenotype of custom pathways
+### 5) Small dataset: Association with phenotype of custom pathways
 Same as before btu for custom gene sets. It requires the association between phenotypes and T-scores to be complete (previous step).
 
 ```sh
@@ -158,20 +158,21 @@ Same as before btu for custom gene sets. It requires the association between phe
 The output includes (saved in *--outFold*):
 - pval_<*names_file*>_covCorr_customPath_<*geneSetName*>.RData / pval_<*names_file*>_customPath_<*geneSetName*>.RData (same as previous step)
 
-### Small dataset: Meta-analysis for multiple cohorts T-scores and pathways
+### 6) Small dataset: Meta-analysis for multiple cohorts T-scores and pathways
 pheno_association_metaAnalysis_run.R
 
-### Small dataset: Meta-analysis for multiple cohorts custom pathways 
+### 7) Small dataset: Meta-analysis for multiple cohorts custom pathways 
 pheno_association_customPath_metaAnalysis_run.R
 
 ***
 ***
 
 ### 1) Large dataset: preliminary
-Predicted gene expression had been executed for split set of samples. For each of them keep only gene such that dev_geno>0.01 and test_dev_geno>0.
+Predicted gene expression had been executed for split set of samples. For each of them keep only gene such that dev_geno > 0.01 and test_dev_geno > 0.
 
-#### Usage
-> bash Combine_filteredGeneExpr.sh inputFold outFold split_tot
+```sh
+bash Combine_filteredGeneExpr.sh inputFold outFold split_tot \
+```
 
 - inputFold: folder including training evaluation model
 - outFold: folder including predicted gene expression
@@ -184,8 +185,18 @@ The output includes:
 ### 2) Large dataset: T-scores computation
 Perform differential gene expression using t-statistic for each sample with respect to subset of samples considered as reference. The reference is usually a subset of control samples, however if column Dx is not present in the covariate Matrix file a subset of samples is randomly chosen.
 *NOTE: computationally heavy. All samples considered together, process is split across genes*
-#### Usage
-> Rscript Tscore_splitGenes_run.R --input_file --nFolds (default 20) --perc_comp (default 0.5) --ncores (default 10) --covDat_file --outFold --split_gene_id --split_tot (default 100)
+
+```sh
+./Tscore_splitGenes_run.R \
+    --input_file \
+    --nFolds (default 20) \
+    --perc_comp (default 0.5) \
+    --ncores (default 10) \
+    --covDat_file \
+    --outFold \
+    --split_gene_id \
+    --split_tot (default 100)
+```
 
 - *input_file*: vector containing full path to split gene expression files
 
@@ -195,8 +206,18 @@ The output includes:
 ### 3) Large dataset: PathScore computation
 Combine T-scores into Pathway scores using as annotation Reactome and GO.
 *NOTE: computationally heavy*
-#### Usage
-> Rscript PathwayScores_splitGenes_run.R/PathwayScores_splitGenes_customGeneList_run.R --ncores (default 10) --input_file  --covDat_file  --outFold --split_tot (default 100) --reactome_file --GOterms_file --skip_reactome (default F)
+
+```sh
+./PathwayScores_splitGenes_run.R/PathwayScores_splitGenes_customGeneList_run.R \
+    --ncores (default 10) \
+    --input_file  \
+    --covDat_file \
+    --outFold \
+    --split_tot (default 100) \
+    --reactome_file \
+    --GOterms_file \
+    --skip_reactome (default F)
+```
 - *input_file*: common path to .RData object predicted Tscores ({i}.RData part excluded)
 
 The output includes:
