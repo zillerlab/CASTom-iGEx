@@ -9,6 +9,10 @@ suppressPackageStartupMessages(library(gridExtra))
 suppressPackageStartupMessages(library(RColorBrewer))
 suppressPackageStartupMessages(library(ggsci))
 suppressPackageStartupMessages(library(ggExtra))
+suppressPackageStartupMessages(library(cowplot))
+suppressPackageStartupMessages(library(ggpubr))
+suppressPackageStartupMessages(library(ggrepel))
+
 options(bitmapType = 'cairo', device = 'png')
 
 parser <- ArgumentParser(description="Combain all results and produce quality plot checks")
@@ -508,8 +512,9 @@ pl_genonew_train <- ggplot(subset(tot_df, train_dev_geno_nop>=0.001), aes(x = tr
   geom_point(size = 0.1) + ggtitle('Train sets (reliable genes)')+ 
   geom_hline(yintercept =0, color = 'black', size = 0.5)+
   geom_vline(xintercept = 0.0009, color = 'black', size = 0.5, linetype =2, alpha = 0.6)+
-  xlab(expression (R[el-net]^2)) +  xlab(expression (R[el-net]^2))+
-  theme_classic() + ylab(expression(frac(R[PriLer]^2 - R[el-net]^2,R[el-net]^2))) + theme(legend.position = "none",plot.title = element_text(hjust = 0.5))+
+  xlab(expression (R[el-net]^2)) + ylab(expression(frac(R[PriLer]^2 - R[el-net]^2,R[el-net]^2))) + 
+  theme_classic() + 
+  theme(legend.position = "none",plot.title = element_text(hjust = 0.5))+
   annotate(geom="text", x=pos_text, y=max(tot_df$perc_train[tot_df$train_dev_geno_nop>=0.001])-0.1, 
            label=paste("% improved genes\n", round(length(which(tot_df$train_col == 'red'))/nrow(tot_df),digits=3)), color="black", size = 3)+
   scale_color_manual(values =c("red", "blue"))
@@ -524,8 +529,9 @@ pl_genonew_test <- ggplot(subset(tot_df, test_dev_geno_nop>=0.001), aes(x = test
   geom_point(size = 0.1) + ggtitle('Test sets (reliable genes)')+ 
   geom_hline(yintercept =0, color = 'black', size = 0.5)+
   geom_vline(xintercept = 0.0009, color = 'black', size = 0.5, linetype =2, alpha = 0.6)+
-  xlab(expression (R[el-net]^2)) +  xlab(expression (R[el-net]^2))+
-  theme_classic() + ylab(expression(frac(R[PriLer]^2 - R[el-net]^2,R[el-net]^2))) + theme(legend.position = "none",plot.title = element_text(hjust = 0.5))+
+  xlab(expression (R[el-net]^2)) +  ylab(expression(frac(R[PriLer]^2 - R[el-net]^2,R[el-net]^2))) + 
+  theme_classic() + 
+  theme(legend.position = "none",plot.title = element_text(hjust = 0.5))+
   annotate(geom="text", x=pos_text, y=max(tot_df$perc_test[tot_df$test_dev_geno_nop>=0.001])-0.1,
            label=paste("% improved genes\n", round(length(which(tot_df$test_col == 'red'))/nrow(tot_df),digits=3)), color="black", size = 3)+
   scale_color_manual(values =c("red", "blue"))
@@ -812,10 +818,6 @@ df_prior <- df_prior[-1,]
 df_prior$Prior <- factor(df_prior$Prior, levels = pNames)
 write.table(file = sprintf('%sfractionPrior_perFeature.txt', outFold),x = df_prior, col.names = T, row.names = F, sep ='\t', quote = F)
 
-library(latex2exp)
-library(cowplot)
-library(ggpubr)
-library(ggrepel)
 
 # make plot
 pl_prior <- ggplot(df_prior, aes(x = frac_nop, y = frac, color = Prior, size = weights)) + 
@@ -823,8 +825,12 @@ pl_prior <- ggplot(df_prior, aes(x = frac_nop, y = frac, color = Prior, size = w
   xlim(0, max(df_prior$frac))+ylim(0,max(df_prior$frac))+
   geom_abline(slope = 1, intercept = 0, linetype=2, alpha = 0.6)+
   geom_abline(slope = 2, intercept = 0, linetype=2, alpha = 0.6, color = 'red')+
-  xlab(TeX('$\\frac{n. reg-SNPs\\,with\\,prior}{n. reg-SNPs}$ el-net'))  +  theme_classic() + 
-  ylab(TeX('$\\frac{n. reg-SNPs\\,with\\,prior}{n. reg-SNPs}$ PriLer')) + theme(legend.position = c(0.75, 0.3), plot.title = element_text(hjust = 0.5))+
+  xlab(expression(frac(regSNPs[Prior],regSNPs), elnet)) + 
+  ylab(expression(frac(regSNPs[Prior],regSNPs), PriLer)) +
+  # xlab(TeX('$\\frac{n. reg-SNPs\\,with\\,prior}{n. reg-SNPs}$ el-net'))  +  
+  # ylab(TeX('$\\frac{n. reg-SNPs\\,with\\,prior}{n. reg-SNPs}$ PriLer')) + 
+  theme_classic() + 
+  theme(legend.position = c(0.75, 0.3), plot.title = element_text(hjust = 0.5))+
   scale_color_d3('category20')+labs(size = "Max contribution \nto prior coefficient")+
   guides(color =FALSE)
 
@@ -833,8 +839,12 @@ tmp <- ggplot(df_prior, aes(x = frac_nop, y = frac, color = Prior, size = weight
   xlim(0, max(df_prior$frac))+ylim(0,max(df_prior$frac))+
   geom_abline(slope = 1, intercept = 0, linetype=2, alpha = 0.6)+
   geom_abline(slope = 2, intercept = 0, linetype=2, alpha = 0.6, color = 'red')+
-  xlab(TeX('$\\frac{n. reg-SNPs\\,with\\,prior}{n. reg-SNPs}$ el-net')) +  theme_classic() +
-  ylab(TeX('$\\frac{n. reg-SNPs\\,with\\,prior}{n. reg-SNPs}$ PriLer')) + theme(legend.position = 'right', plot.title = element_text(hjust = 0.5))+
+  xlab(expression(frac(regSNPs[Prior],regSNPs), elnet)) + 
+  ylab(expression(frac(regSNPs[Prior],regSNPs), PriLer)) +
+  #xlab(TeX('$\\frac{n. reg-SNPs\\,with\\,prior}{n. reg-SNPs}$ el-net')) +  
+  #ylab(TeX('$\\frac{n. reg-SNPs\\,with\\,prior}{n. reg-SNPs}$ PriLer')) + 
+  theme_classic() + 
+  theme(legend.position = 'right', plot.title = element_text(hjust = 0.5))+
   scale_color_d3('category20')+labs(size = "Max contribution \nto prior coefficient")+
   guides(size =FALSE)
 
