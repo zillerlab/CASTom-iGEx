@@ -103,7 +103,7 @@ The output includes (saved in *--outFold*):
 - Pathway_<*geneSetName*>_scores.txt
 
 ### 4) Small dataset: Association with phenotype of T-score and pathways
-T-scores and pathway-scores are tested for association with phenotypes. The regression type depends on the nature of the phenotype (gaussin, binary and ordinal logistic). Redundant pathways composed of the same gene sets are removed keeping the one with lower number of annotated total gene. Genes/pathways are corrected for multiple testing.
+T-scores and pathway-scores are tested for association with phenotypes. The regression type depends on the nature of the phenotype (gaussian, binary and ordinal logistic). Redundant pathways composed of the same gene sets are removed keeping the one with lower number of annotated total gene. Genes/pathways are corrected for multiple testing.
 
 *--thr_reliableGenes* MUST be the same as the filtering criteria previously applied, *--inputFold* contains pathways and t-scores results, *--covDat_file* includes covariates to filter for, *--sampleAnn_file* same sample list of *covDat_file* but can exclude actual covariates, *--names_file* name for the phenotype group to be tested, *--geneAnn_file* resPrior_regEval_allchr.txt from PriLer
 
@@ -134,7 +134,7 @@ The output includes (saved in *--outFold*):
 
 
 ### 5) Small dataset: Association with phenotype of custom pathways
-Same as before btu for custom gene sets. It requires the association between phenotypes and T-scores to be complete (previous step).
+Same as before but for custom gene sets. It requires the association between phenotypes and T-scores to be complete (previous step).
 
 ```sh
 ./pheno_association_smallData_customPath_run.R \
