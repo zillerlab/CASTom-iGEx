@@ -59,7 +59,7 @@ for(i in 1:length(all_Chroms)){
   chr <- all_Chroms[i]
   print(chr)
   
-  genDat <- read.table(gzfile(sprintf('%s%s_matrix.txt.gz', genoDat_file, chr)), header  = T, check.names=F)
+  genDat <- fread(sprintf('%s%s_matrix.txt.gz', genoDat_file, chr), header  = T, check.names=F, data.table = F)
   # order based the sample_id file (NOTE: covDat already ordered based on that)
   id <- unname(sapply(sampleAnn$genoSample_ID, function(x) which(x == colnames(genDat))))
   genDat <- genDat[, id]
