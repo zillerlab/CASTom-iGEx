@@ -222,13 +222,15 @@ The output includes:
 - predictedExpression_filt.txt.gz filtered predicted gene expression for all samples
 
 ### 2) Large dataset: T-scores computation
-Perform differential gene expression using t-statistic for each sample with respect to subset of samples considered as reference. The reference is usually a subset of control samples, however if column Dx is not present in the covariate Matrix file a subset of samples is randomly chosen.
-*NOTE: computationally heavy. All samples considered together, process is split across genes*
+Perform differential gene expression using t-statistic for each sample with respect to subset of samples considered as reference. The reference is usually a subset of control samples. However if column Dx is not present in the covariate mat (covDat_file), a subset of samples is randomly chosen.
+*NOTE: computationally heavy. All samples considered together, process is split across genes (--split_gene_id)*
+
+- *input_file*: vector containing full path to split gene expression files
 
 ```sh
 ./Tscore_splitGenes_run.R \
     --input_file \
-    --nFolds (default 20) \
+    --nFolds (default 40) \
     --perc_comp (default 0.5) \
     --ncores (default 10) \
     --covDat_file \
@@ -236,8 +238,6 @@ Perform differential gene expression using t-statistic for each sample with resp
     --split_gene_id \
     --split_tot (default 100)
 ```
-
-- *input_file*: vector containing full path to split gene expression files
 
 The output includes: 
 - predictedTscore_splitGenes{i}.RData for each subset of genes, all samples included
