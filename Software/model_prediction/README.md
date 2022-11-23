@@ -210,17 +210,15 @@ The output includes (saved in *--outFold*):
 ### 1) Large dataset: preliminary
 
 Predicted gene expression had been executed for split set of samples. For each of them keep only gene such that dev_geno > 0.01 and test_dev_geno > 0.
+- *inputFold* folder including resPrior_regEval_allchr.txt from PriLer
+- *outFold* folder including predicted gene expression (split per sample groups)
+- *split_tot* number of subgroup the samples have been split on
 
 ```sh
-bash Combine_filteredGeneExpr.sh inputFold outFold split_tot \
+bash Combine_filteredGeneExpr.sh inputFold outFold split_tot
 ```
 
-- inputFold: folder including training evaluation model
-- outFold: folder including predicted gene expression
-- split_tot: number of subgroup the samples have been split on
-
 The output includes:
-- split{i}_predictedExpression_filt.txt filtered predicted gene expression for each sample subset
 - predictedExpression_filt.txt.gz filtered predicted gene expression for all samples
 
 ### 2) Large dataset: T-scores computation
