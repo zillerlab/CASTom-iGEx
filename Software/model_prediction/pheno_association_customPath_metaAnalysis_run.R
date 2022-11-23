@@ -15,7 +15,6 @@ parser$add_argument("--name_cohort", type="character", nargs = '*', help = "name
 parser$add_argument("--cov_corr", type = "logical",default = F,  help = "if T column in covDat_file are use to correct association (excluded Dx and IDs) [default %(default)s]")
 parser$add_argument("--phenoName", type="character",  help = "phenotype group name considered")
 parser$add_argument("--thr_het", type = "double", default = 0.001, help = "threshold for random effect model [default %(default)s]")
-parser$add_argument("--lambda_pi1", type = "double", default = 0.5, help = "lambda parameter to compute pi1 [default %(default)s]")
 parser$add_argument("--geneSetName", type = "character", help = "name pathway custom")
 parser$add_argument("--abs_tscore", type = "logical", default = F, help = "if true also the pathway using absolute values of tscore is computed [default %(default)s]")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
@@ -29,7 +28,6 @@ phenoName <- args$phenoName
 thr_het <- args$thr_het
 pathwayStructure_file <- args$pathwayStructure_file
 geneSetName <- args$geneSetName
-lambda_pi1 <- args$lambda_pi1
 abs_tscore <- args$abs_tscore
 outFold <- args$outFold
 
@@ -40,7 +38,6 @@ outFold <- args$outFold
 # cov_corr = T
 # thr_het <- 10^-3
 # phenoName <- 'Dx'
-# lambda_pi1 <- 0.5
 # GOterms_file <- '/psycl/g/mpsziller/lucia/refData/GOterm_geneAnnotation_allOntologies.RData'
 # reactome_file <- '/psycl/g/mpsziller/lucia/refData/ReactomePathways.gmt'
 # outFold <- 'OUTPUT_GTEx/predict_CAD/Adipose_Subcutaneous/200kb/CAD_GWAS_bin5e-2/Meta_Analysis_CAD/'
