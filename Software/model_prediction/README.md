@@ -104,8 +104,13 @@ The output includes (saved in *--outFold*):
 
 ### 4) Small dataset: Association with phenotype of T-score and pathways
 T-scores and pathway-scores are tested for association with phenotypes. The regression type depends on the nature of the phenotype (gaussian, binary and ordinal logistic). Redundant pathways composed of the same gene sets are removed keeping the one with lower number of annotated total gene. Genes/pathways are corrected for multiple testing.
-
-*--thr_reliableGenes* MUST be the same as the filtering criteria previously applied, *--inputFold* contains pathways and t-scores results, *--covDat_file* includes covariates to filter for, *--sampleAnn_file* same sample list of *covDat_file* but can exclude actual covariates, *--names_file* name for the phenotype group to be tested, *--geneAnn_file* resPrior_regEval_allchr.txt from PriLer
+- *--thr_reliableGenes* MUST be the same as the filtering criteria previously applied, 
+- *--inputFold* contains pathways and t-scores results, 
+- *--covDat_file* includes covariates to filter for, 
+- *--sampleAnn_file* same sample list of *covDat_file* but can exclude actual covariates, 
+- *--names_file* name for the phenotype group to be tested, 
+- *--geneAnn_file* resPrior_regEval_allchr.txt from PriLer
+- *--cov_corr* if TRUE (default) corrects for the covariates available in covDat_file
 
 ```sh
 ./pheno_association_smallData_run.R \
@@ -124,7 +129,7 @@ T-scores and pathway-scores are tested for association with phenotypes. The regr
     --outFold
 ```
 The output includes (saved in *--outFold*):
-- pval_<*names_file*>_covCorr.RData/pval_<*names_file*>.RData list composed of 
+- pval_<*names_file*>_covCorr.RData list composed of 
     - pheno: phenoAnn info
     - tscore (list, each entry refers to a phenotype): summary statistics of association from tscores for each reliable genes
     - pathScore_reactome (list, each entry refers to a phenotype): summary statistics of association from pathscore (Reactome)
@@ -156,18 +161,54 @@ Same as before but for custom gene sets. It requires the association between phe
 ```
 
 The output includes (saved in *--outFold*):
-- pval_<*names_file*>_covCorr_customPath_<*geneSetName*>.RData / pval_<*names_file*>_customPath_<*geneSetName*>.RData (same as previous step)
+- pval_<*names_file*>_covCorr_customPath_<*geneSetName*>.RData (same structure as previous step)
 
 ### 6) Small dataset: Meta-analysis for multiple cohorts T-scores and pathways
-pheno_association_metaAnalysis_run.R
+
+Combine results from multiple cohorts (harmonized) via meta-analsys (inverse variance weighted method). 
+- *--res_cohorts* .RData files from pheno_association_smallData_run.R, one for each cohort
+- *--thr_het* threshold for p-value from Cochrane’s Q statistic, if p-value <= thr_het estimates are computed via random-effects
+
+```sh
+./pheno_association_metaAnalysis_run.R \
+    --res_cohorts
+    --name_cohort 
+    --phenoDatFile_cohorts
+    --cov_corr (defualt T)
+    --phenoName
+    --thr_het (defualt 0.001)
+    --reactome_file
+    --GOterms_file
+    --outFold
+```
+The output includes (saved in *--outFold*):
+- pval_<*phenoName*>_covCorr.RData (same structure as previous step)
+- phenoInfo_<*phenoName*>_cohorts.txt (tab separated file with n. cases/controls for each sample)
 
 ### 7) Small dataset: Meta-analysis for multiple cohorts custom pathways 
-pheno_association_customPath_metaAnalysis_run.R
+Same as before but for custom gene sets.
 
-***
+```sh
+./pheno_association_customPath_metaAnalysis_run.R \
+    --res_cohorts 
+    --name_cohort
+    --phenoDatFile_cohorts
+    --cov_corr (default T)
+    --phenoName
+    --thr_het (defualt 0.001)
+    --pathwayStructure_file
+    --geneSetName 
+    --abs_tscore (default T)
+    --outFold 
+```
+The output includes (saved in *--outFold*):
+- pval_<*phenoName*>_covCorr.RData 
+- phenoInfo_<*phenoName*>_cohorts.txt (tab separated file with n. cases/controls for each sample)
+
 ***
 
 ### 1) Large dataset: preliminary
+
 Predicted gene expression had been executed for split set of samples. For each of them keep only gene such that dev_geno > 0.01 and test_dev_geno > 0.
 
 ```sh
