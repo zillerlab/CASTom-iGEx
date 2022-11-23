@@ -8,6 +8,8 @@ split_tot=$3
 
 
 cd ${outFold}
+mkdir -p devgeno${devgeno}_testdevgeno${testdevgeno}/
+
 gene_info=${inputFold}resPrior_regEval_allchr.txt
 
 # create gene list to keep 
