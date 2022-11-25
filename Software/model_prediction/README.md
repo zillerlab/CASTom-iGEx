@@ -279,11 +279,11 @@ Combine T-scores into Pathway scores for a custom .RData object containing gene 
     --outFold \
     --split_tot (default 100) \
     --pathwayStruct_file \
-	--geneSetName
+    --geneSetName
 ```
 
 The output includes (saved in *--outFold*):
-- Pathway_<geneSetName>.RData 
+- Pathway_<*geneSetName*>.RData 
 
 #### 4) Large dataset: Association
 - pheno_association_prepare_largeData_run.R
