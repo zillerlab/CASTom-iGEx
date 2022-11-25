@@ -85,7 +85,7 @@ The output includes (saved in *--outFold*):
 
 Pathway scores can include pathway made of the same genes but with different names (filtered in the association steps)
 
-### 3) Small dataset: Pathway-scores computation for custom gene list
+### 2') Small dataset: Pathway-scores computation for custom gene list
 Based on already computed T-scores, create pathway-scores for a custom .RData object containing gene sets (example WikiPathways)
 
 *--tscore_file* is - predictedTscores.txt: gene T-scores of the previous step, *--geneSetName* custom name for gene sets databse
@@ -102,7 +102,7 @@ Based on already computed T-scores, create pathway-scores for a custom .RData ob
 The output includes (saved in *--outFold*):
 - Pathway_<*geneSetName*>_scores.txt
 
-### 4) Small dataset: Association with phenotype of T-score and pathways
+### 3) Small dataset: Association with phenotype of T-score and pathways
 T-scores and pathway-scores are tested for association with phenotypes. The regression type depends on the nature of the phenotype (gaussian, binary and ordinal logistic). Redundant pathways composed of the same gene sets are removed keeping the one with lower number of annotated total gene. Genes/pathways are corrected for multiple testing.
 - *--thr_reliableGenes* MUST be the same as the filtering criteria previously applied, 
 - *--inputFold* contains pathways and t-scores results, 
@@ -138,7 +138,7 @@ The output includes (saved in *--outFold*):
     - info_pathScore_GO (list, each entry refers to a phenotype): for each pathway in GO, its summary statistics and those of the genes belonging to the pathway
 
 
-### 5) Small dataset: Association with phenotype of custom pathways
+### 4) Small dataset: Association with phenotype of custom pathways
 Same as before but for custom gene sets. It requires the association between phenotypes and T-scores to be complete (previous step).
 
 ```sh
@@ -163,7 +163,7 @@ Same as before but for custom gene sets. It requires the association between phe
 The output includes (saved in *--outFold*):
 - pval_<*names_file*>_covCorr_customPath_<*geneSetName*>.RData (same structure as previous step)
 
-### 6) Small dataset: Meta-analysis for multiple cohorts T-scores and pathways
+### 5) Small dataset: Meta-analysis for multiple cohorts T-scores and pathways
 
 Combine results from multiple cohorts (harmonized) via meta-analsys (inverse variance weighted method). 
 - *--res_cohorts* .RData files from pheno_association_smallData_run.R, one for each cohort
@@ -185,7 +185,7 @@ The output includes (saved in *--outFold*):
 - pval_<*phenoName*>_covCorr.RData (same structure as previous step)
 - phenoInfo_<*phenoName*>_cohorts.txt (tab separated file with n. cases/controls for each sample)
 
-### 7) Small dataset: Meta-analysis for multiple cohorts custom pathways 
+### 6) Small dataset: Meta-analysis for multiple cohorts custom pathways 
 Same as before but for custom gene sets.
 
 ```sh
@@ -223,9 +223,11 @@ The output includes:
 
 ### 2) Large dataset: T-scores computation
 Perform differential gene expression using t-statistic for each sample with respect to subset of samples considered as reference. The reference is usually a subset of control samples. However if column Dx is not present in the covariate mat (covDat_file), a subset of samples is randomly chosen.
-*NOTE: computationally heavy. All samples considered together, process is split across genes (--split_gene_id)*
 
-- *input_file*: vector containing full path to split gene expression files
+**NOTE**: computationally heavy. All samples considered together, process is split across genes (--split_gene_id)
+
+- *input_file* vector containing full path to split gene expression files
+- *split_tot* number of subgroup the genes will be split on, each split will produce n_samples x n_genes_split matrices
 
 ```sh
 ./Tscore_splitGenes_run.R \
@@ -239,15 +241,18 @@ Perform differential gene expression using t-statistic for each sample with resp
     --split_tot (default 100)
 ```
 
-The output includes: 
+The output includes (saved in *--outFold*):
 - predictedTscore_splitGenes{i}.RData for each subset of genes, all samples included
 
 ### 3) Large dataset: PathScore computation
 Combine T-scores into Pathway scores using as annotation Reactome and GO.
-*NOTE: computationally heavy*
+**NOTE**: computationally heavy, for ~ 300,000 samples it required --mem-per-cpu=35G and --cpus-per-task=10
+
+- *input_file* common path to .RData object predicted Tscores ({i}.RData part excluded)
+- *split_tot* MUST be tha same value used in the previous script
 
 ```sh
-./PathwayScores_splitGenes_run.R/PathwayScores_splitGenes_customGeneList_run.R \
+./PathwayScores_splitGenes_run.R \
     --ncores (default 10) \
     --input_file  \
     --covDat_file \
@@ -257,13 +262,28 @@ Combine T-scores into Pathway scores using as annotation Reactome and GO.
     --GOterms_file \
     --skip_reactome (default F)
 ```
-- *input_file*: common path to .RData object predicted Tscores ({i}.RData part excluded)
 
-The output includes:
-- Pathway_Reactome/GO_scores.RData: pathway scores for each pathways and samples
-- Pathway_Reactome/GO_pvalues.RData: pathway pvalues (t.test) for each pathways and samples
-- PathwaySummaryPvalues_cases_Reactome/GO.txt: Fisher’s combined probability pvalue consider only cases
-- PathwaySummaryPvalues_cases_Reactome/GO.txt: Fisher’s combined probability pvalue consider only controls
+The output includes (saved in *--outFold*):
+- Pathway_Reactome.RData: pathway scores based on Reactome
+- Pathway_GO_scores.RData: pathway scores based on GO
+
+### 3') Large dataset: Pathway-scores computation for custom gene list
+Combine T-scores into Pathway scores for a custom .RData object containing gene sets (example WikiPathways)
+**NOTE**: computationally heavy, for ~ 300,000 samples it required --mem-per-cpu=35G and --cpus-per-task=10
+
+```sh
+./PathwayScores_splitGenes_customGeneList_run.R \
+    --ncores (default 10) \
+    --input_file  \
+    --covDat_file \
+    --outFold \
+    --split_tot (default 100) \
+    --pathwayStruct_file \
+	--geneSetName
+```
+
+The output includes (saved in *--outFold*):
+- Pathway_<geneSetName>.RData 
 
 #### 4) Large dataset: Association
 - pheno_association_prepare_largeData_run.R
