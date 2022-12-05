@@ -55,6 +55,9 @@ It initially corrects for PCs, uses wilcoxon test and combined in loci/macrogrou
 ### treatment response
 cluster_treatmentResponseAnalysis_run.R
 
+### drug repositioning 
+pathSEA_path_group_run.R
+
 ### Predict on external cohort
 Corrects for new cohort PCs before projecting clustering
 
