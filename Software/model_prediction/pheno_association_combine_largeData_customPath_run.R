@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 # combine splitted results association
 
 options(stringsAsFactors=F)

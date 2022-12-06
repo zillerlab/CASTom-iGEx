@@ -1,4 +1,5 @@
-#### code written by Lucia Trastulla, e-mail: lucia_trastulla@psych.mpg.de ####
+#!/usr/bin/env Rscript
+
 # save also beta, se, zcores
 # consider results from big matrix, possibility to load more than 1 cov and pheno dat, add pheno annotation info
 # specific for pathway scores
