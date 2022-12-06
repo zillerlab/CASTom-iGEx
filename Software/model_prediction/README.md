@@ -313,13 +313,28 @@ The output includes (saved in *--outFold*):
 - tscore_info.RData, pathScore_Reactome_info.RData, pathScore_GO_info.RData, pathScore_<pathwayCustom_name>_info.RData tables with genes and pathways to be tested
 - Pathway_Reactome_scores_splitPath<i>.RData, Pathway_GO_scores_splitPath<i>.RData, Pathway_<pathwayCustom_name>_scores_splitPath<i>.RData matrices of subgroup of pathways to be tested, i goes from 1 to *split_tot*
 
+#### 4.2) Large dataset: Association: test gene T-scores
 
-- pheno_association_tscore_largeData_run.R
-- pheno_association_pathscore_largeData_run.R
-- pheno_association_combine_largeData_run.R
-- pheno_association_combine_largeData_customPath_run.R
+```sh
+./pheno_association_tscore_largeData_run.R \
+```
 
+#### 4.3) Large dataset: Association: test pathway-scores
 
+```sh
+./pheno_association_pathscore_largeData_run.R \
+```
+
+#### 4.4) Large dataset: Association: combine results
+
+```sh
+./pheno_association_combine_largeData_run.R \
+```
+
+#### 4.4') Large dataset: Association: combine results from custom pathway database
+```sh
+./pheno_association_combine_largeData_customPath_run.R \
+```
 
 ***
 
