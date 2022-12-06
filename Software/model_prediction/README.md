@@ -285,11 +285,41 @@ Combine T-scores into Pathway scores for a custom .RData object containing gene 
 The output includes (saved in *--outFold*):
 - Pathway_<*geneSetName*>.RData 
 
-#### 4) Large dataset: Association
-- pheno_association_prepare_largeData_run.R
+### 4) Large dataset: Association
+Perform association with a phenotype, it is divided in multiple steps to reduce computational burden
+
+#### 4.1) Large dataset: Association: input preparation
+Prepare for association with phenotypes, it creates summary info files for genes and pathways and split pathway .RData in smaller .RData objectes to be tested in parallel. Pathways computed from the same genes are filtered to keep the ones composed of a lower number of genes (original annotation).
+- *inputFold* folder including pathway and T-scores from step 3)
+- *geneAnn_file* resPrior_regEval_allchr.txt from PriLer
+- *skip_tscore_info* boolen, set to TRUE if preparation for T-score has been done, e.g. when applying the script to custom pathway
+- *split_tot* number of subgroup the genes were split on, the same value will be used to split pathways into that amount of groups.
+
+```sh
+./pheno_association_prepare_largeData_run.R \
+    --inputFold (default NULL) \
+    --reactome_file (default NULL) \
+    --GOterms_file (default NULL) \
+    --pathwayCustom_file (default NULL) \
+    --pathwayCustom_name (default NULL) \
+    --sampleAnn_file \
+    --geneAnn_file \
+    --thr_reliableGenes (default = c(0.01, 0)) \
+    --split_tot (defualt 100) \
+    --skip_tscore_info (default FALSE) \
+    --outFold 
+```
+The output includes (saved in *--outFold*):
+- tscore_info.RData, pathScore_Reactome_info.RData, pathScore_GO_info.RData, pathScore_<pathwayCustom_name>_info.RData tables with genes and pathways to be tested
+- Pathway_Reactome_scores_splitPath<i>.RData, Pathway_GO_scores_splitPath<i>.RData, Pathway_<pathwayCustom_name>_scores_splitPath<i>.RData matrices of subgroup of pathways to be tested, i goes from 1 to *split_tot*
+
+
 - pheno_association_tscore_largeData_run.R
 - pheno_association_pathscore_largeData_run.R
 - pheno_association_combine_largeData_run.R
+- pheno_association_combine_largeData_customPath_run.R
+
+
 
 ***
 
