@@ -317,6 +317,19 @@ The output includes (saved in *--outFold*):
 
 ```sh
 ./pheno_association_tscore_largeData_run.R \
+    --inputFile \
+    --inputInfoFile \
+    --split_tot \
+    --split_gene_id \
+    --covDat_file \
+    --sampleAnn_file \
+    --phenoDat_file \
+    --phenoAnn_file \
+    --cov_corr \
+    --names_file \
+    --functR \
+    --ncores \
+    --outFile \
 ```
 
 #### 4.3) Large dataset: Association: test pathway-scores
