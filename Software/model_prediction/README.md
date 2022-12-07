@@ -290,10 +290,10 @@ Perform association with a phenotype, it is divided in multiple steps to reduce 
 
 #### 4.1) Large dataset: Association: input preparation
 Prepare for association with phenotypes, it creates summary info files for genes and pathways and split pathway .RData in smaller .RData objectes to be tested in parallel. Pathways computed from the same genes are filtered to keep the ones composed of a lower number of genes (original annotation).
-- *inputFold* folder including pathway and T-scores from step 3)
-- *geneAnn_file* resPrior_regEval_allchr.txt from PriLer
-- *skip_tscore_info* boolen, set to TRUE if preparation for T-score has been done, e.g. when applying the script to custom pathway
-- *split_tot* number of subgroup the genes were split on, the same value will be used to split pathways into that amount of groups.
+- *--inputFold* folder including pathway and T-scores from step 3)
+- *--geneAnn_file* resPrior_regEval_allchr.txt from PriLer
+- *--skip_tscore_info* boolen, set to TRUE if preparation for T-score has been done, e.g. when applying the script to custom pathway
+- *--split_tot* number of subgroup the genes were split on, the same value will be used to split pathways into that amount of groups.
 
 ```sh
 ./pheno_association_prepare_largeData_run.R \
@@ -314,20 +314,31 @@ The output includes (saved in *--outFold*):
 - Pathway_Reactome_scores_splitPath<i>.RData, Pathway_GO_scores_splitPath<i>.RData, Pathway_<pathwayCustom_name>_scores_splitPath<i>.RData matrices of subgroup of pathways to be tested, i goes from 1 to *split_tot*
 
 #### 4.2) Large dataset: Association: test gene T-scores
+Test gene T-scores association with phenotype via generalized linear model. The script is run for each group of genes (split **i**) and for each provided phenotype. 
+- *--inputFile* complete path to predictedTscore_splitGenes{i}.RData,
+- *--inputInfoFile* complete path to tscore_info.RData obtained from the previous script,
+- *--split_tot* MUST be the same value used in Tscore_splitGenes_run.R,
+- *--split_gene_id* value between 1 and split_tot indicating the group of genes to be tested,
+- *--sampleAnn_file* same sample list of *covDat_file* but can exclude actual covariates,
+- *--cov_corr* if TRUE (default) corrects for the covariates available in covDat_file,
+- *--names_file* name for the phenotype group to be tested
+
+mod cov_corr in the script!!!
+specify that multiple files can be passed but a unique phenoAnn_file is needed
 
 ```sh
 ./pheno_association_tscore_largeData_run.R \
     --inputFile \
     --inputInfoFile \
-    --split_tot \
+    --split_tot (defualt 100) \
     --split_gene_id \
     --covDat_file \
     --sampleAnn_file \
     --phenoDat_file \
     --phenoAnn_file \
-    --cov_corr \
+    --cov_corr (default TRUE)\
     --names_file \
-    --functR \
+    --functR ./pheno_association_functions.R \
     --ncores \
     --outFile \
 ```
