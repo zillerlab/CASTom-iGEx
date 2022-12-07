@@ -321,10 +321,8 @@ Test gene T-scores association with phenotype via generalized linear model. The 
 - *--split_gene_id* value between 1 and split_tot indicating the group of genes to be tested,
 - *--sampleAnn_file* same sample list of *covDat_file* but can exclude actual covariates,
 - *--cov_corr* if TRUE (default) corrects for the covariates available in covDat_file,
-- *--names_file* name for the phenotype group to be tested
-
-mod cov_corr in the script!!!
-specify that multiple files can be passed but a unique phenoAnn_file is needed
+- *--names_file* name for the phenotype group to be tested.
+Note that multiple files can be passed to *phenoDat_file* and *covDat_file* that MUST be of the same lenght of the provided *names_file* vector. Each entry will refer to a group of phenotypes to be tested and the covariates to correct for. 
 
 ```sh
 ./pheno_association_tscore_largeData_run.R \
@@ -342,6 +340,7 @@ specify that multiple files can be passed but a unique phenoAnn_file is needed
     --ncores \
     --outFile \
 ```
+The output is:
 
 #### 4.3) Large dataset: Association: test pathway-scores
 
