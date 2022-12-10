@@ -1,4 +1,4 @@
-#!/usr/bin/env Rscriptø
+#!/usr/bin/env Rscript
 # consider results from big matrix, prepare for association, split pathway RData, create info files
 
 options(stringsAsFactors=F)

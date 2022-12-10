@@ -18,7 +18,7 @@ parser$add_argument("--pathScoreFold", type = "character", help = "RData to be l
 parser$add_argument("--n_split", type = "integer", default = 100, help = "total number of splitted parts")
 parser$add_argument("--lambda_pi0", type = "double", default = 0.5,  help = "fixed lambda for pi1 computation")
 parser$add_argument("--phenoAnn_file", type = "character", help = "file with phenotype annotation (used to determine the type of regression)")
-parser$add_argument("--cov_corr", type = "logical",default = F,  help = "if T column in covDat_file are use to correct association (excluded Dx and IDs)")
+parser$add_argument("--cov_corr", type = "logical", default = T,  help = "if T column in covDat_file are use to correct association (excluded Dx and IDs)")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
 args <- parser$parse_args()
