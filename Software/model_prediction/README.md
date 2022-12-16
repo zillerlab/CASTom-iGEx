@@ -340,23 +340,66 @@ Note that multiple files can be passed to *phenoDat_file* and *covDat_file* that
     --ncores \
     --outFile \
 ```
-The output is:
+The output is *<outFile>_covCorr.RData* and containes P data frames, one per tested phenotype. Each dataframe reports the genes expression association in terms of Z-statistic, p-value, effect size and standard deviation.
+
+**NOTE**: This file is temporary and refers only to genes in split **i**, the total output will be combined later.
 
 #### 4.3) Large dataset: Association: test pathway-scores
+Test pathway scores association with phenotype via generalized linear model. The script is run for each group of pathways (split **i**) and for each provided phenotype. This script can be used for any kind of pathway database (pathwayDB)
+- *--inputFile* complete path to <pathwayDB>_splitPath{i}.RData,
+- *--inputInfoFile* complete path to <pathwayDB>_info.RData obtained from the previous script,
+- *--sampleAnn_file* same sample list of *covDat_file* but can exclude actual covariates,
+- *--cov_corr* if TRUE (default) corrects for the covariates available in covDat_file,
+- *--names_file* name for the phenotype group to be tested.
+Note that multiple files can be passed to *phenoDat_file* and *covDat_file* that MUST be of the same lenght of the provided *names_file* vector. Each entry will refer to a group of phenotypes to be tested and the covariates to correct for. 
 
 ```sh
 ./pheno_association_pathscore_largeData_run.R \
+    --inputFile \
+    --inputInfoFile \
+    --covDat_file \
+    --sampleAnn_file \
+    --phenoDat_file \
+    --phenoAnn_file \
+    --cov_corr (default TRUE)\
+    --names_file \
+    --functR ./pheno_association_functions.R \
+    --path_type \
+    --ncores \
+    --outFile 
 ```
+The output is *<outFile>_covCorr.RData* and containes P data frames, one per tested phenotype. Each dataframe reports the pathways association in terms of Z-statistic, p-value, effect size and standard deviation.
 
 #### 4.4) Large dataset: Association: combine results
 
 ```sh
 ./pheno_association_combine_largeData_run.R \
+    --names_file \
+    --tscoreFold \
+    --GOterms_file \
+    --reactome_file \
+    --lambda_pi0 \
+    --pathScoreFold_Reactome \
+    --pathScoreFold_GO \
+    --n_split \
+    --phenoAnn_file \
+    --cov_corr \
+    --outFold
 ```
 
 #### 4.4') Large dataset: Association: combine results from custom pathway database
 ```sh
 ./pheno_association_combine_largeData_customPath_run.R \
+    --names_file \
+    --tscoreFold \
+    --pathwayCustom_name \
+    --pathwayCustom_file \
+    --lambda_pi0 \
+    --pathScoreFold \
+    --n_split \
+    --phenoAnn_file \
+    --cov_corr \
+    --outFold
 ```
 
 ***
