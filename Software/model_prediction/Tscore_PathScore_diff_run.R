@@ -31,14 +31,14 @@ nFolds <- args$nFolds
 outFold <- args$outFold
 
 ####################################################################
-input_file <- '/psycl/g/mpsziller/lucia/CAD_SHIP/GENE_EXPR/Filtered_SHIP-TREND_GX_plate01-14_QuantileNormalized.log2Transformd-zz_transposed-resid-SHIP_2022_27.txt'
-originalRNA <- T
-GOterms_file <- '/psycl/g/mpsziller/lucia/castom-igex/refData/GOterm_geneAnnotation_allOntologies.RData'
-reactome_file <- '/psycl/g/mpsziller/lucia/castom-igex/refData/ReactomePathways.gmt'
-thr_reliableGenes <- c(0.01, 0)
-nFolds <- 40
-covDat_file <- '/psycl/g/mpsziller/lucia/CAD_SHIP/Results/PriLer/SHIP-TREND_gPC_SHIP_2022_27_withSex.txt'
-outFold <- '/psycl/g/mpsziller/lucia/CAD_SHIP/GENE_EXPR/'
+#input_file <- '/psycl/g/mpsziller/lucia/CAD_SHIP/GENE_EXPR/Filtered_SHIP-TREND_GX_plate01-14_QuantileNormalized.log2Transformd-zz_transposed-resid-SHIP_2022_27.txt'
+#originalRNA <- T
+#GOterms_file <- '/psycl/g/mpsziller/lucia/castom-igex/refData/GOterm_geneAnnotation_allOntologies.RData'
+#reactome_file <- '/psycl/g/mpsziller/lucia/castom-igex/refData/ReactomePathways.gmt'
+#thr_reliableGenes <- c(0.01, 0)
+#nFolds <- 40
+#covDat_file <- '/psycl/g/mpsziller/lucia/CAD_SHIP/Results/PriLer/SHIP-TREND_gPC_SHIP_2022_27_withSex.txt'
+#outFold <- '/psycl/g/mpsziller/lucia/CAD_SHIP/GENE_EXPR/'
 ####################################################################
 
 #########################
