@@ -100,7 +100,7 @@ Based on already computed T-scores, create pathway-scores for a custom .RData ob
     --outFold
 ```
 The output includes (saved in *--outFold*):
-- Pathway_<*geneSetName*>_scores.txt
+- Pathway_*geneSetName*_scores.txt
 
 ### 3) Small dataset: Association with phenotype of T-score and pathways
 T-scores and pathway-scores are tested for association with phenotypes. The regression type depends on the nature of the phenotype (gaussian, binary and ordinal logistic). Redundant pathways composed of the same gene sets are removed keeping the one with lower number of annotated total gene. Genes/pathways are corrected for multiple testing.
@@ -129,7 +129,7 @@ T-scores and pathway-scores are tested for association with phenotypes. The regr
     --outFold
 ```
 The output includes (saved in *--outFold*):
-- pval_<*names_file*>_covCorr.RData list composed of 
+- pval_*names_file*_covCorr.RData list composed of 
     - pheno: phenoAnn info
     - tscore (list, each entry refers to a phenotype): summary statistics of association from tscores for each reliable genes
     - pathScore_reactome (list, each entry refers to a phenotype): summary statistics of association from pathscore (Reactome)
@@ -161,7 +161,7 @@ Same as before but for custom gene sets. It requires the association between phe
 ```
 
 The output includes (saved in *--outFold*):
-- pval_<*names_file*>_covCorr_customPath_<*geneSetName*>.RData (same structure as previous step)
+- pval_*names_file*_covCorr_customPath_*geneSetName*.RData (same structure as previous step)
 
 ### 5) Small dataset: Meta-analysis for multiple cohorts T-scores and pathways
 
@@ -182,8 +182,8 @@ Combine results from multiple cohorts (harmonized) via meta-analsys (inverse var
     --outFold
 ```
 The output includes (saved in *--outFold*):
-- pval_<*phenoName*>_covCorr.RData (same structure as previous step)
-- phenoInfo_<*phenoName*>_cohorts.txt (tab separated file with n. cases/controls for each sample)
+- pval_*phenoName*_covCorr.RData (same structure as previous step)
+- phenoInfo_*phenoName*_cohorts.txt (tab separated file with n. cases/controls for each sample)
 
 ### 6) Small dataset: Meta-analysis for multiple cohorts custom pathways 
 Same as before but for custom gene sets.
@@ -202,8 +202,8 @@ Same as before but for custom gene sets.
     --outFold 
 ```
 The output includes (saved in *--outFold*):
-- pval_<*phenoName*>_covCorr.RData 
-- phenoInfo_<*phenoName*>_cohorts.txt (tab separated file with n. cases/controls for each sample)
+- pval_*phenoName*_covCorr.RData 
+- phenoInfo_*phenoName*_cohorts.txt (tab separated file with n. cases/controls for each sample)
 
 ***
 
@@ -283,7 +283,7 @@ Combine T-scores into Pathway scores for a custom .RData object containing gene 
 ```
 
 The output includes (saved in *--outFold*):
-- Pathway_<*geneSetName*>.RData 
+- Pathway_*geneSetName*.RData 
 
 ### 4) Large dataset: Association
 Perform association with a phenotype, it is divided in multiple steps to reduce computational burden
@@ -310,12 +310,12 @@ Prepare for association with phenotypes, it creates summary info files for genes
     --outFold 
 ```
 The output includes (saved in *--outFold*):
-- tscore_info.RData, pathScore_Reactome_info.RData, pathScore_GO_info.RData, pathScore_<pathwayCustom_name>_info.RData tables with genes and pathways to be tested
-- Pathway_Reactome_scores_splitPath<i>.RData, Pathway_GO_scores_splitPath<i>.RData, Pathway_<pathwayCustom_name>_scores_splitPath<i>.RData matrices of subgroup of pathways to be tested, i goes from 1 to *split_tot*
+- tscore_info.RData, pathScore_Reactome_info.RData, pathScore_GO_info.RData, pathScore_pathwayCustom_name_info.RData tables with genes and pathways to be tested
+- Pathway_Reactome_scores_splitPath*i*.RData, Pathway_GO_scores_splitPath*i*.RData, Pathway_*pathwayCustom_name*_scores_splitPath*i*.RData matrices of subgroup of pathways to be tested, i goes from 1 to *split_tot*
 
 #### 4.2) Large dataset: Association: test gene T-scores
 Test gene T-scores association with phenotype via generalized linear model. The script is run for each group of genes (split **i**) and for each provided phenotype. 
-- *--inputFile* complete path to predictedTscore_splitGenes{i}.RData,
+- *--inputFile* complete path to predictedTscore_splitGenes*i*.RData,
 - *--inputInfoFile* complete path to tscore_info.RData obtained from the previous script,
 - *--split_tot* MUST be the same value used in Tscore_splitGenes_run.R,
 - *--split_gene_id* value between 1 and split_tot indicating the group of genes to be tested,
@@ -340,24 +340,87 @@ Note that multiple files can be passed to *phenoDat_file* and *covDat_file* that
     --ncores \
     --outFile \
 ```
-The output is:
+The output is *outFile.RData* and containes P data frames, one per tested phenotype. Each dataframe reports the genes expression association in terms of Z-statistic, p-value, effect size and standard deviation.
+
+**NOTE**: This file is temporary and refers only to genes in split **i**, the total output will be combined later.
 
 #### 4.3) Large dataset: Association: test pathway-scores
+Test pathway scores association with phenotype via generalized linear model. The script is run for each group of pathways (split **i**) and for each provided phenotype. This script can be used for any kind of pathway database (pathwayDB)
+- *--inputFile* complete path to *pathwayDB*_splitPath{i}.RData,
+- *--inputInfoFile* complete path to *pathwayDB*_info.RData obtained from the previous script,
+- *--sampleAnn_file* same sample list of *covDat_file* but can exclude actual covariates,
+- *--cov_corr* if TRUE (default) corrects for the covariates available in covDat_file,
+- *--names_file* name for the phenotype group to be tested.
+Note that multiple files can be passed to *phenoDat_file* and *covDat_file* that MUST be of the same lenght of the provided *names_file* vector. Each entry will refer to a group of phenotypes to be tested and the covariates to correct for. 
 
 ```sh
 ./pheno_association_pathscore_largeData_run.R \
+    --inputFile \
+    --inputInfoFile \
+    --covDat_file \
+    --sampleAnn_file \
+    --phenoDat_file \
+    --phenoAnn_file \
+    --cov_corr (default TRUE)\
+    --names_file \
+    --functR ./pheno_association_functions.R \
+    --path_type \
+    --ncores \
+    --outFile 
 ```
+The output is *outFile.RData* and containes P data frames, one per tested phenotype. Each dataframe reports the pathways association in terms of Z-statistic, p-value, effect size and standard deviation.
 
 #### 4.4) Large dataset: Association: combine results
+Combine tscore, pathway Reactome and GO association results in a unique RData object, same structure of step **3) Small dataset**. 
+- *--tscoreFold*: folder with split output of genes associations
+- *--pathScoreFold_Reactome*: folder with split output of pathway reactome associations
+GO associations
+- *--n_split*: total number of split used
 
 ```sh
 ./pheno_association_combine_largeData_run.R \
+    --names_file \
+    --tscoreFold \
+    --GOterms_file \
+    --reactome_file \
+    --pathScoreFold_Reactome \
+    --pathScoreFold_GO \
+    --n_split (default 100)\
+    --phenoAnn_file \
+    --cov_corr (default T)\
+    --outFold
 ```
 
+The output includes (saved in *--outFold*):
+- pval_*names_file*_covCorr.RData list composed of 
+    - pheno: phenoAnn info
+    - tscore (list, each entry refers to a phenotype): summary statistics of association from tscores for each reliable genes
+    - pathScore_reactome (list, each entry refers to a phenotype): summary statistics of association from pathscore (Reactome)
+    - pathScore_GO (list, each entry refers to a phenotype): summary statistics of association from pathscore (GO)
+    - info_pathScore_reactome (list, each entry refers to a phenotype): for each pathway in Reactome, its summary statistics and those of the genes belonging to the pathway
+    - info_pathScore_GO (list, each entry refers to a phenotype): for each pathway in GO, its summary statistics and those of the genes belonging to the pathway
+
 #### 4.4') Large dataset: Association: combine results from custom pathway database
+
+Same as previous script, but combine results when testing for gene T-scores and custom pathway scores
+
+- *--pathScoreFold*: folder with split output of genes associations
+
 ```sh
 ./pheno_association_combine_largeData_customPath_run.R \
+    --names_file \
+    --tscoreFold \
+    --pathwayCustom_name \
+    --pathwayCustom_file \
+    --pathScoreFold \
+    --n_split (default 100)\
+    --phenoAnn_file \
+    --cov_corr (default T)\
+    --outFold
 ```
+
+The output includes (saved in *--outFold*):
+- pval_*names_file*_covCorr_customPath_*geneSetName*.RData (same structure as previous step)
 
 ***
 
