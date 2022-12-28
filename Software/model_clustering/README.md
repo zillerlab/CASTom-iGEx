@@ -34,7 +34,7 @@ Compute genes correlation imputed from 2 different models. Genes are imputed on 
     --outFold 
 ```
 The output includes (saved in *--outFold*):
-- *tissue_name*_filter_genes_matched_datasets.txt 
+- tissue_name_filter_genes_matched_datasets.txt 
 
 #### Compare imputed pathways
 Compute pathways correlation imputed from 2 different models. Pathways-scores are computed on the reference panel from which the gene expression models are estimated (see [CASTom-iGEx Module 1](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/Software/model_training)), after the computation of gene T-scores (see [CASTom-iGEx Module 2](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/Software/model_prediction))
@@ -50,7 +50,7 @@ Compute pathways correlation imputed from 2 different models. Pathways-scores ar
     --outFold 
 ```
 The output includes (saved in *--outFold*):
-- *tissue_name*_filter_path_*type_path*_matched_datasets.txt
+- tissue_name_filter_path_type_path_matched_datasets.txt
 
 ### Clustering based on genetic principal componenets (optional)
 Cluster individuals based on genetic principal componenets. This script is used to benchmark results and observe the overlap with tissue-specific clustering.
