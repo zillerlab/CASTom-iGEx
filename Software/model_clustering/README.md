@@ -34,7 +34,7 @@ Compute genes correlation imputed from 2 different models. Genes are imputed on 
     --outFold 
 ```
 The output includes (saved in *--outFold*):
-- <tissue_name>_filter_genes_matched_datasets.txt 
+- *tissue_name*_filter_genes_matched_datasets.txt 
 
 #### Compare imputed pathways
 Compute pathways correlation imputed from 2 different models. Pathways-scores are computed on the reference panel from which the gene expression models are estimated (see [CASTom-iGEx Module 1](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/Software/model_training)), after the computation of gene T-scores (see [CASTom-iGEx Module 2](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/Software/model_prediction))
@@ -70,17 +70,17 @@ Cluster individuals based on genetic principal componenets. This script is used 
 ```
 The output includes (saved in *--outFold*):
 - PCs_cluster*type_cluster*_PGmethod_*type_sim*metric.RData object with the following structure:
-    - best_k: kNN parameter, 
-    - cl_res:
+    - best_k: single kNN parameter given OR if multiple kNN provided, returns kNN that maximizes Davies-Bouldin index.
+    - cl_res: total clustering ouptput including computed similarity matrix.
     - test_cov: chisq-test or kruskal-wallis test of clustering structure and covariates (e.g. PCs or sex).
-    - info_tune:
+    - info_tune: metric of clustering given kNN, includes modularity maximized by Louvain clustering
     - feat: names of feautures used for clustering
-    - cl_best: 
-    - Dx_perc:
-    - samples_id:
-    - test_diff_gr:
-    - gr_input:    
-    - input_data:
+    - cl_best: optimal (if multiple kNN given) or unique clustering structure obtained
+    - Dx_perc: If `--type_cluster All`, calculates the percentages of cases and controls in the found partition
+    - samples_id: `Individual_ID` of the considered samples
+    - test_diff_gr: kruskal wallis test of each features used to compute the clusters and the clustering structure.
+    - gr_input: mean, sd and coefficient of variation (cv) of each feature across clusters.
+    - input_data: standardized input features used for clustering
 
 
 ## Workflow (single cohort)
