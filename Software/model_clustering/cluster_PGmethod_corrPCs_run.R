@@ -22,7 +22,6 @@ parser <- ArgumentParser(description="clustering using PG method")
 parser$add_argument("--inputFile", type = "character", default = NULL, help = "file to be loaded (predicted tscore or pathScore)")
 parser$add_argument("--sampleAnnFile", type = "character", help = "file with samples to be used")
 parser$add_argument("--tissues_name", type = "character", help = "name tissue")
-parser$add_argument("--color_file", type = "character", help = "file with color based on phenotype")
 parser$add_argument("--covDatFile", type = "character", default = NULL, help = "additional cov to test")
 parser$add_argument("--type_cluster", type = "character", default = 'All', help = "All, Cases, Controls")
 parser$add_argument("--split_tot", type = "integer", default = 0, help = "if 0 then inpuntFile load alone, otherwise splitted version")
@@ -45,7 +44,6 @@ args <- parser$parse_args()
 pvalresFile <- args$pvalresFile
 tissues_name <- args$tissues_name
 capped_zscore <- args$capped_zscore
-color_file <- args$color_file
 pval_id <- args$pval_id
 inputFile <- args$inputFile
 geneRegionFile <- args$geneRegionFile
@@ -80,7 +78,6 @@ outFold <- args$outFold
 # corr_thr <- 0.9
 # type_input <- 'zscaled'
 # kNN_par <- 30
-# color_file <- '/psycl/g/mpsziller/lucia/castom-igex/Figures/color_tissues.txt'
 # tissues_name <- 'Liver'
 #####################################################################################################################
 
