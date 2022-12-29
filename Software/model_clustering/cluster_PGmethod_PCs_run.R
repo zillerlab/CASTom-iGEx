@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 options(stringsAsFactors=F)
 options(max.print=1000)
 suppressPackageStartupMessages(library(argparse))

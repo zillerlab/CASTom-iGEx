@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 # associate endophenotypes to cluster structure 
 # use GLM
 
