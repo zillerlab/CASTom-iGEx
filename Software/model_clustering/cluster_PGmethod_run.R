@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 # cluster, single cohort
 
 options(stringsAsFactors=F)
