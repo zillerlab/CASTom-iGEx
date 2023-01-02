@@ -3,15 +3,16 @@ CASTom-iGEx (Module 3) is a pipeline (R based) that uses gene-level T-scores, co
 
 ## Input 
 ### Data
-- **Sample matrix** (*--sampleAnnFile*): .txt file tab separated, includes the subset of samples to be clustered. Columns must contain `Individual_ID` and `Dx` that refers to Cases (`Dx=1`) and Controls (`Dx=0`).
+- **Sample matrix** (*--sampleAnnFile*): .txt file tab separated, includes the subset of samples to be clustered. Columns must contain `Individual_ID` and `Dx` that refers to Cases (`Dx=1`) and Controls (`Dx=0`) and principal components. 
 - **Input matrix** (*--inputFile*): `predictedTscores.txt` tab separated (small n. samples) OR `predictedTscore_splitGenes` common name of split predicted gene T-scores in .RData format (large n. samples). These files are produced from `Tscore_PathScore_diff_run.R` or `Tscore_splitGenes_run.R` in [CASTom-iGEx Module 2](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/Software/model_prediction).  
-- **TWAS and PALAS results** (*--pvalresFile*):
+- **TWAS and PALAS results** (*--pvalresFile*): .RData file obtained from `pheno_association_` scripts in [CASTom-iGEx Module 2](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/Software/model_prediction). Z-statistic from genes or pathways are used to annotate clustering features and re-scale them.
+ 
 
 ### Parameters
 - **type of clustering** (*--type_cluster*): Indicates if all samples in *--sampleAnnFile* are clustered (`All`), only affected individuals (`Cases`) or only non-affected individuals (`Controls`).
 - **type of similarity** (*--type_sim*): if `HK`, heat kernel similarity is used. If `ED`, opposite of euclidian distance is used as similarity.
-- **type of data** (*--type_data*):
-- **type of input** (*--type_input*): how input should be processed
+- **type of data** (*--type_data*): indicates the type of input data (*--inputFile*) used to compute the clustering: gene T-score `tscore`, Pathway-score Reactome `path_Reactome` or pathway-score Gene Ontology `path_GO`.
+- **type of input** (*--type_input*): indicates how the input should be processed, if `original` the data is not multiplied by Z-statistic nut only standardized, if `zscaled` each feature is first standardized and then multiplied by the correspondig Z-statistic provided in *--pvalresFile*.
 - **K nearest neighbour** (*--kNN_par*): number of nearest neighbours considered to compute both heat kernel similarity and shared nearest neighbour similarity.
 
 
@@ -67,7 +68,7 @@ Cluster individuals based on genetic principal componenets. This script is used 
     --PCs_input_file \
     --sampleAnnFile \
     --sampleOutFile \
-    --type_cluster (default "All") \
+    --type_cluster \
     --functR ./clustering_functions.R \
     --type_sim (default "HK") \
     --kNN_par (default 30) \
@@ -91,38 +92,51 @@ The output includes (saved in *--outFold*):
 ## Single cohort (tissue-specific)
 ### 1) Clustering
 Cluster individuals based on tissue-specific imputed gene expression. This script intially clump genes based on correlation, standardize each genes, correct for PCs and rescaled them by TWAS disease-specifc Z-statistic.
-- *--covDatFile*
-- *--split_tot*
-- *--pval_id*
-- *--corr_thr*
-- *--min_genes_path*
-- *--exclude_MHC*
-- *--capped_zscore*
-- *--geneRegionFile*
+- *--covDatFile*: optional, additional covariates to test for. NOTE: principal components shoudl be included in *--sampleAnnFile*.
+- *--split_tot*: integer indicating the number of groups the *--inputFile* has been split. Used in a large sample size setting e.g. UK Biobank.
+- *--pval_id*: integer indicating the index of the phenotype to be considered in *--pvalresFile* that can include more than one phenotype.
+- *--corr_thr*: correlation threshold to clump features. If 1 include all the features.
+- *--min_genes_path*: minimum number of genes forming a pathway. Used to filter pathways for clustering.
+- *--exclude_MHC*: if TRUE and `type_data="tscore"`, exclude genes in MHC locus.
+- *--capped_zscore*: if TRUE, Z-statistic to rescale features are capped at 0.05% to attenuate extreme associations
+- *--geneRegionFile*: used if `type_data="tscore"` and `exclude_MHC=TRUE`. Tab separated file that contains gene location (e.g. resPrior_regEval_allchr.txt from PriLer).
 
 ```sh
 ./cluster_PGmethod_corrPCs_run.R \
     --inputFile \
     --sampleAnnFile \
     --tissues_name \
-    --covDatFile \
+    --covDatFile (default NULL) \
     --type_cluster \
     --split_tot (default 0) \
     --pvalresFile \
-    --pval_id \
+    --pval_id (default 1) \
     --pval_thr (default 1) \
     --corr_thr (default -1) \
     --functR ./clustering_functions.R \
-    --type_data help = "tscore, path_Reactome or path_GO" \
-    --type_sim \
-    --type_input "original or zscaled" \
-    --kNN_par \
+    --type_data (default tscore) \
+    --type_sim (default HK) \
+    --type_input (default original) \
+    --kNN_par (default 30) \
     --min_genes_path (default 1) \
-    --exclude_MHC (default FALSE) "if true, MHC region excluded (only ossible for tscore)"\
-    --capped_zscore (default FALSE) "if true, zstat is capped based on distribution"\
-    --geneRegionFile (default NULL) "used if tscore and exclude_MHC"\
+    --exclude_MHC (default FALSE) \
+    --capped_zscore (default FALSE) \
+    --geneRegionFile (default NULL) \
     --outFold
 ```
+The output includes (saved in *--outFold*):
+- **type_data**\_corrPCs_**type_input**\_cluster**type_cluster**\_PGmethod\_**type_sim**metric.RData object with the following structure:
+    - best_k: single kNN parameter given OR if multiple kNN provided, returns kNN that maximizes Davies-Bouldin index.
+    - cl_res: total clustering ouptput including computed similarity matrix.
+    - test_cov: chisq-test or kruskal-wallis test of clustering structure and covariates (e.g. PCs or sex).
+    - info_tune: metric of clustering given kNN, includes modularity maximized by Louvain clustering
+    - feat: names of feautures used for clustering
+    - cl_best: optimal (if multiple kNN given) or unique clustering structure obtained
+    - Dx_perc: If `--type_cluster All`, calculates the percentages of cases and controls in the found partition
+    - samples_id: `Individual_ID` of the considered samples
+    - test_diff_gr: kruskal wallis test of each features used to compute the clusters and the clustering structure.
+    - gr_input: mean, sd and coefficient of variation (cv) of each feature across clusters.
+    - input_data: standardized input features used for clustering
 
 ### Optional: Clustering without PCs correction
 Cluster as before but without correcting for PCs, this script is used to benchmark results and compare them with the clustering correcting for PCs. Inputs specifics as previous script.
@@ -132,24 +146,26 @@ Cluster as before but without correcting for PCs, this script is used to benchma
     --inputFile \
     --sampleAnnFile \
     --tissues_name \
-    --covDatFile \
+    --covDatFile (default NULL) \
     --type_cluster \
     --split_tot (default 0) \
     --pvalresFile \
-    --pval_id \
+    --pval_id (default 1) \
     --pval_thr (default 1) \
     --corr_thr (default -1) \
     --functR ./clustering_functions.R \
-    --type_data \
-    --type_sim \
-    --type_input \
-    --kNN_par \
+    --type_data (default tscore) \
+    --type_sim (default HK) \
+    --type_input (default original) \
+    --kNN_par (default 30) \
     --min_genes_path (default 1) \
     --exclude_MHC (default FALSE) \
     --capped_zscore (default FALSE) \
     --geneRegionFile (default NULL) \
     --outFold
 ```
+The output includes (saved in *--outFold*):
+- **type_data**\_**type_input**\_cluster**type_cluster**\_PGmethod\_**type_sim**metric.RData object with the same structure as the previous command.
 
 
 ### 2.1) Associate clusters with molecular features (genes/pathwayScores):
