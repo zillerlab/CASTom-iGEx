@@ -198,9 +198,10 @@ Associate the clustering structure with a registered phenotypes on samples. Uses
     --rescale_pheno (default = FALSE) \
     --outFold
 ```
+
 The output includes (saved in *--outFold*):
-- **type_data**\_**type_input**\_cluster**type_cluster**_PGmethod_**type_sim**metric_phenoAssociation_GLMpairwise.RData (tests gr\_i vs gr\_j)
-- **type_data**\_**type_input**\_cluster**type_cluster**_PGmethod_**type_sim**metric_phenoAssociation_GLM.RData (tests gr\_i vs remaning samples).
+- **type_data**\_**type_input**\_cluster**type_cluster**\_PGmethod\_**type_sim**metric\_phenoAssociation\_GLMpairwise.RData (tests gr\_i vs gr\_j)
+- **type_data**\_**type_input**\_cluster**type_cluster**\_PGmethod\_**type_sim**metric\_phenoAssociation\_GLM.RData (tests gr\_i vs remaning samples).
 Both .RData objects contain:
     - phenoDat: input --phenoDatFile
     - phenoInfo: input --phenoDescFile
@@ -209,6 +210,24 @@ Both .RData objects contain:
     - bin_reg: summary statistics referring to regression coefficient for group independent variable. 
 - **type_data**\_**type_input**\_cluster**type_cluster**_PGmethod_**type_sim**metric_phenoAssociation_GLMpairwise.txt and **type_data**\_**type_input**\_cluster**type_cluster**_PGmethod_**type_sim**metric_phenoAssociation_GLM.txt tab separated file containing `$bin_reg` of the .RData object
 
+
+### Optional: combine results of multiple phenotype association returns
+If mutliple runs of the previous script have been performed to correct for different covariates, the results are combined together in a unique tab separated file. Can also perform a forest plot.
+- *--endopFile* vector of .RData oject filed from previous script to be loaded
+
+```sh
+./plot_endophenotype_grVSall_run.R \
+    --type_cluster_data \
+    --type_cluster \
+	--type_input \
+	--endopFile
+    --outFold \
+	--forest_plot (default F)\
+	--pval_pheno \
+	--colorFile 
+```
+The output includes (saved in *--outFold*):
+- **type_cluster_data**\_**type_input**\_cluster**type_cluster**\_PGmethod\_HKmetric\_phenoAssociation\_GLM\_combined.txt
 
 ### 2.3) Find differential treatment response among clusters
 cluster_treatmentResponseAnalysis_run.R
