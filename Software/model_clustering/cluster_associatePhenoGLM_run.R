@@ -25,7 +25,7 @@ parser$add_argument("--phenoDatFile", type = "character", help = "file to be loa
 parser$add_argument("--phenoDescFile", type = "character", help = "description endophenotype")
 parser$add_argument("--sampleAnnFile", type = "character", help = "file with samples to be used")
 parser$add_argument("--clusterFile", type = "character", help = "file with clustering structure")
-parser$add_argument("--type_cluster", type = "character", default = 'All', help = "All, Cases, Controls")
+parser$add_argument("--type_cluster", type = "character",  help = "All, Cases, Controls")
 parser$add_argument("--functR", type = "character", help = "functions to be used")
 parser$add_argument("--type_data", type = "character", help = "tscore, path_Reactome, path_GO, PCs")
 parser$add_argument("--type_sim", type = "character", default = 'HK', help = "HK or ED or SNF")
