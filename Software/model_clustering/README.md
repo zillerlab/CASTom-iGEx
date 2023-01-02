@@ -6,6 +6,8 @@ CASTom-iGEx (Module 3) is a pipeline (R based) that uses gene-level T-scores, co
 - **Sample matrix** (*--sampleAnnFile*): .txt file tab separated, includes the subset of samples to be clustered. Columns must contain `Individual_ID` and `Dx` that refers to Cases (`Dx=1`) and Controls (`Dx=0`) and principal components. 
 - **Input matrix** (*--inputFile*): `predictedTscores.txt` tab separated (small n. samples) OR `predictedTscore_splitGenes` common name of split predicted gene T-scores in .RData format (large n. samples). These files are produced from `Tscore_PathScore_diff_run.R` or `Tscore_splitGenes_run.R` in [CASTom-iGEx Module 2](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/Software/model_prediction).  
 - **TWAS and PALAS results** (*--pvalresFile*): .RData file obtained from `pheno_association_` scripts in [CASTom-iGEx Module 2](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/Software/model_prediction). Z-statistic from genes or pathways are used to annotate clustering features and re-scale them.
+- **Phenotype matrix** (*--phenoDatFile*): columns must contain `Individual_ID` plus any phenotype to test for clustering differences (phenotypes + 1 x samples). This matrix can include multiple phenotypes to be tested. 
+- **Phenotype description** (*--phenoDescFile*): rows refers to phenotypes to be tested. Columns must include: `pheno_id`, `FieldID`, `Field`,  `transformed_type`;  `pheno_id` is used to match columns name in Phenotype matrix, transformed_type is a charachter defining the type of data (continous, binary ecc.)
  
 
 ### Parameters
@@ -18,9 +20,6 @@ CASTom-iGEx (Module 3) is a pipeline (R based) that uses gene-level T-scores, co
 
 FROM HERE
 
-- **Phenotype matrix**: columns must contain `Individual_ID` plus any phenotype to test the association (phenotypes + 1 x samples). This matrix can include multiple phenotypes to be tested. 
-- **Phenotype description**: rows refers to phenotypes to be tested. Columns must include: `pheno_id`, `FieldID`, `Field`,  `transformed_type`;  `pheno_id` is used to match columns name in Phenotype matrix, transformed_type is a charachter defining the type of data (continous, binary ecc.)
-- **Covariate matrix** (*--covDat_file*): covariates to correct for in the association analysis (covariats + IDs x samples). Columns must contain `Individual_ID` and `genoSample_ID` to match genotype plus covariates to correct for in the phenotype association. Column `Dx` (0 control 1 case) is optional, if present is used to build the reference set when computing T-scores. *Note: samples in genotype and phenotype matrix are matched based on covariate matrix*
 - **Reactome Pathway annotation** (*--reactome_file*): .gmt file can be downloaded from https://reactome.org/download-data/ (provided in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/))
 - **GO Pathway annotation** (*--GOterms_file*): .RData file, can be obtained using *Annotate_GOterm_run.R*, each pathway is a entry in the list with `GOID` `Term` `Ontology` `geneIds` elemnets (provided in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/))
 - **Custom pathway**: .RData file, similar to GO structure, each pathway is a list entry with `name` and `geneIds` elements. Available for WikiPathways (2019) in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/)
@@ -176,7 +175,40 @@ It initially corrects for PCs, uses wilcoxon test and combined in loci/macrogrou
 - cluster_associatePath_corrPCs_run.R (merge GO and Reactome)
 
 ### 2.2) Associate clusters with endophenotypes
-cluster_associatePhenoGLM_run.R
+Associate the clustering structure with a registered phenotypes on samples. Uses generalized lienar model based on the penotype nature (dependent variables) and corrects for provided covariates. Test 2 models: gr\_i vs remaning samples OR gr\_i vs gr\_j (pairwise) dummy variables as independent. 
+- *--sampleAnnFile* MUST include the covariates to correct for.
+- *--clusterFile*: complete path to output of clustering script in step 1)
+- *--type_data*: NOTE: can also be PCs
+- *--type_input*: needed to save output, if refers to version correcting for PCs, add corrPCs\_ in front (e.g. `corrPCs_zscaled`).
+- *--risk_score*: if TRUE, the provided phenotype is a predicted gene risk-score across samples.
+- *--rescale_pheno*: if TRUE, continuous phenotype is rescaled.
+
+```sh
+./cluster_associatePhenoGLM_run.R \
+    --phenoDatFile \
+    --phenoDescFile \
+    --sampleAnnFile \
+    --clusterFile \
+    --type_cluster \
+    --functR ./clustering_functions.R \
+    --type_data \
+    --type_sim (default = 'HK') \
+    --type_input (default original) \
+    --risk_score (default = FALSE) \
+    --rescale_pheno (default = FALSE) \
+    --outFold
+```
+The output includes (saved in *--outFold*):
+- **type_data**\_**type_input**\_cluster**type_cluster**_PGmethod_**type_sim**metric_phenoAssociation_GLMpairwise.RData (tests gr\_i vs gr\_j)
+- **type_data**\_**type_input**\_cluster**type_cluster**_PGmethod_**type_sim**metric_phenoAssociation_GLM.RData (tests gr\_i vs remaning samples).
+Both .RData objects contain:
+    - phenoDat: input --phenoDatFile
+    - phenoInfo: input --phenoDescFile
+    - cl: data frame with clustering partition
+    - covDat: data frame with covariates used
+    - bin_reg: summary statistics referring to regression coefficient for group independent variable. 
+- **type_data**\_**type_input**\_cluster**type_cluster**_PGmethod_**type_sim**metric_phenoAssociation_GLMpairwise.txt and **type_data**\_**type_input**\_cluster**type_cluster**_PGmethod_**type_sim**metric_phenoAssociation_GLM.txt tab separated file containing `$bin_reg` of the .RData object
+
 
 ### 2.3) Find differential treatment response among clusters
 cluster_treatmentResponseAnalysis_run.R
