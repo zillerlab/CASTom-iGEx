@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 # find relevant genes/pathways to cluster structure 
 # use wilcoxon test
 # possible include multiple tissues
