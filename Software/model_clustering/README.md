@@ -17,6 +17,7 @@ CASTom-iGEx (Module 3) is a pipeline (R based) that uses gene-level T-scores, co
 - **type of input** (*--type_input*): indicates how the input should be processed, if `original` the data is not multiplied by Z-statistic nut only standardized, if `zscaled` each feature is first standardized and then multiplied by the correspondig Z-statistic provided in *--pvalresFile*.
 - **K nearest neighbour** (*--kNN_par*): number of nearest neighbours considered to compute both heat kernel similarity and shared nearest neighbour similarity.
 
+***
 ### Optional: Clustering based on genetic principal componenets
 Cluster individuals based on genetic principal componenets. This script is used to benchmark results and observe the overlap with tissue-specific clustering.
 - *--PCs_input_file*: .RData object containing matrix (nsamples x PCs) rownames must be `Individual_ID`.
