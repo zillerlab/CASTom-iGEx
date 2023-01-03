@@ -27,16 +27,13 @@ parser$add_argument("--sampleAnnFile", type = "character", help = "file with sam
 parser$add_argument("--clusterFile", type = "character", help = "file with clustering structure")
 parser$add_argument("--inputFold", type = "character", nargs = '*', help = "folder containing pathway scores")
 parser$add_argument("--tissues", type = "character", nargs = '*', help = "tissues name")
-parser$add_argument("--type_cluster", type = "character", default = 'All', help = "All, Cases, Controls")
+parser$add_argument("--type_cluster", type = "character", help = "All, Cases, Controls")
 parser$add_argument("--functR", type = "character", help = "functions to be used")
-parser$add_argument("--type_data", type = "character", help = "tscore, path_Reactome or path_GO")
-parser$add_argument("--type_data_cluster", type = "character", help = "tscore, path_Reactome or path_GO")
+parser$add_argument("--type_data_cluster", type = "character", default = 'tscore', help = "tscore, path_Reactome or path_GO")
 parser$add_argument("--type_sim", type = "character", default = 'HK', help = "HK or ED or SNF")
 parser$add_argument("--type_input", type = "character", default = 'original', help = "original or zscaled")
 parser$add_argument("--pvalresFile", type = "character", nargs = '*',  help = "file with pvalue results")
-parser$add_argument("--geneInfoFile", type = "character", nargs = '*', default = NULL, help = "file with info model genes")
-parser$add_argument("--pval_id", type = "integer", default = 0, help = "id to be used on pvalue file")
-parser$add_argument("--pvalcorr_thr", type = "double", default = 0.05, help = "group sign")
+parser$add_argument("--pval_id", type = "integer", default = 1, help = "id to be used on pvalue file")
 parser$add_argument("--ncores", type = "integer", default = 5, help = "n, cores parallelization per tissue")
 parser$add_argument("--thr_js", type = "double", default = 0.2, help = "jaccard similarity threshold for filtering pathways")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
@@ -46,7 +43,6 @@ sampleAnnFile <- args$sampleAnnFile
 inputFold <- args$inputFold
 type_cluster <- args$type_cluster
 functR <- args$functR
-type_data <- args$type_data
 type_sim <- args$type_sim
 type_input <- args$type_input
 clusterFile <- args$clusterFile
@@ -54,7 +50,6 @@ pvalresFile <- args$pvalresFile
 type_data_cluster <- args$type_data_cluster
 pval_id <- args$pval_id
 tissues <- args$tissues
-pvalcorr_thr <- args$pvalcorr_thr
 ncores <- args$ncores
 thr_js <- args$thr_js
 outFold <- args$outFold
@@ -76,6 +71,8 @@ outFold <- args$outFold
 # thr_js <- 0.2
 ####################################################################################################################
 
+type_data <- "path"
+
 source(functR)
 # combine function for parallelization
 comb <- function(x, ...) {
@@ -93,26 +90,6 @@ if(!'samples_id' %in% names(cluster_output)){
 if(!'cl_best' %in% names(cluster_output)){
   cluster_output$cl_best <- cluster_output$cl_new
 }
-
-# if(type_data == 'tscore'){
-#   id_pval <- 8
-#   id_info <- 2
-#   id_geno_summ <- 3
-# }else{
-#   if(type_data == 'path_Reactome'){
-#     id_pval <- 13
-#     id_info <- 1
-#     id_geno_summ <- 4
-#   }else{
-#     if(type_data == 'path_GO'){
-#       id_pval <- 15
-#       id_info <- 1
-#       id_geno_summ <- 6
-#     }else{
-#       stop('unknown pathway called')
-#     }
-#   }
-# }
 
 print(inputFold)
 print(pvalresFile)
