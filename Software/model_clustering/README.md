@@ -271,7 +271,26 @@ The output includes (saved in *--outFold*):
 - **type_cluster_data**\_**type_input**\_cluster**type_cluster**\_PGmethod\_HKmetric\_phenoAssociation\_GLM\_combined.txt
 
 ### 2.3) Find differential treatment response among clusters
-cluster_treatmentResponseAnalysis_run.R
+Test cluster-specific treatment response. It tests the response of phenotypes in `--phenoDatFile` to medication status in `--covDatFile` separately for each group and compares the estimates between each pair of group.
+- *--covDatFile*: covariates including treatments in binary format to be tested. The other variables such as PCs are used to corret the model. The model corrects for all the treatments provided.
+- *--phenoDescCovFile*: same as --phenoDescFile but referring to --covDatFile. 
+
+```sh
+./cluster_treatmentResponseAnalysis_run.R \
+    --phenoDatFile
+    --phenoDescFile 
+    --phenoDescCovFile
+    --covDatFile
+    --clusterFile
+    --type_cluster
+    --functR ./clustering_functions.R \
+    --type_data
+    --type_sim (default "HK")
+    --type_input (default "original")
+    --outFold
+```
+The output includes (saved in *--outFold*):
+- **type_data**\_**type_input**\_cluster**type_cluster**\_TreatResponse\_pairwise.txt summary table for each pair of groups, phenotype and treatment tested. The columns `z_diff` and `pvalue_diff` refers to pairwise difference Z-statistic and p-value.
 
 ### 2.4) Drug repositiong based on cluster-specific pathways
 pathSEA_path_group_run.R
