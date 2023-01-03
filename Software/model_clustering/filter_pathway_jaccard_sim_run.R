@@ -10,18 +10,18 @@ suppressPackageStartupMessages(library(argparse))
 options(bitmapType = 'cairo', device = 'png')
 
 parser <- ArgumentParser(description="select pathways")
-parser$add_argument("--pvalOut", type = "character", nargs = '*', help = "")
+parser$add_argument("--pvalresFile", type = "character", help = "file with pvalue results")
 parser$add_argument("--thr_js", type = "double", default = 0.3, help = "")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
 args <- parser$parse_args()
-pvalOut <- args$pvalOut
+pvalresFile <- args$pvalresFile
 thr_js <- args$thr_js
 outFold <- args$outFold
 
 ########################################################################################################################
 # outFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Whole_Blood/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/'
-# pvalOut <- sprintf('%spval_CAD_pheno_covCorr.RData', outFold)
+# pvalresFile <- sprintf('%spval_CAD_pheno_covCorr.RData', outFold)
 # thr_js <- 0.2
 # #########################################################################################################################
 
@@ -86,7 +86,7 @@ clumping_pathways <- function(path, thr_js, min_ngenes = 3, max_genes = 200){
 }
 
 ########################################
-res_pval <- get(load(pvalOut))
+res_pval <- get(load(pvalresFile))
 
 path_reactome <- get_path_list(res_pval$info_pathScore_reactome, 'Reactome')
 path_GO <- get_path_list(res_pval$info_pathScore_GO, 'GO')
