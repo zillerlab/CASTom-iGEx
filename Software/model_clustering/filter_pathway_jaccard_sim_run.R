@@ -11,7 +11,7 @@ options(bitmapType = 'cairo', device = 'png')
 
 parser <- ArgumentParser(description="select pathways")
 parser$add_argument("--pvalresFile", type = "character", help = "file with pvalue results")
-parser$add_argument("--thr_js", type = "double", default = 0.3, help = "")
+parser$add_argument("--thr_js", type = "double", default = 0.2, help = "")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
 args <- parser$parse_args()
