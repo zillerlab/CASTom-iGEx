@@ -168,11 +168,93 @@ The output includes (saved in *--outFold*):
 
 
 ### 2.1) Associate clusters with molecular features (genes/pathwayScores):
-It initially corrects for PCs, uses wilcoxon test and combined in loci/macrogroups
+Test cluster-specific genes and pathways via wilcoxon-test across all tissues. For each group j, it is tested feature ~ gr_j vs remaining samples. Combine genes results in loci. Pathways are initially filtered to remove redundant ones and combine Reactome and GO databases. Original genes and pathways are initially corrected for PCs. All tissues can be passed at the same time, script can be parallelized per tissue. Note that the clustering is tissue-specific BUT these scripts test predicted genes and pathways across all tissues.
 
-- cluster_associateFeat_corrPCs_run.R
-- filter_pathway_jaccard_sim_run.R (filter pathways based on overlap and min/max number of genes)
-- cluster_associatePath_corrPCs_run.R (merge GO and Reactome)
+- *--clusterFile*: complete path to output of clustering script in step 1)
+- *--split_tot*: integer indicating the number of groups the *--inputFile* has been split. Used in a large sample size setting e.g. UK Biobank.
+- *--type_data_cluster*: type of data used for clustering (tscore, path\_Reactome or path\_GO), corresponds to *--type_data* in step 1)
+- *--pvalresFile*: vector, should match *--tissues* entries. TWAS and PALAS results as described in **Input Data**.
+- *--ncores*: n. of cores used for parallelization. Parallelizzation per tissue.
+
+#### 2.1.1) Test cluster-specific genes
+
+- *--inputFile*: vector, should match *--tissues* entries. T-score or pathway-scores per tissue as described in **Input Data**.
+- *--geneInfoFile*: vector, should match *--tissues* entries. Tab separated file that contains gene location (e.g. resPrior_regEval_allchr.txt from PriLer).
+- *--type_data*: type of data that will be tested, default is `tscore` and this is the recommendend mode. However, if path\_Reactome or path\_GO are passed, all pathways in that database will be loaded but without initial filtering and can only be run separately for Reactome and GO.
+- *--pvalcorr_thr*: when combining results in loci for the tested genes, only results with adjusted p-value lower than this threshold will be considered.
+
+```sh
+./cluster_associateFeat_corrPCs_run.R \
+    --sampleAnnFile \
+    --clusterFile \
+    --split_tot (default = 0) \
+    --inputFile \
+    --tissues \
+    --type_cluster \
+    --functR ./clustering_functions.R \
+    --type_data (default "tscore") \
+    --type_data_cluster (default "tscore") \
+    --type_sim (default "HK") \
+    --type_input (default "original") \
+    --pvalresFile \
+    --geneInfoFile (default NULL) \
+    --min_genes_path (default 1) \
+    --pval_id (default = 1) \
+    --pvalcorr_thr \
+    --ncores (default = 5) \
+    --outFold 
+```
+The output includes (saved in *--outFold*):
+- **type_data**Original\_corrPCs\_**type_data_cluster**Cluster**type_cluster**\_featAssociation.RData object composed of:
+    - inputData: list of loaded *--inputFile*, one per tissue.
+    - scaleData: as inputData but scaled per feature and corrected for PCs.
+    - res_pval: list of loaded *--pvalresFile*.
+    - cl: data frame with clustering partition.
+    - tissues: tissues name, entry match inputData and scaleData.
+    - covDat: covariates extracted from sampleAnnFile and tested for cluster-specific differences.
+    - test_cov: chisq-test or wilcoxon-test for covariates in covDat.
+    - test_feat: list of results, one per tissue. Tested each feature in scaleData.
+- **type_data**\_corrPCs\_**type_input**\_cluster**type_cluster**\_summary\_geneLoci\_allTissues.txt and **type_data**\_corrPCs\_**type_input**\_cluster**type_cluster**\_summary\_geneLoci\_tissueSpec.txt tab separated tables with results summarized per loci combining all tissues or tissue specific, respectively.
+
+#### 2.1.1) Test cluster-specific pathways
+For each tissue, filter pathways based on genes overlap combining both Reactome and GO. It gives priority to pathways with higher coverage and number of genes. It is needed to provide a restricted list of pathways without redundant information.
+
+- *--pvalresFile*: TWAS and PALAS results in .RData object. Used to extract pathway structure.
+- *--thr_js*: threshold for jaccard similarity between pathways based on genes, used to clump pathways.
+
+```sh
+./filter_pathway_jaccard_sim_run.R \
+    --pvalresFile \
+    --thr_js (default = 0.2)
+    --outFold
+```
+The output includes (saved in *--outFold*):
+-  selected\_pathways\_JSthr**thr_js**.txt: tab separated file. Contains the pathway names to be tested via the next script.
+
+
+For each tissue, test for cluster-specific pathways. Reactome and GO are merged together. 
+- *--inputFold*: vector of complete paths to folder containing pathway-scores. It should match with *--tissues* and should also include selected\_pathways\_JSthr**thr_js**.txt file.
+- *--thr_js*: same value used in the previous script.
+
+```sh
+./cluster_associatePath_corrPCs_run.R \
+    --sampleAnnFile \
+    --clusterFile \
+    --inputFold \
+    --tissues \
+    --type_cluster \
+    --functR ./clustering_functions.R \
+    --type_data_cluster (default "tscore") \
+    --type_sim (default "HK") \
+    --type_input (default "original") \
+    --pvalresFile \
+    --pval_id (default 1) \
+    --ncores \
+    --thr_js (default = 0.2)
+    --outFold
+```
+The output includes (saved in *--outFold*):
+- pathOriginal\_filtJS**thr_js**\_corrPCs\_**type_data_cluster**Cluster**type_cluster**\_featAssociation.RData object. Same structure as output of 2.1.1). 
 
 ### 2.2) Associate clusters with endophenotypes
 Associate the clustering structure with a registered phenotypes on samples. Uses generalized lienar model based on the penotype nature (dependent variables) and corrects for provided covariates. Test 2 models: gr\_i vs remaning samples OR gr\_i vs gr\_j (pairwise) dummy variables as independent. 
@@ -219,12 +301,12 @@ If mutliple runs of the previous script have been performed to correct for diffe
 ./plot_endophenotype_grVSall_run.R \
     --type_cluster_data \
     --type_cluster \
-	--type_input \
-	--endopFile
+    --type_input \
+    --endopFile
     --outFold \
-	--forest_plot (default F)\
-	--pval_pheno \
-	--colorFile 
+    --forest_plot (default F)\
+    --pval_pheno \
+    --colorFile 
 ```
 The output includes (saved in *--outFold*):
 - **type_cluster_data**\_**type_input**\_cluster**type_cluster**\_PGmethod\_HKmetric\_phenoAssociation\_GLM\_combined.txt
