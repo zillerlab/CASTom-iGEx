@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 # treatment response analysis
 # perform groupwise
 
