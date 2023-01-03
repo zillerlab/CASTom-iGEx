@@ -17,46 +17,6 @@ CASTom-iGEx (Module 3) is a pipeline (R based) that uses gene-level T-scores, co
 - **type of input** (*--type_input*): indicates how the input should be processed, if `original` the data is not multiplied by Z-statistic nut only standardized, if `zscaled` each feature is first standardized and then multiplied by the correspondig Z-statistic provided in *--pvalresFile*.
 - **K nearest neighbour** (*--kNN_par*): number of nearest neighbours considered to compute both heat kernel similarity and shared nearest neighbour similarity.
 
-
-FROM HERE
-
-- **Reactome Pathway annotation** (*--reactome_file*): .gmt file can be downloaded from https://reactome.org/download-data/ (provided in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/))
-- **GO Pathway annotation** (*--GOterms_file*): .RData file, can be obtained using *Annotate_GOterm_run.R*, each pathway is a entry in the list with `GOID` `Term` `Ontology` `geneIds` elemnets (provided in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/))
-- **Custom pathway**: .RData file, similar to GO structure, each pathway is a list entry with `name` and `geneIds` elements. Available for WikiPathways (2019) in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/)
-
-### Optional: Initial filtering if datasets are not harmonized
-The following two scripts are used when gene risk scores are predicted on a data set (e.g. PGC) but TWAS estimates are obtained from another data set (e.g. UKBB) and the two initial PriLer models were not harmonized per SNPs. This step is prior the clustering computation that should be based on a subset of correlated genes.
-
-#### Compare imputed genes
-Compute genes correlation imputed from 2 different models. Genes are imputed on the reference panel from which the gene expression models are estimated, see [CASTom-iGEx Module 1](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/Software/model_training)
-- *--geneExpPred_file*: predicted gene expression on the same reference panel (e.g. GTEx) for a certain tissue but based on 2 different harmonization (reference panel + data set 1 and reference panel + data set 2). Complete file path for the two imputations.
-
-```sh
-./compare_geneExp_matchedDataset_run.R \
-    --geneExpPred_file (2 files necessary) \
-    --corr_thr (default 0.8) \
-    --tissue_name \
-    --outFold 
-```
-The output includes (saved in *--outFold*):
-- tissue_name_filter_genes_matched_datasets.txt 
-
-#### Compare imputed pathways
-Compute pathways correlation imputed from 2 different models. Pathways-scores are computed on the reference panel from which the gene expression models are estimated (see [CASTom-iGEx Module 1](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/Software/model_training)), after the computation of gene T-scores (see [CASTom-iGEx Module 2](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/Software/model_prediction))
-- *--pathScore_file*: predicted pathway-score on the same reference panel (e.g. GTEx) for a certain tissue but based on 2 different harmonization (reference panel + data set 1 and reference panel + data set 2). Complete file path for the two imputations.
-- *--type_path*: pathway database name, Reactome or GO.
-
-```sh
-./compare_pathScore_matchedDataset_run.R \
-    --pathScore_file (2 files necessary) \
-    --corr_thr (default 0.8) \
-    --type_path \
-    --tissue_name \
-    --outFold 
-```
-The output includes (saved in *--outFold*):
-- tissue_name_filter_path_type_path_matched_datasets.txt
-
 ### Optional: Clustering based on genetic principal componenets
 Cluster individuals based on genetic principal componenets. This script is used to benchmark results and observe the overlap with tissue-specific clustering.
 - *--PCs_input_file*: .RData object containing matrix (nsamples x PCs) rownames must be `Individual_ID`.
@@ -165,7 +125,6 @@ Cluster as before but without correcting for PCs, this script is used to benchma
 ```
 The output includes (saved in *--outFold*):
 - **type_data**\_**type_input**\_cluster**type_cluster**\_PGmethod\_**type_sim**metric.RData object with the same structure as the previous command.
-
 
 ### 2.1) Associate clusters with molecular features (genes/pathwayScores):
 Test cluster-specific genes and pathways via wilcoxon-test across all tissues. For each group j, it is tested feature ~ gr_j vs remaining samples. Combine genes results in loci. Pathways are initially filtered to remove redundant ones and combine Reactome and GO databases. Original genes and pathways are initially corrected for PCs. All tissues can be passed at the same time, script can be parallelized per tissue. Note that the clustering is tissue-specific BUT these scripts test predicted genes and pathways across all tissues.
@@ -292,7 +251,6 @@ Both .RData objects contain:
     - bin_reg: summary statistics referring to regression coefficient for group independent variable. 
 - **type_data**\_**type_input**\_cluster**type_cluster**_PGmethod_**type_sim**metric_phenoAssociation_GLMpairwise.txt and **type_data**\_**type_input**\_cluster**type_cluster**_PGmethod_**type_sim**metric_phenoAssociation_GLM.txt tab separated file containing `$bin_reg` of the .RData object
 
-
 ### Optional: combine results of multiple phenotype association returns
 If mutliple runs of the previous script have been performed to correct for different covariates, the results are combined together in a unique tab separated file. Can also perform a forest plot.
 - *--endopFile* vector of .RData oject filed from previous script to be loaded
@@ -344,6 +302,40 @@ compute_risk_score_corrPCs_run.R
 ***
 
 ## Multiple cohorts (tissue-specific)
+
+### Optional: Initial filtering if datasets are not harmonized
+The following two scripts are used when gene risk scores are predicted on a data set (e.g. PGC) but TWAS estimates are obtained from another data set (e.g. UKBB) and the two initial PriLer models were not harmonized per SNPs. This step is prior the clustering computation that should be based on a subset of correlated genes.
+
+#### Compare imputed genes
+Compute genes correlation imputed from 2 different models. Genes are imputed on the reference panel from which the gene expression models are estimated, see [CASTom-iGEx Module 1](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/Software/model_training)
+- *--geneExpPred_file*: predicted gene expression on the same reference panel (e.g. GTEx) for a certain tissue but based on 2 different harmonization (reference panel + data set 1 and reference panel + data set 2). Complete file path for the two imputations.
+
+```sh
+./compare_geneExp_matchedDataset_run.R \
+    --geneExpPred_file (2 files necessary) \
+    --corr_thr (default 0.8) \
+    --tissue_name \
+    --outFold 
+```
+The output includes (saved in *--outFold*):
+- **tissue_name**\_filter\_genes\_matched\_datasets.txt 
+
+#### Compare imputed pathways
+Compute pathways correlation imputed from 2 different models. Pathways-scores are computed on the reference panel from which the gene expression models are estimated (see [CASTom-iGEx Module 1](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/Software/model_training)), after the computation of gene T-scores (see [CASTom-iGEx Module 2](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/Software/model_prediction))
+- *--pathScore_file*: predicted pathway-score on the same reference panel (e.g. GTEx) for a certain tissue but based on 2 different harmonization (reference panel + data set 1 and reference panel + data set 2). Complete file path for the two imputations.
+- *--type_path*: pathway database name, Reactome or GO.
+
+```sh
+./compare_pathScore_matchedDataset_run.R \
+    --pathScore_file (2 files necessary) \
+    --corr_thr (default 0.8) \
+    --type_path \
+    --tissue_name \
+    --outFold 
+```
+The output includes (saved in *--outFold*):
+- **tissue_name**\_filter\_**path_type**\_path\_matched\_datasets.txt
+
 ### 0) Detect outliers
 - detect_outliers_corrPCs_multipleCohorts_run.R
 - combine_outliers_cluster_run.R
