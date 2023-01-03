@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 # Consider all pathways, filter to obtain a restricted set of 
 # not-overlapping genes that retain the pathway with highest coverage
 # for each tissue separately since genes are not exactly the same across pathways
