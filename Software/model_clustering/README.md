@@ -293,8 +293,19 @@ The output includes (saved in *--outFold*):
 - **type_data**\_**type_input**\_cluster**type_cluster**\_TreatResponse\_pairwise.txt summary table for each pair of groups, phenotype and treatment tested. The columns `z_diff` and `pvalue_diff` refers to pairwise difference Z-statistic and p-value.
 
 ### 2.4) Drug repositiong based on cluster-specific pathways
-pathSEA_path_group_run.R
+Perform drug reporposing based on gene2drug tool implemented in [gep2pep](https://bioconductor.org/packages/release/bioc/html/gep2pep.html) R Bioconductor package. The script searchs for drugs inhibiting group-specific up-regulated pathways or activitating group-specific down-regulated pathways.
+- *--pathCluster_file*: output of cluster-specific pathways (2.1.1 script).
+- *--atc_file*: 
+- *--cmap_fold*:
 
+```sh
+./pathSEA_path_group_run.R \
+    --pathCluster_file
+    --atc_file
+    --cmap_fold
+    --type_cluster
+    --outFold \
+```
 ### 3) Project on external cohorts
 Corrects for new cohort PCs before projecting clustering
 
