@@ -22,7 +22,7 @@ parser <- ArgumentParser(description="path SEA analysis (cmap data)")
 parser$add_argument("--pathCluster_file", type = "character", help = "file to be loaded")
 parser$add_argument("--atc_file", type = "character", help = "")
 parser$add_argument("--cmap_fold", type = "character", help = "")
-parser$add_argument("--type_cluster", type = "character", default = 'All', help = "All, Cases, Controls")
+parser$add_argument("--type_cluster", type = "character", help = "All, Cases, Controls")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
 args <- parser$parse_args()
