@@ -140,7 +140,7 @@ Test cluster-specific genes and pathways via wilcoxon-test across all tissues. F
 
 - *--inputFile*: vector, should match *--tissues* entries. T-score or pathway-scores per tissue as described in **Input Data**.
 - *--geneInfoFile*: vector, should match *--tissues* entries. Tab separated file that contains gene location (e.g. resPrior_regEval_allchr.txt from PriLer).
-- *--type_data*: type of data that will be tested, default is `tscore` and this is the recommendend mode. However, if path\_Reactome or path\_GO are passed, all pathways in that database will be loaded but without initial filtering and can only be run separately for Reactome and GO.
+- *--type_data*: type of data that will be tested, default is `tscore` and this is the recommendend mode. However, if path\_Reactome, path\_GO or customPath\_, all pathways in that database will be loaded but without initial filtering and can only be run separately for Reactome, GO or any custom-provided pathway.
 - *--pvalcorr_thr*: when combining results in loci for the tested genes, only results with adjusted p-value lower than this threshold will be considered.
 
 ```sh
