@@ -30,7 +30,7 @@ parser$add_argument("--inputFile", type = "character", nargs = '*', default = 'N
 parser$add_argument("--tissues", type = "character", nargs = '*', help = "tissues name")
 parser$add_argument("--type_cluster", type = "character", help = "All, Cases, Controls")
 parser$add_argument("--functR", type = "character", help = "functions to be used")
-parser$add_argument("--type_data", type = "character", default = "tscore",  help = "tscore, path_Reactome or path_GO")
+parser$add_argument("--type_data", type = "character", default = "tscore",  help = "tscore, path_Reactome, path_GO or custom pathway (name must include customPath)")
 parser$add_argument("--type_data_cluster", type = "character", default = "tscore", help = "tscore, path_Reactome or path_GO")
 parser$add_argument("--type_sim", type = "character", default = 'HK', help = "HK or ED or SNF")
 parser$add_argument("--type_input", type = "character", default = 'original', help = "original or zscaled")
@@ -63,26 +63,21 @@ ncores <- args$ncores
 outFold <- args$outFold
 
 ###################################################################################################################
-# tissues <- read.table('OUTPUT_GTEx/Tissue_PGCgwas_red', h=F, stringsAsFactors = F)$V1
-# inputFile <- c('OUTPUT_CMC/predict_PGC/200kb/scz_boco_eur/devgeno0.01_testdevgeno0/predictedTscores.txt',
-#                sprintf('OUTPUT_GTEx/predict_PGC/%s/200kb/PGC_GWAS_bin1e-2/scz_boco_eur/devgeno0.01_testdevgeno0/predictedTscores.txt', tissues))
+# tissues <- read.table('OUTPUT_GTEx/Tissue_CADgwas_final', h=F, stringsAsFactors = F)$V1[1:2]
+# inputFile <- sprintf('OUTPUT_GTEx/predict_CAD/%s/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/Pathway_WikiPath2019Human_scores.RData', tissues)
 # split_tot <- 0
-# sampleAnnFile <- 'INPUT_DATA/Covariates/scz_boco_eur.covariateMatrix_old.txt'
-# clusterFile <- 'OUTPUT_CMC/predict_PGC/200kb/scz_boco_eur/devgeno0.01_testdevgeno0/update_corrPCs/matchUKBB_filt0.1_tscore_corrPCs_zscaled_predictClusterCases_PGmethod_HKmetric.RData'
+# sampleAnnFile <- 'INPUT_DATA_GTEx/CAD/Covariates/UKBB/CAD_HARD_clustering/covariateMatrix_CADHARD_All_phenoAssoc.txt'
+# clusterFile <- 'OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/update_corrPCs/tscore_corrPCs_zscaled_clusterCases_PGmethod_HKmetric.RData'
 # type_cluster <- 'Cases'
-# type_data <- 'tscore'
+# type_data <- 'customPath_WikiPath2019Human'
 # type_data_cluster <- 'tscore'
 # type_sim <- 'HK'
 # min_genes_path <- 2
 # pval_id <- 1
-# pvalresFile <- c('OUTPUT_all/Meta_Analysis_SCZ/DLPC_CMC/pval_Dx_pheno_covCorr.RData',
-#                  sprintf('OUTPUT_all/Meta_Analysis_SCZ/%s/pval_Dx_pheno_covCorr.RData', tissues))
-# outFold <- 'OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/'
-# functR <- '/home/luciat/castom-igex/Software/model_clustering/clustering_functions.R'
+# pvalresFile <- sprintf('OUTPUT_GTEx/predict_CAD/%s/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/pval_CAD_pheno_covCorr_customPath_WikiPath2019Human.RData', tissues) 
+# outFold <- 'OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/update_corrPCs/'
+# functR <- '/psycl/g/mpsziller/lucia/castom-igex/Software/model_clustering/clustering_functions.R'
 # type_input <- 'zscaled'
-# geneInfoFile <- c('OUTPUT_CMC/train_CMC/200kb/resPrior_regEval_allchr.txt',
-#                   sprintf('OUTPUT_GTEx/train_GTEx/%s/200kb/PGC_GWAS_bin1e-2/resPrior_regEval_allchr.txt', tissues))
-# tissues <- c('DLPC_CMC', tissues)
 ####################################################################################################################
 
 source(functR)
@@ -119,7 +114,7 @@ if(type_data == 'tscore'){
   id_info <- 2
   id_geno_summ <- 3
 }else{
-  if(type_data == 'path_Reactome'){
+  if(type_data == 'path_Reactome' | grepl("customPath", type_data)){
     id_pval <- 13
     id_info <- 1
     id_geno_summ <- 4
@@ -152,26 +147,28 @@ res <- foreach(id_t=1:length(tissues), .combine='comb',
                .multicombine=TRUE, 
                .init=list(list(), list(), list()))%dopar%{
                  
-#                 for(id_t in 1:length(tissues)){
+                 #                 for(id_t in 1:length(tissues)){
                  print(tissues[id_t])
                  # load pval res
                  res_pval <- get(load(pvalresFile[id_t]))
                  if(type_data == 'tscore'){
                    res_pval <- res_pval$tscore[[pval_id]]
-                 }else{
-                   if(type_data == 'path_Reactome'){
-                     res_pval <- res_pval$pathScore_reactome[[pval_id]]
-                   }else{
-                     if(type_data == 'path_GO'){
-                       res_pval <- res_pval$pathScore_GO[[pval_id]]
-                     }else{
-                       stop('unknown pathway called')
-                     }
-                   }
                  }
-                 
+                 if(type_data == 'path_Reactome'){
+                   res_pval <- res_pval$pathScore_reactome[[pval_id]]
+                 }
+                 if(type_data == 'path_GO'){
+                   res_pval <- res_pval$pathScore_GO[[pval_id]]
+                 }
+                 if(grepl("customPath", type_data)){
+                   res_pval <- res_pval$pathScore[[pval_id]]
+                 }
+                 if(!type_data %in% c("tscore", "path_Reactome", "path_GO") & !grepl("customPath", type_data)){
+                   stop('unknown pathway called')
+                 }
+                   
                  # recompute pvalue if ngenes_tscore > 1
-                 if(min_genes_path > 1 & grepl('path',type_data)){
+                 if(min_genes_path > 1 & grepl('PATH',toupper(type_data))){
                    res_pval <- res_pval[res_pval$ngenes_tscore >= min_genes_path, ]
                    res_pval[,id_pval+1] <- qvalue(res_pval[,id_pval])$qvalues
                    res_pval[,id_pval+2] <- p.adjust(res_pval[,id_pval], method = 'BH')
@@ -197,16 +194,16 @@ res <- foreach(id_t=1:length(tissues), .combine='comb',
                  colnames(input_data) <- colnames(input_data_notcorr)
                  fmla <- as.formula(paste('g ~', paste0(name_cov, collapse = '+')))
                  for(i in 1:ncol(input_data_notcorr)){
-                  # print(i)
-                  tmp <- data.frame(g = input_data_notcorr[,i], sampleAnn[, name_cov])
-                  if(any(is.na(tmp$g))){
-                    # only needed when imputed gene expression is computed in non-harmonized data
-                    # some genes might have variance zero
-                    input_data[,i] <- 0
-                  }else{
-                    reg <- lm(fmla, data = tmp)
-                    input_data[,i] <- reg$residuals
-                  }
+                   # print(i)
+                   tmp <- data.frame(g = input_data_notcorr[,i], sampleAnn[, name_cov])
+                   if(any(is.na(tmp$g))){
+                     # only needed when imputed gene expression is computed in non-harmonized data
+                     # some genes might have variance zero
+                     input_data[,i] <- 0
+                   }else{
+                     reg <- lm(fmla, data = tmp)
+                     input_data[,i] <- reg$residuals
+                   }
                  }
                  print("corrected for PCs")
                  print(identical(colnames(input_data), res_pval_t[, id_info]))
@@ -288,7 +285,7 @@ registerDoParallel(cores=min(ncores, length(tissues)))
 #test_feat_t <- vector(mode = 'list', length = length(tissues))
 test_feat_t <- foreach(id_t=1:length(tissues))%dopar%{
   
-#for(id_t in 1:length(tissues)){
+  #for(id_t in 1:length(tissues)){
   test_feat <- vector(mode = 'list', length = length(gr_names))
   for(i in 1:length(gr_names)){
     
@@ -416,7 +413,7 @@ if(type_data == 'tscore'){
   tmp_feat <- test_feat_tot[test_feat_tot$pval_corr <= pvalcorr_thr,]
   # # remove Y_RNA if any (repeated in different locations of the genome)
   # tmp_feat <- tmp_feat[!tmp_feat$feat %in% c('Y_RNA'),]
-
+  
   tmp_info <- geneInfo_tot[geneInfo_tot$new_id %in% tmp_feat$new_id, ] 
   tmp_info$Zstat <- res_pval_tot[match(tmp_info$new_id,res_pval_tot$new_id),id_pval-1]
   
@@ -445,4 +442,5 @@ if(type_data == 'tscore'){
               col.names = T, row.names = F, sep = '\t', quote = F)
   
 }
+
 
