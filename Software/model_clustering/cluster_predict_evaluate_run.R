@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 # plot prediction cluster
 
 options(stringsAsFactors=F)
