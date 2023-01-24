@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 # predict cluster probability based on phenograp approach
 
 options(stringsAsFactors=F)
