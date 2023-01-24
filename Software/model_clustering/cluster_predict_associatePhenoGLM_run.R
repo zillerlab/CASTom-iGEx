@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 # Endophenotype when phenoInfo not available
 
 options(stringsAsFactors=F)
