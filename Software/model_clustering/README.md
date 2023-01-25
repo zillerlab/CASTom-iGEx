@@ -114,9 +114,9 @@ Cluster as before but without correcting for PCs, this script is used to benchma
     --pval_thr (default 1) \
     --corr_thr (default -1) \
     --functR ./clustering_functions.R \
-    --type_data (default tscore) \
-    --type_sim (default HK) \
-    --type_input (default original) \
+    --type_data (default "tscore") \
+    --type_sim (default "HK") \
+    --type_input (default "original") \
     --kNN_par (default 30) \
     --min_genes_path (default 1) \
     --exclude_MHC (default FALSE) \
@@ -234,10 +234,10 @@ Associate the clustering structure with a registered phenotypes on samples. Uses
     --type_cluster \
     --functR ./clustering_functions.R \
     --type_data \
-    --type_sim (default = 'HK') \
-    --type_input (default original) \
-    --risk_score (default = FALSE) \
-    --rescale_pheno (default = FALSE) \
+    --type_sim (default "HK") \
+    --type_input (default "original") \
+    --risk_score (default FALSE) \
+    --rescale_pheno (default FALSE) \
     --outFold
 ```
 
@@ -277,16 +277,16 @@ Test cluster-specific treatment response. It tests the response of phenotypes in
 
 ```sh
 ./cluster_treatmentResponseAnalysis_run.R \
-    --phenoDatFile
-    --phenoDescFile 
-    --phenoDescCovFile
-    --covDatFile
-    --clusterFile
-    --type_cluster
+    --phenoDatFile \
+    --phenoDescFile \
+    --phenoDescCovFile \
+    --covDatFile \
+    --clusterFile \
+    --type_cluster \
     --functR ./clustering_functions.R \
-    --type_data
-    --type_sim (default "HK")
-    --type_input (default "original")
+    --type_data \
+    --type_sim (default "HK") \
+    --type_input (default "original") \
     --outFold
 ```
 The output includes (saved in *--outFold*):
@@ -300,21 +300,48 @@ Perform drug reporposing based on gene2drug tool implemented in [gep2pep](https:
 
 ```sh
 ./pathSEA_path_group_run.R \
-    --pathCluster_file
-    --atc_file
-    --cmap_fold
-    --type_cluster
-    --outFold \
+    --pathCluster_file \
+    --atc_file \
+    --cmap_fold \
+    --type_cluster \
+    --outFold
 ```
 The output includes (saved in *--outFold*):
 - pathSEA\_corrPCs\_tscoreCluster**type\_cluster**\_featAssociation.txt summary table for all groups and compounds. Includes atc code for the tested compounds, column "type" indicates if up-regulated or donw-regulated pathways in a group were considered.
 
 
-### 3) Project on external cohorts
-Corrects for new cohort PCs before projecting clustering
+### 3.1) Project on external cohorts
+Project clustering structure into an external cohort not used to derive the clustering. Gene T-scores are pre-processed similar as before and corrected for PCs.
+- *--sampleAnnNew_file*: sample file of the new cohort, including covariates
+- *--inputFile*: predicted T-scores for the new cohort
+- *--sampleAnn_file*: sample file of the cohort already clustered, if NULL "$sampleInfo" from the clustering object is used
+- *--clustFile*: .RData object output of step 1)
 
-cluster_PGmethod_corrPCs_predict_run.R
+```sh
+./cluster_PGmethod_corrPCs_predict_run.R \
+    --inputFile 
+    --name_cohort 
+    --sampleAnn_file (default NULL)
+    --sampleAnnNew_file 
+    --clustFile 
+    --functR ./clustering_functions.R \
+    --type_data (default "tscore") \
+    --type_input (default "original") \
+    --split_tot (default 0) \
+    --type_cluster \ 
+    --outFold
+```
+The output includes (saved in *--outFold*):
+- **type\_data**\_corrPCs\_**type\_input**\_predictCluster**type\_cluster**\_PGmethod\_HKmetric.RData R object with the following structure:
+    - probability: for each group, indicates the probability of a sample in the external cohort to be projected in that group
+    - tot_W_sNN: sparse matrix of shared NN including both the samples in the model clustering and the samples in the external cohort
+    - sampleAnn: sampleAnn file of the external cohort
+    - data_new: standardized input features used for clustering in the external cohort
+    - cl_new: projected clustering structure (assigned as the group having maximum probabiity)
+    - res_pval: TWAS assocation for the considered features used for clustering
+    - gr_input: mean, sd and coefficient of variation (cv) of each feature across clusters.
 
+### 3.2) Evaluation of projected clustering
 Evaluate cluster on external cohort: additional phenotype, percentage of repr, n. of loci
 
 cluster_predict_evaluate_run.R
