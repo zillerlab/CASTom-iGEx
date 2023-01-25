@@ -295,8 +295,8 @@ The output includes (saved in *--outFold*):
 ### 2.4) Drug repositiong based on cluster-specific pathways
 Perform drug reporposing based on gene2drug tool implemented in [gep2pep](https://bioconductor.org/packages/release/bioc/html/gep2pep.html) R Bioconductor package. The script searchs for drugs inhibiting group-specific up-regulated pathways or activitating group-specific down-regulated pathways.
 - *--pathCluster_file*: output of cluster-specific pathways (2.1.1 script).
-- *--atc_file*: 
-- *--cmap_fold*:
+- *--atc_file*: csv file obtained from [atcd github](https://github.com/fabkury/atcd) 
+- *--cmap_fold*: folder including Cmap data, downloaded from http://dsea.tigem.it/data/Cmap_MSigDB_v6.1_PEPs.tar.gz
 
 ```sh
 ./pathSEA_path_group_run.R \
@@ -306,6 +306,10 @@ Perform drug reporposing based on gene2drug tool implemented in [gep2pep](https:
     --type_cluster
     --outFold \
 ```
+The output includes (saved in *--outFold*):
+- pathSEA\_corrPCs\_tscoreCluster**type\_cluster**\_featAssociation.txt summary table for all groups and compounds. Includes atc code for the tested compounds, column "type" indicates if up-regulated or donw-regulated pathways in a group were considered.
+
+
 ### 3) Project on external cohorts
 Corrects for new cohort PCs before projecting clustering
 
