@@ -29,7 +29,6 @@ parser$add_argument("--clustFile", type = "character", help = "file cluster resu
 parser$add_argument("--split_tot", type = "integer", default = 0, help = "if 0 then inpuntFile load alone, otherwise splitted version")
 parser$add_argument("--functR", type = "character", help = "functions to be used")
 parser$add_argument("--type_input", type = "character", default = 'original', help = "original or zscaled")
-parser$add_argument("--tissues_name", type = "character", help = "name tissue")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
 args <- parser$parse_args()
@@ -43,7 +42,6 @@ type_data <- args$type_data
 type_input <- args$type_input
 split_tot <- args$split_tot
 type_cluster <- args$type_cluster
-tissues_name <- args$tissues_name
 outFold <- args$outFold
 
 
