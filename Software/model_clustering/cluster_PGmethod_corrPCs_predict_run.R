@@ -23,7 +23,7 @@ parser$add_argument("--sampleAnnNew_file", type = "character", help = "sample an
 parser$add_argument("--sampleAnn_file", type = "character", default = NULL, help = "sample annotation file model data")
 parser$add_argument("--name_cohort", type = "character", help = "")
 parser$add_argument("--type_cluster", type = "character", help = "All, Cases, Controls")
-parser$add_argument("--type_data", type = "character", help = "pathway or tscore")
+parser$add_argument("--type_data", type = "character", default = "tscore", help = "pathway or tscore")
 parser$add_argument("--inputFile", type = "character", help = "input files (scores)")
 parser$add_argument("--clustFile", type = "character", help = "file cluster results")
 parser$add_argument("--split_tot", type = "integer", default = 0, help = "if 0 then inpuntFile load alone, otherwise splitted version")
