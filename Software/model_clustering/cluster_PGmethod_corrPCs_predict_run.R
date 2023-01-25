@@ -22,7 +22,7 @@ parser <- ArgumentParser(description="predict cluster probability for new sample
 parser$add_argument("--sampleAnnNew_file", type = "character", help = "sample annotation file new data")
 parser$add_argument("--sampleAnn_file", type = "character", default = NULL, help = "sample annotation file model data")
 parser$add_argument("--name_cohort", type = "character", help = "")
-parser$add_argument("--type_cluster", type = "character",default = 'All', help = "All, Cases, Controls")
+parser$add_argument("--type_cluster", type = "character", help = "All, Cases, Controls")
 parser$add_argument("--type_data", type = "character", help = "pathway or tscore")
 parser$add_argument("--inputFile", type = "character", help = "input files (scores)")
 parser$add_argument("--clustFile", type = "character", help = "file cluster results")
