@@ -311,7 +311,7 @@ The output includes (saved in *--outFold*):
 
 
 ### 3.1) Project on external cohorts
-Project clustering structure into an external cohort not used to derive the clustering. Gene T-scores are pre-processed similar as before and corrected for PCs.
+Project clustering structure into an external cohort not used to derive the original clustering (model cluster). Gene T-scores are pre-processed similar as before and corrected for PCs.
 - *--sampleAnnNew_file*: sample file of the new cohort, including covariates
 - *--inputFile*: predicted T-scores for the new cohort
 - *--sampleAnn_file*: sample file of the cohort already clustered, if NULL "$sampleInfo" from the clustering object is used
@@ -342,9 +342,35 @@ The output includes (saved in *--outFold*):
     - gr_input: mean, sd and coefficient of variation (cv) of each feature across clusters.
 
 ### 3.2) Evaluation of projected clustering
-Evaluate cluster on external cohort: additional phenotype, percentage of repr, n. of loci
+Evaluate cluster projection on external cohort compared to model clustering: check percentage of samples in each group, concordance of cluster-specific genes, n.of loci reproduced and test additional endophenotypes (if available). 
+- *--model_name*: name of the model clustering cohort(s)
+- *--featRel_model*: .RData object output of 2.1.1 for model clustering
+- *--clustFile_new*: .RData object output of 3.1 for clustering projection
+- *--featRel_predict*: .RData object output of 2.1.1 for clustering projection
+- *--geneLoci_summ*: summary\_geneLoci\_allTissues.txt output of 2.1.1 for model clustering
 
-cluster_predict_evaluate_run.R
+```sh
+./cluster_predict_evaluate_run.R \
+    --cohort_name \
+    --model_name \
+    --phenoNew_file (default NULL) \
+    --type_cluster \
+    --type_data \
+    --clustFile \
+    --featRel_model  (default NULL) \ 
+    --clustFile_new \
+    --featRel_predict (default NULL) \
+    --functR ./clustering_functions.R \
+    --type_input (default "original") \
+    --geneLoci_summ (default NULL) \
+    --outFold
+```
+The output includes (saved in *--outFold*):
+- **type\_data**\_**type\_input**\_cluster**type\_cluster**\_percentageGropus\_prediction_model**model\_name**.txt percentage of samples in each group in the projected and model clustering 
+- **type\_data**\_**type\_input**\_cluster**type\_cluster**\_correlationSpear\_WMWestSign\_Groups\_prediction\_model**model\_name**.txt Spearman correlation between projected and model of wilcoxon-mann-whitney estimates significant in the model clustering.
+- **type\_data**\_**type\_input**\_cluster**type\_cluster**\_numberLociRep\_prediction\_model%s.txt Reproducibility of loci significant in the model clustering, uses the most significant gene in loci from the model clustering and compare sign and nominal significance in the projected clustering.
+- **type\_data**\_**type\_input**\_cluster**type\_cluster**\_phenoAssociationGLMpairwise\_prediction\_model**model\_name**.RData
+and **type\_data**\_**type\_input**\_cluster**type\_cluster**\_phenoAssociationGLM\_prediction\_model**model\_name**.RData same format as in step 2.2
 
 Endophenotype difference for a predicted cluster, phenoInfo not available
 
