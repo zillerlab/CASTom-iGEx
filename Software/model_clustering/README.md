@@ -372,15 +372,32 @@ The output includes (saved in *--outFold*):
 - **type\_data**\_**type\_input**\_cluster**type\_cluster**\_phenoAssociationGLMpairwise\_prediction\_model**model\_name**.RData
 and **type\_data**\_**type\_input**\_cluster**type\_cluster**\_phenoAssociationGLM\_prediction\_model**model\_name**.RData same format as in step 2.2
 
-Endophenotype difference for a predicted cluster, phenoInfo not available
+### Optional: Associate projected clusters with endophenotypes
+Run endophenotype difference as in 2.2 for a projected clustering. It does not require a phenoInfo file that will be automatically built based on phenotypes nature.
+- *--phenoNew_file*: same structure as *--phenoDatFile*
+- *--covNew_file*: additional covariates to correct for, if not already available in sample info stored in *--clustFile_new*.
 
-cluster_predict_associatePhenoGLM_run.R
+```sh
+.\cluster_predict_associatePhenoGLM_run.R
+    --cohort_name \
+    --phenoNew_file \
+    --covNew_file (default NULL) \
+    --type_cluster \
+    --type_data \
+    --model_name \
+    --clustFile_new \
+    --functR ./clustering_functions.R \
+    --type_input (default "original") \
+    --outFold
+```
+The output includes (saved in *--outFold*):
+- **type\_data**\_**type\_input**\_cluster**type\_cluster**\_phenoAssociationGLMall\_prediction\_model**model\_name**.RData same format as 2.2, the object include both pairwise (gri vs grj) and total (gri vs everything else) comparisons. 
 
 ### 4) Compute gene-risk score
 compute_risk_score_corrPCs_run.R
 ***
 
-## Optional: Evaluate gene-risk score 
+### Optional: Evaluate gene-risk score 
 - evaluate_risk_score_run.R
 - plot_evaluate_risk_score_run.R (Figures/)
 - cluster_associatePhenoGLM_run.R/cluster_associatePhenoGLM_multipleCohorts_metaAnalysis_run.R (as before)
