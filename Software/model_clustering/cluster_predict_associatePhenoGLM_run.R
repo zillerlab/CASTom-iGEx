@@ -22,7 +22,7 @@ parser <- ArgumentParser(description="Endophenotype differences on a predicted c
 parser$add_argument("--cohort_name", nargs = '*', type = "character", help = "")
 parser$add_argument("--phenoNew_file", nargs = '*', type = "character", help = "")
 parser$add_argument("--covNew_file", nargs = '*', default = NULL, type = "character", help = "")
-parser$add_argument("--type_cluster", type = "character",default = 'All', help = "All, Cases, Controls")
+parser$add_argument("--type_cluster", type = "character", help = "All, Cases, Controls")
 parser$add_argument("--type_data", type = "character", help = "pathway or tscore")
 parser$add_argument("--model_name", type = "character", help = "")
 parser$add_argument("--clustFile_new", type = "character", nargs = '*', help = "file cluster results")
