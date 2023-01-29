@@ -25,7 +25,7 @@ parser <- ArgumentParser(description="predict cluster probability for new sample
 parser$add_argument("--cohort_name", nargs = '*', type = "character", help = "")
 parser$add_argument("--model_name", type = "character", help = "")
 parser$add_argument("--phenoNew_file", nargs = '*', default = NULL, type = "character", help = "")
-parser$add_argument("--type_cluster", type = "character",default = 'All', help = "All, Cases, Controls")
+parser$add_argument("--type_cluster", type = "character", help = "All, Cases, Controls")
 parser$add_argument("--type_data", type = "character", help = "pathway or tscore")
 parser$add_argument("--clustFile", type = "character", help = "file cluster results")
 parser$add_argument("--featRel_model", type = "character", default = NULL, help = "file association features wilcoxon test")
