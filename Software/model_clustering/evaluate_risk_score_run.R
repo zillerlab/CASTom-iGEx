@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 # for each phenotype associate R2
 # if continuous, common R2 otherwise Lee libility scale R2?
 
