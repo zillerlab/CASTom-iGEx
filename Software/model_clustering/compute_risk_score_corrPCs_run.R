@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 # compute gene PRS/path PRS
 
 options(stringsAsFactors=F)
@@ -25,7 +26,7 @@ parser$add_argument("--sampleAnn_file", type = "character", help = "")
 parser$add_argument("--inputFile", type = "character", help = "input files (scores)")
 parser$add_argument("--split_tot", type = "integer", default = 0, help = "if 0 then inpuntFile load alone, otherwise splitted version")
 parser$add_argument("--functR", type = "character", help = "functions to be used")
-parser$add_argument("--type_data", type = "character", help = "")
+parser$add_argument("--type_data", type = "character", default = "tscore", help = "tscore, path_Reactome or path_GO")
 parser$add_argument("--cases_only", type = "logical", default = FALSE, help = "")
 parser$add_argument("--scale_rs", type = "logical", default = FALSE, help = "")
 parser$add_argument("--pheno_class_name", type = "character", nargs = '*', help = "")

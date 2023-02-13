@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 # compute correlation matrix for Tscores/pathways for a specific tissue
 # use a random samples setting 
 
