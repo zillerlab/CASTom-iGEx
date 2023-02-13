@@ -222,7 +222,7 @@ Associate the clustering structure with a registered phenotypes on samples. Uses
 - *--clusterFile*: complete path to output of clustering script in step 1)
 - *--type_data*: NOTE: can also be PCs
 - *--type_input*: needed to save output, if refers to version correcting for PCs, add corrPCs\_ in front (e.g. `corrPCs_zscaled`).
-- *--risk_score*: if TRUE, the provided phenotype is a predicted gene risk-score across samples.
+- *--risk_score*: if TRUE, the provided phenotypes are predicted gene risk-scores across samples.
 - *--rescale_pheno*: if TRUE, continuous phenotype is rescaled.
 
 ```sh
@@ -378,7 +378,7 @@ Run endophenotype difference as in 2.2 for a projected clustering. It does not r
 - *--covNew_file*: additional covariates to correct for, if not already available in sample info stored in *--clustFile_new*.
 
 ```sh
-.\cluster_predict_associatePhenoGLM_run.R
+./cluster_predict_associatePhenoGLM_run.R
     --cohort_name \
     --phenoNew_file \
     --covNew_file (default NULL) \
@@ -393,11 +393,65 @@ Run endophenotype difference as in 2.2 for a projected clustering. It does not r
 The output includes (saved in *--outFold*):
 - **type\_data**\_**type\_input**\_cluster**type\_cluster**\_phenoAssociationGLMall\_prediction\_model**model\_name**.RData same format as 2.2, the object include both pairwise (gri vs grj) and total (gri vs everything else) comparisons. 
 
-### 4) Compute gene-risk score
-compute_risk_score_corrPCs_run.R
+### 4) Associate cluster with gene-risk scores
+Predict gene-risk score on the population of interest and detect differences across groups. Gene-risk scores are similar to polygenic risk-score but imputed gene expression and TWAS summary statistics are considered instead of individual genotype and GWAS results. Note that the following script can be lso used for individual pathway-scores and PALAS summary statisitcs but gene usage is set as default.
+
+#### 4.1) Compute features (genes/pathways) correlation
+Compute features (genes or pathways) correlation to be used for the initial filtering of features in computing risk-scores. 
+A completely different set of samples can be used for this purpose.
+- *--inputFile* pathway-score or gene T-scores (.RData) from which the correlation is computed. If pathway-scores, it must be a vector of 2 .RData, one for Reactome and one for GO
+- *--sampleAnnFile* samples matching *--inputFile* or a subset used to compute features correlation
+- *--split_tot* depends on the dimensionality of input, if 0 a single matrix is loaded
+
+```sh
+./correlation_features_run.R \
+	--inputFile \
+	--sampleAnnFile \
+	--tissue_name \
+	--split_tot (default 0) \
+	--type_data \
+	--outFold
+```
+The output includes (saved in *--outFold*):
+- correlation_estimate_<type_data>.RData, R object with correlation matrix and samples info 
+
+
+#### 4.2) Predict gene risk-scores
+- *--genes_to_filter*: .txt files produced by compare_geneExp_matchedDataset_run.R (see below), filter out genes when not harmonized data-sets are considered for TWAS estimates and imputed gene expression
+- *--cases_only*: if TRUE, cosider only cases in sampleAnn_file (Dx=1)
+- *--scale_rs*: if TRUE risk-scores are standardized
+- *--pheno_class_name*: macro name for each RData object including TWAS results in pvalresFile
+- *--corrFile*: output of step 4.1)
+- *--sqcorr_thr*: squared correlation threshold from --corrFile to clump features based on PriLer R^2.
+
+```sh
+./compute_risk_score_corrPCs_run.R
+    --genes_to_filter (default NULL) \
+    --sampleAnn_file \
+    --inputFile \
+    --split_tot \
+    --n_max (default 50000) \
+    --type_cluster \
+    --type_data (default "tscore") \
+    --cases_only (default FALSE) \
+    --functR ./clustering_functions.R \
+    --scale_rs (default FALSE) \
+    --pheno_class_name \
+    --pvalresFile \
+    --sqcorr_thr (default 1) \
+    --corrFile \
+    --min_genes_path (default 1)\
+    --outFold
+```
+The output includes (saved in *--outFold*):
+- **type\_data**\_corr2Thr**sqcorr\_thr**\_risk\_score\_relatedPhenotypes.txt, table with first column Individual\_ID and following once predicted gene risk-score for each phenotype having TWAS summary statistic in --pvalresFile.
+- **type\_data**\_features\_risk\_score\_corr2Thr**sqcorr\_thr**.txt', table with features (genes) names used to compute gene risk-scores.
+
+#### 4.3) Find cluster-specific differences in gene-risk scores
+Application of cluster_associatePhenoGLM_run.R with --risk_score TRUE and 
 ***
 
-### Optional: Evaluate gene-risk score 
+#### Optional 4.4): Evaluate gene-risk score prediction
 - evaluate_risk_score_run.R
 - plot_evaluate_risk_score_run.R (Figures/)
 - cluster_associatePhenoGLM_run.R/cluster_associatePhenoGLM_multipleCohorts_metaAnalysis_run.R (as before)
