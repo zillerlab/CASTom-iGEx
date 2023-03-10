@@ -12,28 +12,49 @@ across directly interpretable biological process and pathways as well as clinica
 
 ## Built with
 * R (>= 3.5.3)
-### Required R packages
-- argparse 
-- biomaRt
+### Required R packages (complete pipeline)
+- GO.db
+- MASS
+- Matrix
+- PGSEA
+- RColorBrewer
+- RNOmni
+- SparseM
+- argparse
 - bigmemory
+- biomaRt
+- circlize
+- coin
+- cowplot
 - data.table
 - doParallel
-- glmnet
-- ggplot2
-- gridExtra
-- ggsci
+- gep2pep
 - ggExtra
-- Matrix
-- limma
+- ggplot2
+- ggpubr
+- ggrepel
+- ggsci
+- ggsignif
+- glmnet
+- gridExtra
+- igraph
 - lattice
+- limma
+- lme4
 - lmtest
 - matrixStats
 - nloptr
-- parallel
-- PGSEA
+- nnet
+- pROC
+- pheatmap
 - pryr
 - qvalue
-- RColorBrewer
+- rlist
+- rstatix
+- stringr
+- sva
+- tidyverse
+- umap
 
 
 ## Usage
