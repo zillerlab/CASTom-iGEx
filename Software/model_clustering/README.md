@@ -35,7 +35,7 @@ Cluster individuals based on genetic principal componenets. This script is used 
     --outFold
 ```
 The output includes (saved in *--outFold*):
-- PCs_cluster*type_cluster*_PGmethod_*type_sim*metric.RData object with the following structure:
+- PCs_cluster**type_cluster**\_PGmethod\_**type_sim**metric.RData object with the following structure:
     - best_k: single kNN parameter given OR if multiple kNN provided, returns kNN that maximizes Davies-Bouldin index.
     - cl_res: total clustering ouptput including computed similarity matrix.
     - test_cov: chisq-test or kruskal-wallis test of clustering structure and covariates (e.g. PCs or sex).
@@ -85,7 +85,7 @@ Cluster individuals based on tissue-specific imputed gene expression. This scrip
     --outFold
 ```
 The output includes (saved in *--outFold*):
-- **type_data**\_corrPCs_**type_input**\_cluster**type_cluster**\_PGmethod\_**type_sim**metric.RData object with the following structure:
+- **type_data**\_corrPCs\_**type_input**\_cluster**type_cluster**\_PGmethod\_**type_sim**metric.RData object with the following structure:
     - best_k: single kNN parameter given OR if multiple kNN provided, returns kNN that maximizes Davies-Bouldin index.
     - cl_res: total clustering ouptput including computed similarity matrix.
     - test_cov: chisq-test or kruskal-wallis test of clustering structure and covariates (e.g. PCs or sex).
@@ -451,7 +451,7 @@ The output includes (saved in *--outFold*):
 Application of cluster_associatePhenoGLM_run.R with --risk_score TRUE and 
 
 #### Optional 4.4): Evaluate gene-risk score prediction
-If gene-risk scores are predicted on the same data set that measured the corresponding phenotypes and from which TWAS and PALAS were estimated (e.g. UKBB), it is possible to evaluate the performance of gene-risk scores in approximating the actual phenotypes. The following script computes R2 and F-statistic estiamtes from comparing nested linear models pheno~risk_score+covariates and pheno~risk_score.
+If gene-risk scores are predicted on the same data set that measured the corresponding phenotypes and from which TWAS and PALAS were estimated (e.g. UKBB), it is possible to evaluate the performance of gene-risk scores in approximating the actual phenotypes. The following script computes R2 and F-statistic estiamtes from comparing nested linear models pheno\~risk_score\+covariates and pheno\~risk_score.
 - *--riskScore_file*: output of step 4.2)
 - *--pheno_file*: phenotype txt file used to compute TWAS and PALAS
 
@@ -467,8 +467,7 @@ If gene-risk scores are predicted on the same data set that measured the corresp
 The output includes (saved in *--outFold*):
 - R2_risk_score_phenotype.txt: summary file with pheno_id, R2 and F-statistic.
 
-
-
+Further functions
 - plot_evaluate_risk_score_run.R (Figures/)
 - cluster_associatePhenoGLM_run.R/cluster_associatePhenoGLM_multipleCohorts_metaAnalysis_run.R (as before)
 - compare_endophenotypeAnalysis_clusterRiskScore_run.R (Figures/)
