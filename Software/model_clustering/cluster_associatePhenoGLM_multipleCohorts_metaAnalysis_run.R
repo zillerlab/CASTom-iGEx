@@ -1,5 +1,7 @@
+#!/usr/bin/env Rscript
+
 # associate endophenotypes to cluster structure 
-# use GLM, multiplt cohorts
+# use GLM, multiple cohorts with final results combined via meta-analysis
 
 options(stringsAsFactors=F)
 options(max.print=1000)
@@ -25,7 +27,7 @@ parser$add_argument("--phenoDatFile", type = "character", nargs = '*', help = "f
 parser$add_argument("--phenoDescFile", type = "character", help = "description endophenotype")
 parser$add_argument("--sampleAnnFile", type = "character", nargs = '*', help = "file with samples to be used")
 parser$add_argument("--clusterFile", type = "character", nargs = '*', help = "file with clustering structure")
-parser$add_argument("--type_cluster", type = "character", default = 'All', help = "All, Cases, Controls")
+parser$add_argument("--type_cluster", type = "character",  help = "All, Cases, Controls")
 parser$add_argument("--functR", type = "character", help = "functions to be used")
 parser$add_argument("--type_data", type = "character", help = "tscore, path_Reactome or path_GO")
 parser$add_argument("--type_sim", type = "character", default = 'HK', help = "HK or ED or SNF")
@@ -58,20 +60,6 @@ outFold <- args$outFold
 # type_sim <- 'HK'
 # outFold <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/Meta_Analysis_CAD/CAD_HARD_clustering/'
 # functR <- '/psycl/g/mpsziller/lucia/priler_project/Software/model_clustering/clustering_functions.R'
-# type_input <- 'zscaled'
-####################################################################################################################
-
-####################################################################################################################
-# name_cohorts <- read.table('INPUT_DATA/SCZ_cohort_names_CLUST')$V1
-# phenoDatFile <- paste0('OUTPUT_CMC/predict_PGC/200kb/',name_cohorts,'/devgeno0.01_testdevgeno0/tscore_corrThr0.5_risk_score_relatedPhenotypes.txt')
-# phenoDescFile <- '/home/luciat/UKBB_SCZrelated/phenotypeDescription_rsSCZ.txt'
-# sampleAnnFile <- paste0('INPUT_DATA/Covariates/',name_cohorts,'.covariateMatrix_old.txt')
-# clusterFile <- 'OUTPUT_CMC/predict_PGC/200kb/Meta_Analysis_SCZ/devgeno0.01_testdevgeno0/tscore_zscaled_clusterCases_PGmethod_HKmetric.RData'
-# type_cluster <- 'Cases'
-# type_data <- 'tscore'
-# type_sim <- 'HK'
-# outFold <- './'
-# functR <- '/home/luciat/priler_project/Software/model_clustering/clustering_functions.R'
 # type_input <- 'zscaled'
 ####################################################################################################################
 

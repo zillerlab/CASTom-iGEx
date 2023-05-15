@@ -448,9 +448,44 @@ The output includes (saved in *--outFold*):
 - **type\_data**\_features\_risk\_score\_corr2Thr**sqcorr\_thr**.txt', table with features (genes) names used to compute gene risk-scores.
 
 #### 4.3) Find cluster-specific differences in gene-risk scores
-Application of cluster_associatePhenoGLM_run.R with --risk_score TRUE and 
+Application of cluster_associatePhenoGLM_run.R with --risk_score TRUE and --rescale_pheno TRUE
 
-#### Optional 4.4): Evaluate gene-risk score prediction
+If gene-risk score is predicted among multiple cohorts (with PCs info calculated separately, e.g. CARDIoGRAM), association of gene-RS with each cohort cluster and final meta-analysis computed with the following R script.
+- *--name_cohorts*: vector with name of considered cohorts
+- *--phenoDatFile*: .txt files including phenotypes to be tested, one per cohort
+- *--sampleAnnFile*: .txt files with samples and covariates info, one per cohort
+- *--clusterFile*: .RData clustering output, either from projection or actual clustering. Can be a unique file (if all cohorts clustered together) or multiple .RData files one per cohort (cohorts clustered separately)
+- *--risk_score*: logical that must be set to TRUE, indicates that the phenotype input is computed as risk score
+
+```sh
+./cluster_associatePhenoGLM_multipleCohorts_metaAnalysis_run.R \
+    --name_cohorts \
+    --phenoDatFile \
+    --phenoDescFile \
+    --sampleAnnFile \
+    --type_cluster \
+    --functR ./clustering_functions.R \
+    --type_data \
+    --type_sim (default "HK") \
+    --type_input (default "original") \
+    --clusterFile \
+    --risk_score (default F) \
+    --outFold
+```
+The output includes (saved in *--outFold*):
+- **type_data**\_**type_input**\_cluster**type_cluster**\_PGmethod\_**type_sim**metric\_phenoAssociation\_GLMpairwise_metaAnalysis.RData (tests gr\_i vs gr\_j)
+- **type_data**\_**type_input**\_cluster**type_cluster**\_PGmethod\_**type_sim**metric\_phenoAssociation\_GLM_metaAnalysis.RData (tests gr\_i vs remaning samples).
+Both .RData objects contain:
+    - phenoDat: input --phenoDatFile
+    - phenoInfo: input --phenoDescFile
+    - cl: data frame with clustering partition
+    - covDat: data frame with covariates used
+    - single_cohorts: list with statistics referring to regression coefficient for group independent variable, one element per cohort.
+    - meta_analysis: meta-analisys results of summary statistics referring to regression coefficient for group independent variable
+    
+- **type_data**\_**type_input**\_cluster**type_cluster**_PGmethod_**type_sim**metric_phenoAssociation_GLMpairwise_metaAnalysis.txt and **type_data**\_**type_input**\_cluster**type_cluster**_PGmethod_**type_sim**metric_phenoAssociation_GLM_metaAnalysis.txt tab separated file containing `meta_analysis` of the .RData object
+
+#### Optional 4.4): Evaluate gene risk-score prediction
 If gene-risk scores are predicted on the same data set that measured the corresponding phenotypes and from which TWAS and PALAS were estimated (e.g. UKBB), it is possible to evaluate the performance of gene-risk scores in approximating the actual phenotypes. The following script computes R2 and F-statistic estiamtes from comparing nested linear models pheno\~risk_score\+covariates and pheno\~risk_score.
 - *--riskScore_file*: output of step 4.2)
 - *--pheno_file*: phenotype txt file used to compute TWAS and PALAS
@@ -467,12 +502,54 @@ If gene-risk scores are predicted on the same data set that measured the corresp
 The output includes (saved in *--outFold*):
 - R2_risk_score_phenotype.txt: summary file with pheno_id, R2 and F-statistic.
 
-Further functions
-- plot_evaluate_risk_score_run.R (Figures/)
-- cluster_associatePhenoGLM_run.R/cluster_associatePhenoGLM_multipleCohorts_metaAnalysis_run.R (as before)
-- compare_endophenotypeAnalysis_clusterRiskScore_run.R (Figures/)
-- plot_precision_risk_score_groupSpec_run.R (Figures/)
+F-statistic and R2 across tissues are plot with
+```sh
+./plot_evaluate_risk_score_run.R \
+    --riskScore_eval_file \
+    --color_tissues_file \
+    --tissues \
+    --outFold
+```
+- *--riskScore_eval_file*: multiple arguments as output of the previous script across tissues, same length as *--tissues*
+- *--color_tissues_file*: file with color code per tissue, available in refData/color_tissues.txt 
 
+#### Optional 4.5): Compare results actual endophenotype and gene risk-score cluster-specific differences
+Comparison of cluster-specific results from measured endophenotype and gene risk-score. For each phenotype in common, computation of cluter-reliable measure (CRM) given by pheno `F-stat * |beta|` with `beta` being the GLM cluster-specific coefficient from gene risk-score associations.
+- *--riskScore_analysis_file*: output of step 4.3) in the form of .RData object. If multiple objects are passed due to multiple run with different endophenotype tables, results are combined together.
+- *--endopheno_analysis_file*: output of step 2.2) in .txt format
+- *--pval_FDR_pheno*, *--pval_pheno_show*, *--thr_plot*, *--measureGoodness_thr* parameters for plot
+- *--color_pheno_file*: color per UKBB phenotype, file available in refData/color_pheno_type_UKBB.txt
+- *--R2_pheno_rs_file*: summary table output of step 4.2)
+```sh
+./compare_endophenotypeAnalysis_clusterRiskScore_run.R \
+    --riskScore_analysis_file \
+    --endopheno_analysis_file \
+    --pval_FDR_pheno (default 0.05) \
+    --pval_pheno_show (default 0.001) \
+    --thr_plot (default 1e-10) \
+    --color_pheno_file \
+    --pheno_name \
+    --R2_pheno_rs_file \
+    --meta_analysis (default F) \
+    --measureGoodness_thr (default 3000) \
+    --outFold 
+```
+The output includes (saved in *--outFold*):
+- riskScores\_clusterCases\_**pheno_name**\_group\_relatedPheno\_measureGoodnessPred.txt
+cluster-specific gene-RS results annotated with F-statistic of gene-RS, actual cluster-specific endophenotypes and cluster-reliable measure.
+
+
+These files (across tissues) are then used to compute precision across CRM values using beta sign concordance via
+```sh
+./plot_precision_risk_score_groupSpec_run.R \
+    --riskScore_comp_file \
+    --color_tissues_file \
+    --tissues \
+    --outFold
+```
+The output includes (saved in *--outFold*):
+- riskScores\_clusterCases\_group\_relatedPheno\_npheno\_and\_precision.txt
+across CRM threshold gives info on n. of phenotypes passing CRM and having the same sign for beta GLM association and resulting precision.
 ***
 
 ## Multiple cohorts (tissue-specific)
@@ -531,6 +608,7 @@ cluster_PGmethod_corrPCs_predict_run.R
 ### 4) Compute gene-risk score
 - compute_risk_score_corrPCs_multipleCohorts_run.R (across all cohort together)
 - cluster_associatePhenoGLM_run.R (evaluate group differences)
+
 
 
 
