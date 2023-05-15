@@ -64,3 +64,5 @@ For details of each module please refer to
 * [Module 3](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/Software/model_clustering)
 
 ## References
+The pipeline and its application is described in details in:
+[Distinct genetic liability profiles define clinically relevant patient strata across common diseases.  Lucia Trastulla, Sylvain Moser, Laura T. Jiménez-Barrón, Till F.M. Andlauer, Moritz von Scheidt, Schizophrenia Working Group of the Psychiatric Genomics Consortium, Monika Budde, Urs Heilbronner, Sergi Papiol, Alexander Teumer, Georg Homuth, Peter Falkai, Henry Völzke, Marcus Dörr, Thomas G. Schulze, Julien Gagneur, Francesco Iorio, Bertram Müller-Myhsok, Heribert Schunkert, Michael J. Ziller. MedRxiv, 2023](https://www.medrxiv.org/content/10.1101/2023.05.10.23289788v1)
