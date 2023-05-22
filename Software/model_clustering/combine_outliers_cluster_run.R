@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 # cluster (multiple cohort combined)
 
 options(stringsAsFactors=F)
@@ -7,8 +8,8 @@ options(bitmapType = 'cairo', device = 'png')
 
 
 parser <- ArgumentParser(description="create a unique file with samples to remove (across tissues and analysis total/noMHC)")
-parser$add_argument("--sampleFiles", type = "character", default = 'NA', nargs = '*', help = "")
-parser$add_argument("--type_cluster", type = "character", default = 'All', help = "All, Cases, Controls")
+parser$add_argument("--sampleFiles", type = "character", nargs = '*', help = "")
+parser$add_argument("--type_cluster", type = "character", help = "All, Cases, Controls")
 parser$add_argument("--type_data", type = "character", help = "tscore, path_Reactome or path_GO")
 parser$add_argument("--type_input", type = "character", default = 'original', help = "original or zscaled")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
