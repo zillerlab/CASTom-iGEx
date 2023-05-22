@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 # cluster (multiple cohort combined)
 
 options(stringsAsFactors=F)
@@ -17,17 +18,17 @@ options(bitmapType = 'cairo', device = 'png')
 
 
 parser <- ArgumentParser(description="remove outliers if needed")
-parser$add_argument("--inputFile", type = "character", default = 'NA', nargs = '*', help = "file to be loaded (predicted tscore or pathScore)")
+parser$add_argument("--inputFile", type = "character", nargs = '*', help = "file to be loaded (predicted tscore or pathScore)")
 parser$add_argument("--name_cohorts", type = "character", nargs = '*', help = "name of the single cohorts")
 parser$add_argument("--sampleAnnFile", type = "character", nargs = '*', help = "file with samples to be used")
-parser$add_argument("--geneRegionFile", type = "character", default='NA', help = "used if tscore and exclude_MHC")
+parser$add_argument("--geneRegionFile", type = "character", default=NULL, help = "used if tscore and exclude_MHC")
 parser$add_argument("--tissues_name", type = "character", help = "name tissue")
 parser$add_argument("--genes_to_filter", type = "character", default = NULL, help = "additional file to filter genes")
 parser$add_argument("--exclude_MHC", type = "logical", default = F, help = "if true, MHC region excluded (only ossible for tscore)")
-parser$add_argument("--type_cluster", type = "character", default = 'All', help = "All, Cases, Controls")
+parser$add_argument("--type_cluster", type = "character", help = "All, Cases, Controls")
 parser$add_argument("--split_tot", type = "integer", default = 0, help = "if 0 then inpuntFile load alone, otherwise splitted version")
-parser$add_argument("--pvalresFile", type = "character", default = 'NA', help = "file with pvalue results")
-parser$add_argument("--pval_id", type = "integer", default = 0, help = "id to be used on pvalue file")
+parser$add_argument("--pvalresFile", type = "character", help = "file with pvalue results")
+parser$add_argument("--pval_id", type = "integer", default = 1, help = "id to be used on pvalue file")
 parser$add_argument("--corr_thr", type = "double", default = -1, help = "correlation among features threshold")
 parser$add_argument("--functR", type = "character", help = "functions to be used")
 parser$add_argument("--type_data", type = "character", help = "tscore, path_Reactome or path_GO")
@@ -222,7 +223,7 @@ if(type_input == 'zscaled'){
 }
 
 ### plot: UMAP
-# remove samples that are outliers (from PCA)
+# remove samples that are outliers (from UMAP)
 n_comp_umap <- 2
 n_neigh_umap <- 30
 min_dist_umap <- 0.01
