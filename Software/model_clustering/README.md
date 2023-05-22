@@ -8,14 +8,17 @@ CASTom-iGEx (Module 3) is a pipeline (R based) that uses gene-level T-scores, co
 - **TWAS and PALAS results** (*--pvalresFile*): .RData file obtained from `pheno_association_` scripts in [CASTom-iGEx Module 2](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/Software/model_prediction). Z-statistic from genes or pathways are used to annotate clustering features and re-scale them.
 - **Phenotype matrix** (*--phenoDatFile*): columns must contain `Individual_ID` plus any phenotype to test for clustering differences (phenotypes + 1 x samples). This matrix can include multiple phenotypes to be tested. 
 - **Phenotype description** (*--phenoDescFile*): rows refers to phenotypes to be tested. Columns must include: `pheno_id`, `FieldID`, `Field`,  `transformed_type`;  `pheno_id` is used to match columns name in Phenotype matrix, transformed_type is a charachter defining the type of data (continous, binary ecc.)
- 
 
-### Parameters
+ 
+### Parameters and auxiliary files
 - **type of clustering** (*--type_cluster*): Indicates if all samples in *--sampleAnnFile* are clustered (`All`), only affected individuals (`Cases`) or only non-affected individuals (`Controls`).
 - **type of similarity** (*--type_sim*): if `HK`, heat kernel similarity is used. If `ED`, opposite of euclidian distance is used as similarity.
 - **type of data** (*--type_data*): indicates the type of input data (*--inputFile*) used to compute the clustering: gene T-score `tscore`, Pathway-score Reactome `path_Reactome` or pathway-score Gene Ontology `path_GO`.
 - **type of input** (*--type_input*): indicates how the input should be processed, if `original` the data is not multiplied by Z-statistic nut only standardized, if `zscaled` each feature is first standardized and then multiplied by the correspondig Z-statistic provided in *--pvalresFile*.
 - **K nearest neighbour** (*--kNN_par*): number of nearest neighbours considered to compute both heat kernel similarity and shared nearest neighbour similarity.
+- **Exclusion of MHC locus** (*--exclude_MHC*): if TRUE and `type_data="tscore"`, exclude genes in MHC locus.
+- **Gene coordinate info** (*--geneRegionFile*): used if `type_data="tscore"` and `exclude_MHC=TRUE`. Tab separated file that contains gene location (e.g. resPrior_regEval_allchr.txt from PriLer output [CASTom-iGEx Module 1](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/Software/model_training)).
+- **Split of Input Matrix** (*--split_tot*): integer indicating the number of groups the *--inputFile* has been split. Used in a large sample size setting e.g. UK Biobank.
 
 ***
 ### Optional: Clustering based on genetic principal componenets
@@ -53,13 +56,10 @@ The output includes (saved in *--outFold*):
 ### 1) Clustering
 Cluster individuals based on tissue-specific imputed gene expression. This script intially clump genes based on correlation, standardize each genes, correct for PCs and rescaled them by TWAS disease-specifc Z-statistic.
 - *--covDatFile*: optional, additional covariates to test for. NOTE: principal components shoudl be included in *--sampleAnnFile*.
-- *--split_tot*: integer indicating the number of groups the *--inputFile* has been split. Used in a large sample size setting e.g. UK Biobank.
 - *--pval_id*: integer indicating the index of the phenotype to be considered in *--pvalresFile* that can include more than one phenotype.
 - *--corr_thr*: correlation threshold to clump features. If 1 include all the features.
-- *--min_genes_path*: minimum number of genes forming a pathway. Used to filter pathways for clustering.
-- *--exclude_MHC*: if TRUE and `type_data="tscore"`, exclude genes in MHC locus.
+- *--min_genes_path*: minimum number of genes forming a pathway. Used to filter pathways for clustering with *--type_data* is path_Reactome or path_GO.
 - *--capped_zscore*: if TRUE, Z-statistic to rescale features are capped at 0.05% to attenuate extreme associations
-- *--geneRegionFile*: used if `type_data="tscore"` and `exclude_MHC=TRUE`. Tab separated file that contains gene location (e.g. resPrior_regEval_allchr.txt from PriLer).
 
 ```sh
 ./cluster_PGmethod_corrPCs_run.R \
@@ -569,7 +569,7 @@ Compute genes correlation imputed from 2 different models. Genes are imputed on 
     --outFold 
 ```
 The output includes (saved in *--outFold*):
-- **tissue_name**\_filter\_genes\_matched\_datasets.txt 
+- **tissue_name**\_filter\_genes\_matched\_datasets.txt, the column "keep" is a logical indicating whether a gene passed the correlation threshold and is reliable in both models.
 
 #### Compare imputed pathways
 Compute pathways correlation imputed from 2 different models. Pathways-scores are computed on the reference panel from which the gene expression models are estimated (see [CASTom-iGEx Module 1](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/Software/model_training)), after the computation of gene T-scores (see [CASTom-iGEx Module 2](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/Software/model_prediction))
@@ -585,11 +585,54 @@ Compute pathways correlation imputed from 2 different models. Pathways-scores ar
     --outFold 
 ```
 The output includes (saved in *--outFold*):
-- **tissue_name**\_filter\_**path_type**\_path\_matched\_datasets.txt
+- **tissue_name**\_filter\_**path_type**\_path\_matched\_datasets.txt, includes only pathways in common and the column "keep" is a logical indicating whether a pathway passed the correlation threshold.
 
 ### 0) Detect outliers
-- detect_outliers_corrPCs_multipleCohorts_run.R
-- combine_outliers_cluster_run.R
+Prior to clustering computation combining all cohorts, detect samples outliers based on UMAP representation. Samples more distant than 6 standard deviation from the median are excluded (union considering the first two dimension). The script is run separately for each tissue.
+- *--name_cohorts*: vector with name of considered cohorts
+- *--sampleAnnFile*: .txt files with samples and covariates info, one per cohort
+- *--genes_to_filter*: .txt output of previous optional step. If not NULL, only genes in "keep" are considered for the analysis. 
+- *--pval_id*: integer indicating the index of the phenotype to be considered in *--pvalresFile* that can include more than one phenotype.
+- *--corr_thr*: correlation threshold to clump features. If 1 include all the features.
+- *--min_genes_path*: minimum number of genes forming a pathway. Used to filter pathways for clustering with *--type_data* is path_Reactome or path_GO.
+
+```sh
+./detect_outliers_corrPCs_multipleCohorts_run.R \
+    --inputFile \
+    --name_cohorts \
+    --sampleAnnFile \
+    --geneRegionFile (default NULL) \
+    --tissues_name \
+    --genes_to_filter (default NULL) \
+    --exclude_MHC (default FALSE) \
+    --type_cluster \
+    --corr_thr (default -1) \
+    --split_tot (default 0) \
+    --pvalresFile \
+    --pval_id (default 1) \
+    --functR ./clustering_functions.R \
+    --type_data \
+    --type_sim (default "HK") \
+    --type_input (default "original") \
+    --min_genes_path (default 1) \
+    --outFold
+```
+The output includes (saved in *--outFold*):
+- **type_data**\_corrPCs\_**type_input**\_cluster**type_cluster**\_PGmethod\_umap\_oultiers.txt containing the sample ids of outliers to exclude. If no outliers are detected, no file is saved.
+
+Combine list of outliers across multiple tissues and/or clustering versions (e.g. different corr_thr).
+- *--sampleFiles*: vector of .txt files with outlier samples
+
+```sh
+./combine_outliers_cluster_run.R \
+    --sampleFiles \
+    --type_cluster \
+    --type_data \
+    --type_input (default "original") \
+    --outFold
+```
+The output includes (saved in *--outFold*):
+- samples\_to\_remove\_outliersUMAP\_**type_data**\_**type_input**\_cluster**type_cluster**.txt includes all samples considered as outliers across multiple tissues/clustering versions.
 
 ### 1) Clustering
 cluster_PGmethod_corrPCs_multipleCohorts_run.R
