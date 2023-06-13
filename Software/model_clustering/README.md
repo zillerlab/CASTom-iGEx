@@ -757,15 +757,47 @@ For each tissue, test for cluster-specific pathways. Reactome and GO are merged 
 The output includes (saved in --outFold):
 - pathOriginal\_filtJS**thr_js**\_corrPCs\_**type_data_cluster**Cluster**type_cluster**\_featAssociation.RData object. Same structure as output of 2.1.1). 
 
-### 2.2) Associate clusters with endophenotypes
-cluster_associatePhenoGLM_run.R
+#### 2.4) Drug repositiong based on cluster-specific pathways
+Perform drug reporposing, same as in step 2.4) of "Single cohort"
 
 ### 3) Project on external cohorts
-cluster_PGmethod_corrPCs_predict_run.R
+Project clustering structure into an external cohort not used to derive the original clustering (model cluster). Scripts in steps 3) for "Single cohort" can be applied in the same way.
 
-### 4) Compute gene-risk score
-- compute_risk_score_corrPCs_multipleCohorts_run.R (across all cohort together)
-- cluster_associatePhenoGLM_run.R (evaluate group differences)
+### 4) Associate cluster with gene-risk scores
+Predict gene-risk score on the population of interest and detect differences across groups (see "Single cohort" step 4) for more details).
+
+#### 4.1) Compute features (genes/pathways) correlation
+Same script as in "Single cohort" step 4.1), use external single cohort samples for this purpuse.
+
+#### 4.2) Predict gene risk-scores
+Similar to step 4.2) in "Single cohort". It computes gene risk scores across all samples in multiple cohorts, after having clumped genes and corrected the remaining genes for PCs.
+- *--inputFile*: vector including file direction or complete path for gene T-scores, same length as --name_cohorts
+```sh
+./compute_risk_score_corrPCs_multipleCohorts_run.R \
+	--genes_to_filter (default NULL) \
+	--sampleAnn_file \
+	--name_cohorts \
+	--inputFile \
+	--split_tot (deafult 0)
+	--functR ./clustering_functions.R \
+	--type_data \
+	--cases_only (default FALSE) \
+	--scale_rs (default FALSE) \
+	--pheno_class_name \
+	--pvalresFile \
+	--sqcorr_thr (default 1) \
+	--n_max (default 50000) \
+	--corrFile \
+	--min_genes_path (default 1) \
+	--outFold
+```
+The output includes (saved in *--outFold*):
+- **type\_data**\_corr2Thr**sqcorr\_thr**\_risk\_score\_relatedPhenotypes.txt, table with first column Individual\_ID and following once predicted gene risk-score for each phenotype having TWAS summary statistic in --pvalresFile.
+- **type\_data**\_features\_risk\_score\_corr2Thr**sqcorr\_thr**.txt', table with features (genes) names used to compute gene risk-scores.
+
+#### 4.3) Find cluster-specific differences in gene-risk scores
+Application of cluster_associatePhenoGLM_run.R with --risk_score TRUE and --rescale_pheno TRUE
+
 
 
 
