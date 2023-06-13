@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 # compute gene PRS/path PRS
 
 options(stringsAsFactors=F)
