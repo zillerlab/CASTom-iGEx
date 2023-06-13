@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 # find relevant pathways to cluster structure 
 # use wilcoxon test
 # possible include multiple tissues
@@ -28,14 +29,14 @@ parser$add_argument("--name_cohorts", type = "character", nargs = '*',  help = "
 parser$add_argument("--inputFold", type = "character", nargs = '*', help = "folder containing pathway scores")
 parser$add_argument("--additional_name_file", type = "character",  help = "additinal string to lead data")
 parser$add_argument("--tissues", type = "character", nargs = '*', help = "tissues name")
-parser$add_argument("--type_cluster", type = "character", default = 'All', help = "All, Cases, Controls")
+parser$add_argument("--type_cluster", type = "character", help = "All, Cases, Controls")
 parser$add_argument("--functR", type = "character", help = "functions to be used")
 parser$add_argument("--type_data", type = "character", help = "tscore, path_Reactome or path_GO")
 parser$add_argument("--type_data_cluster", type = "character", help = "tscore, path_Reactome or path_GO")
 parser$add_argument("--type_sim", type = "character", default = 'HK', help = "HK or ED or SNF")
 parser$add_argument("--type_input", type = "character", default = 'original', help = "original or zscaled")
 parser$add_argument("--pvalresFile", type = "character", nargs = '*',  help = "file with pvalue results")
-parser$add_argument("--pval_id", type = "integer", default = 0, help = "id to be used on pvalue file")
+parser$add_argument("--pval_id", type = "integer", default = 1, help = "id to be used on pvalue file")
 parser$add_argument("--ncores", type = "integer", default = 5, help = "n, cores parallelization per tissue")
 parser$add_argument("--thr_js", type = "double", default = 0.2, help = "jaccard similarity threshold for filtering pathways")
 parser$add_argument("--path_filt_file", type = "character", nargs = '*', help = "file for filtering pathways")

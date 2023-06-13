@@ -176,7 +176,7 @@ The output includes (saved in *--outFold*):
     - test_feat: list of results, one per tissue. Tested each feature in scaleData.
 - **type_data**\_corrPCs\_**type_input**\_cluster**type_cluster**\_summary\_geneLoci\_allTissues.txt and **type_data**\_corrPCs\_**type_input**\_cluster**type_cluster**\_summary\_geneLoci\_tissueSpec.txt tab separated tables with results summarized per loci combining all tissues or tissue specific, respectively.
 
-#### 2.1.1) Test cluster-specific pathways
+#### 2.1.2) Test cluster-specific pathways
 For each tissue, filter pathways based on genes overlap combining both Reactome and GO. It gives priority to pathways with higher coverage and number of genes. It is needed to provide a restricted list of pathways without redundant information.
 
 - *--pvalresFile*: TWAS and PALAS results in .RData object. Used to extract pathway structure.
@@ -675,9 +675,87 @@ The output includes (saved in *--outFold*):
 	- test_cov
 
 ### 2.1) Associate clusters with molecular features (genes/pathwayScores):
-- cluster_associateFeat_corrPCs_multipleCohorts_run.R
-- filter_pathway_jaccard_sim_run.R (filter pathways based on overlap and min/max number of genes)
-- cluster_associatePath_corrPCs_multipleCohort_run.R (merge GO and Reactome)
+Test cluster-specific genes and pathways via wilcoxon-test across all tissues. Similar to Step 2.1) of "Single cohort" but associations tested concatenating all cohorts. Differences are in 
+- *--sampleAnnFile*: vector of .txt files refering to sample annotation, one per cohort
+- *--inputFold*: vector of input (tscore or pathway-score) fold, one per tissue (common part across cohorts)
+- *--name_cohorts*: vector of cohort names
+
+#### 2.1.1) Test cluster-specific genes
+Similar to 2.1.1) of "Single cohort". Cna also test differences at the level pf pathways, provided that the .txt input file is given. Pathways are NOT filtered and all the given ones are tested. Differences are in
+- *--additional_name_file*: common final part referring to tscore or pathway-score (e.g. predictedTscores.txt) common across cohorts. Note that the input file complete name is built as `name_file <- paste0(inputFold[id_t], name_cohorts[c_id], additional_name_file)`
+
+```sh
+./cluster_associateFeat_corrPCs_multipleCohorts_run.R \
+	--sampleAnnFile \
+	--clusterFile \
+	--split_tot (default 0) \
+	--name_cohorts \
+	--inputFold \
+	--additional_name_file \
+	--tissues \
+	--type_cluster \
+	--functR ./clustering_functions.R \
+	--type_data (default "tscore") \
+	--type_data_cluster (default "tscore") \
+	--type_sim (default "HK") \
+	--type_input (default "original") \
+	--pvalresFile \
+	--geneInfoFile \
+	--min_genes_path (default 1) \
+	--pval_id (default 1) \
+	--pvalcorr_thr (default 0.05)
+	--ncores (default 5) \
+	--outFold
+```
+The output includes (saved in *--outFold*):
+- **type_data**Original\_corrPCs\_**type_data_cluster**Cluster**type_cluster**\_featAssociation.RData object composed of:
+    - inputData: list of loaded *--inputFile*, one per tissue.
+    - scaleData: as inputData but scaled per feature and corrected for PCs.
+    - res_pval: list of loaded *--pvalresFile*.
+    - cl: data frame with clustering partition.
+    - tissues: tissues name, entry match inputData and scaleData.
+    - covDat: covariates extracted from sampleAnnFile and tested for cluster-specific differences.
+    - test_cov: chisq-test or wilcoxon-test for covariates in covDat.
+    - test_feat: list of results, one per tissue. Tested each feature in scaleData.
+- **type_data**\_corrPCs\_**type_input**\_cluster**type_cluster**\_summary\_geneLoci\_allTissues.txt and **type_data**\_corrPCs\_**type_input**\_cluster**type_cluster**\_summary\_geneLoci\_tissueSpec.txt tab separated tables with results summarized per loci combining all tissues or tissue specific, respectively.
+
+#### 2.1.2) Test cluster-specific pathways
+For each tissue, filter pathways based on genes overlap combining both Reactome and GO. It gives priority to pathways with higher coverage and number of genes. It is needed to provide a restricted list of pathways without redundant information. Same as step 2.1.2 in "Single cohort"
+```sh
+./filter_pathway_jaccard_sim_run.R \
+    --pvalresFile \
+    --thr_js (default = 0.2)
+    --outFold
+```
+The output includes (saved in *--outFold*):
+-  selected\_pathways\_JSthr**thr_js**.txt: tab separated file. Contains the pathway names to be tested via the next script.
+
+For each tissue, test for cluster-specific pathways. Reactome and GO are merged together. Same as step 2.1.2) of "Single cohorts" but test concatanating all cohorts. Differences are in
+- *--additional_name_file*: common final part referring pathway-score location including both GO and Reactome pathways (e.g. /devgeno0.01_testdevgeno0/) and common across cohorts. Note that the input file complete name is built as `name_file <- paste0(inputFold[id_t], name_cohorts[c_id], additional_name_file)` and `inputFile = sprintf('%s/Pathway_Reactome_scores.txt', name_file)`
+
+```sh
+./cluster_associatePath_corrPCs_multipleCohort_run.R \
+	--sampleAnnFile \
+	--clusterFile \
+	--name_cohorts \
+	--inputFold \
+	--additional_name_file \
+	--tissues \
+	--type_cluster \
+	--functR ./clustering_functions.R \
+	--type_data \
+	--type_data_cluster \
+	--type_sim (default "HK") \
+	--type_input (default "original") \
+	--pvalresFile \
+	--pval_id (default 1) \
+	--ncores (default 5) \
+	--thr_js (default 0.2) \
+	--path_filt_file \
+	--outFold
+```
+The output includes (saved in --outFold):
+- pathOriginal\_filtJS**thr_js**\_corrPCs\_**type_data_cluster**Cluster**type_cluster**\_featAssociation.RData object. Same structure as output of 2.1.1). 
 
 ### 2.2) Associate clusters with endophenotypes
 cluster_associatePhenoGLM_run.R
