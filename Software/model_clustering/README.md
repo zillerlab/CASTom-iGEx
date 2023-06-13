@@ -635,7 +635,44 @@ The output includes (saved in *--outFold*):
 - samples\_to\_remove\_outliersUMAP\_**type_data**\_**type_input**\_cluster**type_cluster**.txt includes all samples considered as outliers across multiple tissues/clustering versions.
 
 ### 1) Clustering
-cluster_PGmethod_corrPCs_multipleCohorts_run.R
+Cluster individuals based on tissue-specific imputed expression. The individuals are split across K cohorts. These cohorts are concatenated, genes are clumped based on the correlation computed from the concatenated dataset. Each gene is standardized, corrected for PCs and rescaled by TWAS Z-statistic. Note that correcting for PCs after the datasets have been concatenated is reasonable only if PCs are computed merging the genetic imput of the multiple cohorts. 
+- *--inputFile*: vector of txt files (predictedTscores.txt) or common name of split .RData files (predictedTscore_splitGenes), one per cohort
+- *--sampleAnnFile*: .txt files with samples and covariates info, one per cohort
+- *--sampleOutFile*: .txt tab separated file, list of samples to be removed from clustering, columns must include Individual_ID. It can be the output of step 0)
+
+```sh
+./cluster_PGmethod_corrPCs_multipleCohorts_run.R \
+	--inputFile \
+	--genes_to_filter (default NULL) \
+	--name_cohorts \
+	--sampleAnnFile \
+	--sampleOutFile \
+	--geneRegionFile (default NULL) \
+	--tissues_name \
+	--exclude_MHC (default FALSE) \
+	--type_cluster \
+	--split_tot (default 0) \
+	--pvalresFile \
+	--pval_id (default 1) \
+	--corr_thr (default -1) \
+	--functR ./clustering_functions.R \
+	--type_data (default tscore) \
+	--type_sim (default HK) \
+	--type_input (default original)
+	--kNN_par (default 30) \
+	--min_genes_path (default 1) \
+	--outFold
+```
+The output includes (saved in *--outFold*):
+- **type_data**\_corrPCs\_**type_input**\_cluster**type_cluster**\_PGmethod\_**type_sim**metric.RData object with the same structure as step 1) in "Single cohort". In addition it includes 
+	- sampleInfo: complete sample annotation with cohort division
+	- sampleOutliers: IDs of removed samples
+	- umap: First 2 UMAP coordinates
+- **type_data**\_corrPCs\_**type_input**\_cluster**type_cluster**\_PGmethod\_**type_sim**metric_minimal.RData similar object but only including
+	- cl_best
+	- samples_id
+	- feat 
+	- test_cov
 
 ### 2.1) Associate clusters with molecular features (genes/pathwayScores):
 - cluster_associateFeat_corrPCs_multipleCohorts_run.R
