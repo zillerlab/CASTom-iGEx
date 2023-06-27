@@ -228,7 +228,7 @@ merge_locus_pos <- function(info_chr, cis_size = 200000, dist_size = 1000000, ti
 }
 
 ## cluster using PG method ##
-clust_PGmethod_HKsim <- function(kNN, score, type_Dx, multiple_cohorts = F, sample_info, euclDist){
+clust_PGmethod_HKsim <- function(kNN, score, type_Dx, multiple_cohorts = F, sample_info, euclDist, cluster_method = "leiden"){
   
   print(kNN)
   # 2) find kNN based on eucl_dist
@@ -263,9 +263,14 @@ clust_PGmethod_HKsim <- function(kNN, score, type_Dx, multiple_cohorts = F, samp
   print(mem_used())
   print('matrix W_sNN built')
   
-  # 6') Louvain method
+  # 6') Louvain/Leiden method
   graph_W_sNN <- graph_from_adjacency_matrix(W_sNN, weighted=TRUE, mode = 'undirected')
-  louv_W_sNN <- cluster_louvain(graph_W_sNN)
+  if(cluster_method == "leiden"){
+    louv_W_sNN <- igraph::cluster_leiden(graph_W_sNN)
+  }
+  if(cluster_method == "louvain"){
+    louv_W_sNN <- igraph::cluster_louvain(graph_W_sNN)
+  }
   
   tmp_info <- data.frame(kNN = kNN, mod = max(louv_W_sNN$modularity), n_gr = length(unique(louv_W_sNN$membership)))
   cl <- louv_W_sNN$membership
