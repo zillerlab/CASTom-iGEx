@@ -341,7 +341,7 @@ for(i in 1:length(cohort_name)){
     for(j in 1:ncol(phenoDat)){
       if(phenoInfo_new[[i]]$type_pheno[j] == 'CONTINUOUS'){
         tmp <- phenoDat[!is.na(phenoDat[,j]),j]
-        phenoDat[!is.na(phenoDat[,j]),j] <- rankNorm(tmp)
+        phenoDat[!is.na(phenoDat[,j]),j] <- RNOmni::RankNorm(tmp)
       }
     }
     
@@ -441,7 +441,7 @@ for(i in 1:length(cohort_name)){
     for(j in 1:ncol(phenoDat)){
       if(phenoInfo_new[[i]]$type_pheno[j] == 'CONTINUOUS'){
         tmp <- phenoDat[!is.na(phenoDat[,j]),j]
-        phenoDat[!is.na(phenoDat[,j]),j] <- rankNorm(tmp)
+        phenoDat[!is.na(phenoDat[,j]),j] <- RNOmni::RankNorm(tmp)
       }
     }
     
