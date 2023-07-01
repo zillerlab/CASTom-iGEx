@@ -19,6 +19,7 @@ CASTom-iGEx (Module 3) is a pipeline (R based) that uses gene-level T-scores, co
 - **Exclusion of MHC locus** (*--exclude_MHC*): if TRUE and `type_data="tscore"`, exclude genes in MHC locus.
 - **Gene coordinate info** (*--geneRegionFile*): used if `type_data="tscore"` and `exclude_MHC=TRUE`. Tab separated file that contains gene location (e.g. resPrior_regEval_allchr.txt from PriLer output [CASTom-iGEx Module 1](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/Software/model_training)).
 - **Split of Input Matrix** (*--split_tot*): integer indicating the number of groups the *--inputFile* has been split. Used in a large sample size setting e.g. UK Biobank.
+- **Method for community detection** (*--cluster_method*): leiden or louvain, refers to the community detection strategy
 
 ***
 ### Optional: Clustering based on genetic principal componenets
@@ -34,7 +35,8 @@ Cluster individuals based on genetic principal componenets. This script is used 
     --type_cluster \
     --functR ./clustering_functions.R \
     --type_sim (default "HK") \
-    --kNN_par (default 30) \
+    --kNN_par (default 20) \
+    --cluster_method (default "leiden") \
     --outFold
 ```
 The output includes (saved in *--outFold*):
@@ -42,7 +44,7 @@ The output includes (saved in *--outFold*):
     - best_k: single kNN parameter given OR if multiple kNN provided, returns kNN that maximizes Davies-Bouldin index.
     - cl_res: total clustering ouptput including computed similarity matrix.
     - test_cov: chisq-test or kruskal-wallis test of clustering structure and covariates (e.g. PCs or sex).
-    - info_tune: metric of clustering given kNN, includes modularity maximized by Louvain clustering
+    - info_tune: metric of clustering given kNN, includes modularity maximized by Louvain/Leiden clustering
     - feat: names of feautures used for clustering
     - cl_best: optimal (if multiple kNN given) or unique clustering structure obtained
     - Dx_perc: If `--type_cluster All`, calculates the percentages of cases and controls in the found partition
@@ -77,11 +79,12 @@ Cluster individuals based on tissue-specific imputed gene expression. This scrip
     --type_data (default tscore) \
     --type_sim (default HK) \
     --type_input (default original) \
-    --kNN_par (default 30) \
+    --kNN_par (default 20) \
     --min_genes_path (default 1) \
     --exclude_MHC (default FALSE) \
     --capped_zscore (default FALSE) \
     --geneRegionFile (default NULL) \
+    --cluster_method (default "leiden") \
     --outFold
 ```
 The output includes (saved in *--outFold*):
@@ -89,7 +92,7 @@ The output includes (saved in *--outFold*):
     - best_k: single kNN parameter given OR if multiple kNN provided, returns kNN that maximizes Davies-Bouldin index.
     - cl_res: total clustering ouptput including computed similarity matrix.
     - test_cov: chisq-test or kruskal-wallis test of clustering structure and covariates (e.g. PCs or sex).
-    - info_tune: metric of clustering given kNN, includes modularity maximized by Louvain clustering
+    - info_tune: metric of clustering given kNN, includes modularity maximized by Louvain/Leiden clustering
     - feat: names of feautures used for clustering
     - cl_best: optimal (if multiple kNN given) or unique clustering structure obtained
     - Dx_perc: If `--type_cluster All`, calculates the percentages of cases and controls in the found partition
@@ -117,11 +120,12 @@ Cluster as before but without correcting for PCs, this script is used to benchma
     --type_data (default "tscore") \
     --type_sim (default "HK") \
     --type_input (default "original") \
-    --kNN_par (default 30) \
+    --kNN_par (default 20) \
     --min_genes_path (default 1) \
     --exclude_MHC (default FALSE) \
     --capped_zscore (default FALSE) \
     --geneRegionFile (default NULL) \
+    --cluster_method (default "leiden") \
     --outFold
 ```
 The output includes (saved in *--outFold*):
@@ -659,7 +663,8 @@ Cluster individuals based on tissue-specific imputed expression. The individuals
 	--type_data (default tscore) \
 	--type_sim (default HK) \
 	--type_input (default original)
-	--kNN_par (default 30) \
+	--kNN_par (default 20) \
+    --cluster_method (default "leiden") \
 	--min_genes_path (default 1) \
 	--outFold
 ```

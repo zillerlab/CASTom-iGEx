@@ -227,6 +227,42 @@ merge_locus_pos <- function(info_chr, cis_size = 200000, dist_size = 1000000, ti
     return(loci_out)
 }
 
+# general clustering
+cluster_function <- function(W_sNN, cluster_method, kNN, sample_info, multiple_cohorts) {
+
+  # 6') Louvain/Leiden method
+  graph_W_sNN <- graph_from_adjacency_matrix(W_sNN, weighted = TRUE, mode = 'undirected')
+  if(cluster_method == "leiden"){
+    set.seed(12345) # for reproducibility
+    cl_W_sNN <- igraph::cluster_leiden(graph_W_sNN, objective_function = c("modularity"))
+    cl_W_sNN$modularity <- cl_W_sNN$quality
+  }
+  if(cluster_method == "louvain"){
+    set.seed(12345) # for reproducibility
+    cl_W_sNN <- igraph::cluster_louvain(graph_W_sNN)
+  }
+  
+  tmp_info <- data.frame(kNN = kNN, modularity_igraph = max(cl_W_sNN$modularity))
+  cl <- cl_W_sNN$membership
+
+  # evaluate clustering
+  df_eval <- clustAnalytics::scoring_functions(com = cl, g = graph_W_sNN, type = "global")
+  df_eval <- as.data.frame(df_eval) %>% 
+    mutate(coverage_and_conductance = coverage + 1 - conductance)
+  tmp_info <- cbind(tmp_info, df_eval)
+
+  if(multiple_cohorts){
+    tmp_info$cohort_nmi <- compare(cl_W_sNN$membership, sample_info$cohort_id, method = 'nmi')  
+  }
+  
+  if(type_Dx == 'All'){tmp_info$Dx_nmi <-  compare(cl_W_sNN$membership, sample_info$Dx, method = 'nmi')}
+
+  return(list(
+    cl = cl_W_sNN, 
+    info = tmp_info))
+
+}
+
 ## cluster using PG method ##
 clust_PGmethod_HKsim <- function(kNN, score, type_Dx, multiple_cohorts = F, sample_info, euclDist, cluster_method = "leiden"){
   
@@ -262,39 +298,17 @@ clust_PGmethod_HKsim <- function(kNN, score, type_Dx, multiple_cohorts = F, samp
   rm(id_tmp)
   print(mem_used())
   print('matrix W_sNN built')
+
+  cluster_res <- cluster_function(W_sNN, cluster_method, kNN, sample_info, multiple_cohorts)
   
-  # 6') Louvain/Leiden method
-  graph_W_sNN <- graph_from_adjacency_matrix(W_sNN, weighted=TRUE, mode = 'undirected')
-  if(cluster_method == "leiden"){
-    louv_W_sNN <- igraph::cluster_leiden(graph_W_sNN)
-  }
-  if(cluster_method == "louvain"){
-    louv_W_sNN <- igraph::cluster_louvain(graph_W_sNN)
-  }
-  
-  tmp_info <- data.frame(kNN = kNN, mod = max(louv_W_sNN$modularity), n_gr = length(unique(louv_W_sNN$membership)))
-  cl <- louv_W_sNN$membership
-  
-  clos_gr <- lapply(sort(unique(cl)), function(x) closeness(normalized = T, induced.subgraph(graph_W_sNN, vids = which(cl == x)), mode = 'all'))
-  central_node_gr <- mapply(function(x,y)  which(cl == x)[y], x = sort(unique(cl)), y = sapply(clos_gr, which.max))
-  clos_central_gr <- sapply(clos_gr, max)
-  print(clos_central_gr)
-  invshort_path_centralnode <- 1/distances(graph_W_sNN, v = central_node_gr, to = central_node_gr, mode = 'all')
-  diag(invshort_path_centralnode) <- 0
-  DBindex <- sapply(1:length(unique(cl)), function(x) min((clos_central_gr[x] + clos_central_gr[-x])/invshort_path_centralnode[x, -x]))
-  print(DBindex)
-  
-  tmp_info$DB_mean <- mean(DBindex)
-  tmp_info$DB_sd <- sd(DBindex)
-  if(multiple_cohorts){
-    tmp_info$cohort_nmi <- compare(louv_W_sNN$membership, sample_info$cohort_id, method = 'nmi')  
-  }
-  
-  if(type_Dx == 'All'){tmp_info$Dx_nmi <-  compare(louv_W_sNN$membership, sample_info$Dx, method = 'nmi')}
-  return(list(cl = louv_W_sNN, info = tmp_info, sim_mat = W_sNN, sigma_kNN = sigma_kNN, kNN_W = t(list_kNN_W)))
+  return(list(
+    cl = cluster_res$cl, 
+    info = cluster_res$info, 
+    sim_mat = W_sNN, 
+    sigma_kNN = sigma_kNN, 
+    kNN_W = t(list_kNN_W)))
   
 }
-
 
 project_clust_PGmethod_HKsim <- function(kNN, score, data_mod, sample_info, euclDist, cl_mod){
   
@@ -350,7 +364,7 @@ project_clust_PGmethod_HKsim <- function(kNN, score, data_mod, sample_info, eucl
 }
 
 
-clust_PGmethod_EDdist <- function(kNN, score, type_Dx, multiple_cohorts = F, sample_info, euclDist){
+clust_PGmethod_EDdist <- function(kNN, score, type_Dx, multiple_cohorts = F, sample_info, euclDist, cluster_method = "leiden"){
   
   print(kNN)
   
@@ -373,36 +387,22 @@ clust_PGmethod_EDdist <- function(kNN, score, type_Dx, multiple_cohorts = F, sam
   rm(id_tmp)
   print(mem_used())
   print('matrix W_sNN built')
-  
-  # 6') Louvain method
-  graph_W_sNN <- graph_from_adjacency_matrix(W_sNN, weighted=TRUE, mode = 'undirected')
-  louv_W_sNN <- cluster_louvain(graph_W_sNN)
-  
-  tmp_info <- data.frame(kNN = kNN, mod = max(louv_W_sNN$modularity), n_gr = length(unique(louv_W_sNN$membership)))
-  cl <- louv_W_sNN$membership
-  
-  clos_gr <- lapply(sort(unique(cl)), function(x) closeness(normalized = T, induced.subgraph(graph_W_sNN, vids = which(cl == x)),  mode = 'all'))
-  central_node_gr <- mapply(function(x,y)  which(cl == x)[y], x = sort(unique(cl)), y = sapply(clos_gr, which.max))
-  clos_central_gr <- sapply(clos_gr, max)
-  invshort_path_centralnode <- 1/distances(graph_W_sNN, v = central_node_gr, to = central_node_gr, mode = 'all')
-  diag(invshort_path_centralnode) <- 0
-  DBindex <- sapply(1:length(unique(cl)), function(x) min((clos_central_gr[x] + clos_central_gr[-x])/invshort_path_centralnode[x, -x]))
-  print(DBindex)
-  
-  tmp_info$DB_mean <- mean(DBindex)
-  tmp_info$DB_sd <- sd(DBindex)
-  if(multiple_cohorts){
-    tmp_info$cohort_nmi <- compare(louv_W_sNN$membership, sample_info$cohort_id, method = 'nmi')  
-  }
-  
-  if(type_Dx == 'All'){tmp_info$Dx_nmi <-  compare(louv_W_sNN$membership, sample_info$Dx, method = 'nmi')}
   sigma_kNN = NA
-  return(list(cl = louv_W_sNN, info = tmp_info, sim_mat = W_sNN, kNN_W = t(list_kNN_W)))
+
+  # cluster
+  cluster_res <- cluster_function(W_sNN, cluster_method, kNN, sample_info, multiple_cohorts)
   
+  return(list(
+    cl = cluster_res$cl, 
+    info = cluster_res$info, 
+    sim_mat = W_sNN, 
+    sigma_kNN = sigma_kNN, 
+    kNN_W = t(list_kNN_W)))
+
 }
 
 # clustering using a precomputed similairty matrix
-clust_PGmethod_sim <- function(kNN, sim, type_Dx, multiple_cohorts = F, sample_info){
+clust_PGmethod_sim <- function(kNN, sim, type_Dx, multiple_cohorts = F, sample_info, cluster_method = "leiden"){
   print(kNN)
   # 4') find shared neigbours based on W
   list_kNN_W <- apply(sim, 1, function(x) order(x, decreasing = T)[1:kNN])
@@ -423,32 +423,18 @@ clust_PGmethod_sim <- function(kNN, sim, type_Dx, multiple_cohorts = F, sample_i
   rm(id_tmp)
   print(mem_used())
   print('matrix W_sNN built')
-  
-  # 6') Louvain method
-  graph_W_sNN <- graph_from_adjacency_matrix(W_sNN, weighted=TRUE, mode = 'undirected')
-  louv_W_sNN <- cluster_louvain(graph_W_sNN)
-  
-  tmp_info <- data.frame(kNN = kNN, mod = max(louv_W_sNN$modularity), n_gr = length(unique(louv_W_sNN$membership)))
-  cl <- louv_W_sNN$membership
-  
-  clos_gr <- lapply(sort(unique(cl)), function(x) closeness(normalized = T, induced.subgraph(graph_W_sNN, vids = which(cl == x)),  mode = 'all'))
-  central_node_gr <- mapply(function(x,y)  which(cl == x)[y], x = sort(unique(cl)), y = sapply(clos_gr, which.max))
-  clos_central_gr <- sapply(clos_gr, max)
-  invshort_path_centralnode <- 1/distances(graph_W_sNN, v = central_node_gr, to = central_node_gr, mode = 'all')
-  diag(invshort_path_centralnode) <- 0
-  DBindex <- sapply(1:length(unique(cl)), function(x) min((clos_central_gr[x] + clos_central_gr[-x])/invshort_path_centralnode[x, -x]))
-  print(DBindex)
-  
-  tmp_info$DB_mean <- mean(DBindex)
-  tmp_info$DB_sd <- sd(DBindex)
-  if(multiple_cohorts){
-    tmp_info$cohort_nmi <- compare(louv_W_sNN$membership, sample_info$cohort_id, method = 'nmi')  
-  }
-  
-  if(type_Dx == 'All'){tmp_info$Dx_nmi <-  compare(louv_W_sNN$membership, sample_info$Dx, method = 'nmi')}
   sigma_kNN = NA
-  return(list(cl = louv_W_sNN, info = tmp_info, sim_mat = W_sNN, kNN_W = t(list_kNN_W)))
+
+  # 6') cluster
+  cluster_res <- cluster_function(W_sNN, cluster_method, kNN, sample_info, multiple_cohorts)
   
+  return(list(
+    cl = cluster_res$cl, 
+    info = cluster_res$info, 
+    sim_mat = W_sNN, 
+    sigma_kNN = sigma_kNN, 
+    kNN_W = t(list_kNN_W)))
+
 }
 
 ### plot
