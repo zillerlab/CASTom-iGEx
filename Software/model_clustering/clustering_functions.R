@@ -228,7 +228,7 @@ merge_locus_pos <- function(info_chr, cis_size = 200000, dist_size = 1000000, ti
 }
 
 # general clustering
-cluster_function <- function(W_sNN, cluster_method, kNN, sample_info, multiple_cohorts) {
+cluster_function <- function(W_sNN, cluster_method, kNN, sample_info, multiple_cohorts, type_Dx) {
 
   # 6') Louvain/Leiden method
   graph_W_sNN <- graph_from_adjacency_matrix(W_sNN, weighted = TRUE, mode = 'undirected')
@@ -299,7 +299,7 @@ clust_PGmethod_HKsim <- function(kNN, score, type_Dx, multiple_cohorts = F, samp
   print(mem_used())
   print('matrix W_sNN built')
 
-  cluster_res <- cluster_function(W_sNN, cluster_method, kNN, sample_info, multiple_cohorts)
+  cluster_res <- cluster_function(W_sNN, cluster_method, kNN, sample_info, multiple_cohorts, type_Dx)
   
   return(list(
     cl = cluster_res$cl, 
@@ -390,7 +390,7 @@ clust_PGmethod_EDdist <- function(kNN, score, type_Dx, multiple_cohorts = F, sam
   sigma_kNN = NA
 
   # cluster
-  cluster_res <- cluster_function(W_sNN, cluster_method, kNN, sample_info, multiple_cohorts)
+  cluster_res <- cluster_function(W_sNN, cluster_method, kNN, sample_info, multiple_cohorts, type_Dx)
   
   return(list(
     cl = cluster_res$cl, 
@@ -426,7 +426,7 @@ clust_PGmethod_sim <- function(kNN, sim, type_Dx, multiple_cohorts = F, sample_i
   sigma_kNN = NA
 
   # 6') cluster
-  cluster_res <- cluster_function(W_sNN, cluster_method, kNN, sample_info, multiple_cohorts)
+  cluster_res <- cluster_function(W_sNN, cluster_method, kNN, sample_info, multiple_cohorts, type_Dx)
   
   return(list(
     cl = cluster_res$cl, 
