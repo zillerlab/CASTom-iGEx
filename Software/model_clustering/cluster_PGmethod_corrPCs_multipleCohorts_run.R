@@ -198,6 +198,10 @@ print(identical(colnames(scoreMat[[1]]), res_pval[,id_info]))
 
 ### clumping: sort according best gene association ###
 scoreMat_tot <- do.call(rbind, scoreMat)
+sampleAnn_list <- sampleAnn
+sampleAnn <- do.call(rbind, sampleAnn)
+
+if(corr_thr < 1){
 cor_score <- cor(scoreMat_tot, use = "pairwise.complete.obs")
 element_rm <- clumping_features(res_pval=res_pval, 
                                 id_info = id_info, 
@@ -205,10 +209,10 @@ element_rm <- clumping_features(res_pval=res_pval,
                                 id_pval = id_pval, 
                                 corr_thr = corr_thr)
 print(paste(length(element_rm),'features removed due to high correlation'))
-
-sampleAnn_list <- sampleAnn
-sampleAnn <- do.call(rbind, sampleAnn)
 scoreMat_tot <- scoreMat_tot[, !colnames(scoreMat_tot) %in% element_rm]
+}else{
+print('All features considered'))
+}
 # match to have the same samples and same order with annotation
 sampleAnn <- sampleAnn[match(rownames(scoreMat_tot), sampleAnn$Temp_ID), ]
 sampleAnn$cohort_id <- as.numeric(as.factor(sampleAnn$cohort))

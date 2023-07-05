@@ -169,6 +169,7 @@ sampleAnn <- load_output$sampleAnn
 print(identical(colnames(scoreMat), res_pval[, id_info]))
 
 ### clumping: sort according best SNP association ###
+if(corr_thr < 1){
 cor_score <- cor(scoreMat)
 element_rm <- clumping_features(res_pval=res_pval, 
                                 id_info = id_info, 
@@ -179,7 +180,9 @@ element_rm <- clumping_features(res_pval=res_pval,
 print(paste(length(element_rm),'features removed due to high correlation'))
 scoreMat <- scoreMat[,!colnames(scoreMat) %in% element_rm]
 res_pval <- res_pval[match(colnames(scoreMat), res_pval[, id_info]),]
-
+}else{
+print('All features considered'))
+}
 input_data <- scale(scoreMat)
 attr(input_data, "scaled:scale") <- NULL
 attr(input_data, "scaled:center") <- NULL
