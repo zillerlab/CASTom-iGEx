@@ -182,7 +182,7 @@ if(corr_thr < 1){
   scoreMat <- scoreMat[,!colnames(scoreMat) %in% element_rm]
   res_pval <- res_pval[match(colnames(scoreMat), res_pval[, id_info]),]
 }else{
-  print('All features considered'))
+  print('All features considered')
 }
 
 input_data_notcorr <- scale(scoreMat)

@@ -211,7 +211,7 @@ element_rm <- clumping_features(res_pval=res_pval,
 print(paste(length(element_rm),'features removed due to high correlation'))
 scoreMat_tot <- scoreMat_tot[, !colnames(scoreMat_tot) %in% element_rm]
 }else{
-print('All features considered'))
+print('All features considered')
 }
 # match to have the same samples and same order with annotation
 sampleAnn <- sampleAnn[match(rownames(scoreMat_tot), sampleAnn$Temp_ID), ]
