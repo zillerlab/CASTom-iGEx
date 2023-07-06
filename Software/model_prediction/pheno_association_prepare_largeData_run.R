@@ -6,7 +6,6 @@ options(max.print=1000)
 suppressPackageStartupMessages(library(argparse))
 suppressPackageStartupMessages(library(bigmemory))
 suppressPackageStartupMessages(library(data.table))
-suppressPackageStartupMessages(library(PGSEA))
 
 parser <- ArgumentParser(description="Gene and Pathway association analysis, prepare files")
 parser$add_argument("--reactome_file", type = "character", default = NULL, help = "reactome pathway anntation (.gmt)")
@@ -49,6 +48,38 @@ outFold <- args$outFold
 # reactome_file <- NULL
 # GOterms_file <- NULL
 #########################################################################################
+
+# load gmt object for Reactome without PGSEA package
+setClass("smc", slots=list(
+    reference="character", 
+    desc="character", 
+    source="character", 
+    design="character", 
+    identifier="character", 
+    species="character", 
+    data = "character", 
+    private="character", 
+    creator="character",
+    ids="character"))
+
+readGmt = function (fname) {
+    f <- readLines(fname)
+    mc <- list()
+    for (i in 1:length(f)) {
+        dat <- unlist(strsplit(f[i], "\t", fixed = TRUE))
+        m <- new("smc")
+        m@reference <- dat[1]
+        if (dat[2] != "NA") 
+            m@desc <- dat[2]
+        else m@desc <- ""
+        ids <- dat[3:length(dat)]
+        m@ids <- ids[!(ids == "NA")]
+        mc <- c(mc, list(m))
+    }
+    names(mc) <- unlist(lapply(mc, function(x) paste(x@reference, 
+        x@desc)))
+    return(mc)
+}
 
 # load sample annotation
 sampleAnn <- read.table(sampleAnn_file, h=T, stringsAsFactors=F)

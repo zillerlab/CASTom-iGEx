@@ -6,7 +6,6 @@ options(max.print=1000)
 suppressPackageStartupMessages(library(argparse))
 suppressPackageStartupMessages(library(data.table))
 suppressPackageStartupMessages(library(doParallel))
-suppressPackageStartupMessages(library(PGSEA))
 suppressPackageStartupMessages(library(qvalue))
 
 parser <- ArgumentParser(description="combine results association analysis")
@@ -48,6 +47,38 @@ outFold <- args$outFold
 # GOterms_file <- '/psycl/g/mpsziller/lucia/refData/GOterm_geneAnnotation_allOntologies.RData'
 # reactome_file <- '/psycl/g/mpsziller/lucia/refData/ReactomePathways.gmt'
 # #########################################################################################
+
+# to load gmt object for Reactome without PGSEA package
+setClass("smc", slots=list(
+    reference="character", 
+    desc="character", 
+    source="character", 
+    design="character", 
+    identifier="character", 
+    species="character", 
+    data = "character", 
+    private="character", 
+    creator="character",
+    ids="character"))
+
+readGmt = function (fname) {
+    f <- readLines(fname)
+    mc <- list()
+    for (i in 1:length(f)) {
+        dat <- unlist(strsplit(f[i], "\t", fixed = TRUE))
+        m <- new("smc")
+        m@reference <- dat[1]
+        if (dat[2] != "NA") 
+            m@desc <- dat[2]
+        else m@desc <- ""
+        ids <- dat[3:length(dat)]
+        m@ids <- ids[!(ids == "NA")]
+        mc <- c(mc, list(m))
+    }
+    names(mc) <- unlist(lapply(mc, function(x) paste(x@reference, 
+        x@desc)))
+    return(mc)
+}
 
 # load pheno info
 phenoAnn <- fread(phenoAnn_file, data.table = F, h=T)

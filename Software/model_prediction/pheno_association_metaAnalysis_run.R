@@ -6,7 +6,6 @@ options(max.print=1000)
 suppressPackageStartupMessages(library(argparse))
 suppressPackageStartupMessages(library(qvalue))
 suppressPackageStartupMessages(library(biomaRt))
-suppressPackageStartupMessages(library(PGSEA))
 
 
 parser <- ArgumentParser(description="Meta analysis tscore and pathway scores")
@@ -43,6 +42,39 @@ outFold <- args$outFold
 # reactome_file <- '/psycl/g/mpsziller/lucia/refData/ReactomePathways.gmt'
 # outFold <- 'OUTPUT_GTEx/predict_CAD/Adipose_Subcutaneous/200kb/CAD_GWAS_bin5e-2/Meta_Analysis_CAD/'
 ################################################################################################################################
+
+# load gmt object for Reactome without PGSEA package
+setClass("smc", slots=list(
+    reference="character", 
+    desc="character", 
+    source="character", 
+    design="character", 
+    identifier="character", 
+    species="character", 
+    data = "character", 
+    private="character", 
+    creator="character",
+    ids="character"))
+
+readGmt = function (fname) {
+    f <- readLines(fname)
+    mc <- list()
+    for (i in 1:length(f)) {
+        dat <- unlist(strsplit(f[i], "\t", fixed = TRUE))
+        m <- new("smc")
+        m@reference <- dat[1]
+        if (dat[2] != "NA") 
+            m@desc <- dat[2]
+        else m@desc <- ""
+        ids <- dat[3:length(dat)]
+        m@ids <- ids[!(ids == "NA")]
+        mc <- c(mc, list(m))
+    }
+    names(mc) <- unlist(lapply(mc, function(x) paste(x@reference, 
+        x@desc)))
+    return(mc)
+}
+
 
 # make a list of all the possible phenotype to consider + summary samples
 pheno_tab <- list()
