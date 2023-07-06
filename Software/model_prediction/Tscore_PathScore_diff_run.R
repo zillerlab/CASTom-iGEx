@@ -3,7 +3,6 @@
 options(stringsAsFactors=F)
 options(max.print=1000)
 suppressPackageStartupMessages(library(argparse))
-suppressPackageStartupMessages(library(PGSEA))
 suppressPackageStartupMessages(library(limma))
 suppressPackageStartupMessages(library(biomaRt))
 suppressPackageStartupMessages(library(data.table))
@@ -44,6 +43,38 @@ outFold <- args$outFold
 #########################
 ### function needed #####
 #########################
+# load gmt object for Reactome without PGSEA package
+setClass("smc", slots=list(
+    reference="character", 
+    desc="character", 
+    source="character", 
+    design="character", 
+    identifier="character", 
+    species="character", 
+    data = "character", 
+    private="character", 
+    creator="character",
+    ids="character"))
+
+readGmt = function (fname) {
+    f <- readLines(fname)
+    mc <- list()
+    for (i in 1:length(f)) {
+        dat <- unlist(strsplit(f[i], "\t", fixed = TRUE))
+        m <- new("smc")
+        m@reference <- dat[1]
+        if (dat[2] != "NA") 
+            m@desc <- dat[2]
+        else m@desc <- ""
+        ids <- dat[3:length(dat)]
+        m@ids <- ids[!(ids == "NA")]
+        mc <- c(mc, list(m))
+    }
+    names(mc) <- unlist(lapply(mc, function(x) paste(x@reference, 
+        x@desc)))
+    return(mc)
+}
+
 # modified version of PGSEA that returns the mean t-score of the genes in each gene set
 modPGSEA = function (exprs, geneSets, range=c(1,Inf), center=F, p.value=0.005, method="mean") {
   # initialize and prepare results matrix containing mean t-scores for each gene set and sample

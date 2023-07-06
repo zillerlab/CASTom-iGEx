@@ -16,7 +16,6 @@ suppressPackageStartupMessages(library(data.table))
 suppressPackageStartupMessages(library(MASS))
 suppressPackageStartupMessages(library(lmtest))
 suppressPackageStartupMessages(library(doParallel))
-suppressPackageStartupMessages(library(PGSEA))
 
 parser <- ArgumentParser(description="Pathway association analysis")
 parser$add_argument("--inputFile", type = "character", help = "RData to be loaded")

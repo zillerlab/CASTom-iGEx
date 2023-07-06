@@ -4,7 +4,6 @@
 options(stringsAsFactors=F)
 options(max.print=1000)
 suppressPackageStartupMessages(library(argparse))
-suppressPackageStartupMessages(library(PGSEA))
 suppressPackageStartupMessages(library(limma))
 suppressPackageStartupMessages(library(biomaRt))
 suppressPackageStartupMessages(library(qvalue))
@@ -63,7 +62,6 @@ outFold <- args$outFold
 # geneAnn_file <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/OUTPUT_GTEx/train_GTEx/Adipose_Subcutaneous/200kb/CAD_GWAS_bin5e-2/resPrior_regEval_allchr.txt'
 # functR <- '/psycl/g/mpsziller/lucia/CAD_UKBB/eQTL_PROJECT/RSCRIPTS/SCRIPTS_v2/AssociationAnalysis_functions_run.R'
 ##########################################################################################
-
 
 source(functR)
 

@@ -6,7 +6,6 @@ options(max.print=1000)
 suppressPackageStartupMessages(library(argparse))
 suppressPackageStartupMessages(library(data.table))
 suppressPackageStartupMessages(library(doParallel))
-suppressPackageStartupMessages(library(PGSEA))
 suppressPackageStartupMessages(library(qvalue))
 
 parser <- ArgumentParser(description="combine results association analysis")

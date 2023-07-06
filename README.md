@@ -11,12 +11,11 @@ across directly interpretable biological process and pathways as well as clinica
 ![](./overview.png)
 
 ## Built with
-* R (>= 3.5.3)
+* R (>= 4.0.3)
 ### Required R packages (complete pipeline)
 - GO.db
 - MASS
 - Matrix
-- PGSEA
 - RColorBrewer
 - RNOmni
 - SparseM
