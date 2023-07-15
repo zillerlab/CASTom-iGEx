@@ -196,8 +196,12 @@ custom.settings$random_state <- seed_umap
 
 umap_res <- umap::umap(input_data, custom.settings)
 
-df <- data.frame(component_1=umap_res$layout[,1], component_2=umap_res$layout[,2], gr = output$cl_best$gr)
+df <- data.frame(component_1=umap_res$layout[,1], component_2=umap_res$layout[,2], gr = output$cl_best$gr,
+                 id = output$cl_best$id)
 df$gr <- factor(df$gr)
+# save umap
+write.table(df, file = sprintf('%sPCs_cluster%s_PGmethod_%smetric_umap.txt', outFold, type_cluster, type_sim),
+            sep = '\t', row.names = F, col.names = T, quote = F)
 
 tot_pl <- ggplot(df, aes(x = component_1, y = component_2, color = gr))+
   geom_point(size = 0.05)+
@@ -244,7 +248,7 @@ if('Centre' %in% colnames(sampleAnn)){
   pl <- list.append(pl, tmp)
 }
 if('Age' %in% colnames(sampleAnn)){
-  df$Age <- sampleAnn$Centre
+  df$Age <- sampleAnn$Age
   myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
   sc <- scale_colour_gradientn(colours = myPalette(100), 
                                limits=c(min(sampleAnn$Age), max(sampleAnn$Age)))
