@@ -124,7 +124,7 @@ for(p in 1:P){
     type_pheno <- phenoInfo$transformed_type[phenoInfo$pheno_id == pheno_id[l]]
     tmp_dat <- cbind(data.frame(pheno = phenoDat[id, pheno_id[l]]), covDat[id,!colnames(covDat) %in% c('Individual_ID', 'Dx')])
     
-    if(sum(!is.na(tmp_dat$pheno))> 300){
+    if(sum(!is.na(tmp_dat$pheno)) >= min(300, nrow(tmp_dat))){
       print(l)
       # standardize Y if continous and PCs cov
       tmp_dat[, colnames(tmp_dat) %in% paste0('PC', 1:10)] <- scale(tmp_dat[, colnames(tmp_dat) %in% paste0('PC', 1:10)])
@@ -133,7 +133,7 @@ for(p in 1:P){
       }
       
       tmp_gr <- compute_reg_endopheno_multi(mat = tmp_dat, fmla = fmla, cov_int = treat_pheno, type_pheno = type_pheno)
-      
+  
       tmp_dat <- cbind(data.frame(pheno = phenoDat[id_not, pheno_id[l]]), covDat[id_not,!colnames(covDat) %in% c('Individual_ID', 'Dx')])
       # standardize Y if continous and PCs cov
       tmp_dat[, colnames(tmp_dat) %in% paste0('PC', 1:10)] <- scale(tmp_dat[, colnames(tmp_dat) %in% paste0('PC', 1:10)])
@@ -196,17 +196,17 @@ for(p in 1:(P-1)){
   
   res_tot[[p]] <- list()
   tmp_2 <- res_tot_diff[res_tot_diff$comp == sprintf('gr%i_vs_all', p),]
-  tmp_2$new_id <- paste0(tmp_2$treat_id, '_and_', tmp_2$pheno_id)
-  
-  for(q in (p+1):P){
-    
-    tmp_1 <- res_tot_diff[res_tot_diff$comp == sprintf('gr%i_vs_all', q),]
-    tmp_1$new_id <- paste0(tmp_1$treat_id, '_and_', tmp_1$pheno_id)
-    # common set:
-    common_id <- intersect( tmp_1$new_id ,  tmp_2$new_id)
-    test_diff <- (tmp_1$gr_beta[match(common_id, tmp_1$new_id)] - tmp_2$gr_beta[match(common_id, tmp_2$new_id)])/sqrt(tmp_1$gr_se_beta[match(common_id, tmp_1$new_id)]^2 + tmp_2$gr_se_beta[match(common_id, tmp_2$new_id)]^2)
-    pval_test <- 2*pnorm(-abs(test_diff))
-    res_tot[[p]][[q-p]] <- data.frame(treat_id = tmp_1$treat_id[match(common_id, tmp_1$new_id)] , z_diff = test_diff, pvalue_diff = pval_test, 
+  if(nrow(tmp_2) > 0){
+    tmp_2$new_id <- paste0(tmp_2$treat_id, '_and_', tmp_2$pheno_id)
+    for(q in (p+1):P){
+      tmp_1 <- res_tot_diff[res_tot_diff$comp == sprintf('gr%i_vs_all', q),]
+      if(nrow(tmp_1) > 0){
+        tmp_1$new_id <- paste0(tmp_1$treat_id, '_and_', tmp_1$pheno_id)
+        # common set:
+        common_id <- intersect( tmp_1$new_id ,  tmp_2$new_id)
+        test_diff <- (tmp_1$gr_beta[match(common_id, tmp_1$new_id)] - tmp_2$gr_beta[match(common_id, tmp_2$new_id)])/sqrt(tmp_1$gr_se_beta[match(common_id, tmp_1$new_id)]^2 + tmp_2$gr_se_beta[match(common_id, tmp_2$new_id)]^2)
+        pval_test <- 2*pnorm(-abs(test_diff))
+        res_tot[[p]][[q-p]] <- data.frame(treat_id = tmp_1$treat_id[match(common_id, tmp_1$new_id)] , z_diff = test_diff, pvalue_diff = pval_test, 
                                       gr1_beta = tmp_1$gr_beta[match(common_id, tmp_1$new_id)], gr1_se_beta = tmp_1$gr_se_beta[match(common_id, tmp_1$new_id)],
                                       gr1_ORorBeta = tmp_1$gr_ORorBeta[match(common_id, tmp_1$new_id)], 
                                       gr1_CI_low = tmp_1$gr_CI_low[match(common_id, tmp_1$new_id)],  
@@ -217,15 +217,17 @@ for(p in 1:(P-1)){
                                       gr2_CI_low = tmp_2$gr_CI_low[match(common_id, tmp_2$new_id)],  
                                       gr2_CI_up = tmp_2$gr_CI_up[match(common_id, tmp_2$new_id)],  
                                       gr2_pvalue = tmp_2$gr_pvalue[match(common_id, tmp_2$new_id)])
-    res_tot[[p]][[q-p]]$comp <- sprintf('gr%i_vs_gr%i', q, p)
-    res_tot[[p]][[q-p]]$treat_Field <- tmp_1$treat_Field[match(common_id, tmp_1$new_id)]
-    res_tot[[p]][[q-p]]$treat_meaning <- tmp_1$treat_meaning[match(common_id, tmp_1$new_id)]
-    res_tot[[p]][[q-p]]$pheno_id <- tmp_1$pheno_id[match(common_id, tmp_1$new_id)]
-    res_tot[[p]][[q-p]]$pheno_Field <- tmp_1$pheno_Field[match(common_id, tmp_1$new_id)]
-    res_tot[[p]][[q-p]]$pheno_meaning <- tmp_1$pheno_meaning[match(common_id, tmp_1$new_id)]
-    res_tot[[p]][[q-p]]$pheno_type <- tmp_1$pheno_type[match(common_id, tmp_1$new_id)]
-    res_tot[[p]][[q-p]]$pheno_class <- tmp_1$pheno_class[match(common_id, tmp_1$new_id)]
+        res_tot[[p]][[q-p]]$comp <- sprintf('gr%i_vs_gr%i', q, p)
+        res_tot[[p]][[q-p]]$treat_Field <- tmp_1$treat_Field[match(common_id, tmp_1$new_id)]
+        res_tot[[p]][[q-p]]$treat_meaning <- tmp_1$treat_meaning[match(common_id, tmp_1$new_id)]
+        res_tot[[p]][[q-p]]$pheno_id <- tmp_1$pheno_id[match(common_id, tmp_1$new_id)]
+        res_tot[[p]][[q-p]]$pheno_Field <- tmp_1$pheno_Field[match(common_id, tmp_1$new_id)]
+        res_tot[[p]][[q-p]]$pheno_meaning <- tmp_1$pheno_meaning[match(common_id, tmp_1$new_id)]
+        res_tot[[p]][[q-p]]$pheno_type <- tmp_1$pheno_type[match(common_id, tmp_1$new_id)]
+        res_tot[[p]][[q-p]]$pheno_class <- tmp_1$pheno_class[match(common_id, tmp_1$new_id)]
     
+      }
+    }
   }
 }
 

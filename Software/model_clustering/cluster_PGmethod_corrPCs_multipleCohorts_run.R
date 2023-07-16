@@ -16,11 +16,14 @@ suppressPackageStartupMessages(library(pheatmap))
 suppressPackageStartupMessages(library(RColorBrewer))
 suppressPackageStartupMessages(library(bigmemory))
 suppressPackageStartupMessages(library(ggsci))
+suppressPackageStartupMessages(library(clustAnalytics))
 options(bitmapType = 'cairo', device = 'png')
 
 
 parser <- ArgumentParser(description="clustering multiple cohorts concatenated using PG method")
 parser$add_argument("--inputFile", type = "character",  nargs = '*', help = "file to be loaded (predicted tscore or pathScore)")
+parser$add_argument("--cluster_method", type = "character", default = "leiden", help = "leidein or louvain, community detection method")
+parser$add_argument("--kNN_par", type = "integer", nargs = '*', default = 20, help = "parameter used for PG method")
 parser$add_argument("--genes_to_filter", type = "character", default = NULL, help = "additional file to filter genes")
 parser$add_argument("--name_cohorts", type = "character", nargs = '*', help = "name of the single cohorts")
 parser$add_argument("--sampleAnnFile", type = "character", nargs = '*', help = "file with samples to be used")
@@ -43,6 +46,7 @@ parser$add_argument("--outFold", type="character", help = "Output file [basename
 
 args <- parser$parse_args()
 name_cohorts <- args$name_cohorts
+cluster_method <- args$cluster_method
 genes_to_filter <- args$genes_to_filter
 pvalresFile <- args$pvalresFile
 sampleOutFile <- args$sampleOutFile
@@ -194,6 +198,10 @@ print(identical(colnames(scoreMat[[1]]), res_pval[,id_info]))
 
 ### clumping: sort according best gene association ###
 scoreMat_tot <- do.call(rbind, scoreMat)
+sampleAnn_list <- sampleAnn
+sampleAnn <- do.call(rbind, sampleAnn)
+
+if(corr_thr < 1){
 cor_score <- cor(scoreMat_tot, use = "pairwise.complete.obs")
 element_rm <- clumping_features(res_pval=res_pval, 
                                 id_info = id_info, 
@@ -201,10 +209,10 @@ element_rm <- clumping_features(res_pval=res_pval,
                                 id_pval = id_pval, 
                                 corr_thr = corr_thr)
 print(paste(length(element_rm),'features removed due to high correlation'))
-
-sampleAnn_list <- sampleAnn
-sampleAnn <- do.call(rbind, sampleAnn)
 scoreMat_tot <- scoreMat_tot[, !colnames(scoreMat_tot) %in% element_rm]
+}else{
+print('All features considered')
+}
 # match to have the same samples and same order with annotation
 sampleAnn <- sampleAnn[match(rownames(scoreMat_tot), sampleAnn$Temp_ID), ]
 sampleAnn$cohort_id <- as.numeric(as.factor(sampleAnn$cohort))
@@ -304,7 +312,13 @@ PG_cl <- vector(mode = 'list', length = length(kNN_par))
 test_cov <- vector(mode = 'list', length = length(kNN_par))
 for(i in 1:length(kNN_par)){
   
-  PG_cl[[i]] <- fun_cl(kNN = kNN_par[i], score = input_data, type_Dx = type_cluster, sample_info=sampleAnn, euclDist=ed_dist[,], multiple_cohorts = T)
+  PG_cl[[i]] <- fun_cl(kNN = kNN_par[i], score = input_data, 
+                       type_Dx = type_cluster, 
+                       sample_info=sampleAnn,
+                       euclDist=ed_dist[,], 
+                       multiple_cohorts = T, 
+                       cluster_method = cluster_method)
+  
   print(PG_cl[[i]]$info)
   # cluster depend on PC?
   id <- PG_cl[[i]]$cl$membership
@@ -335,7 +349,7 @@ for(i in 1:length(kNN_par)){
 
 test_cov <- do.call(rbind, test_cov)
 info_hyperParam <- do.call(rbind, lapply(PG_cl, function(x) x$info))
-opt_k <- kNN_par[which.max(info_hyperParam$DB_mean)]
+opt_k <- kNN_par[which.max(info_hyperParam$coverage_and_conductance)]
 
 # if type_clster == 'All' compute percentage for each group
 df_perc <- df_perc_test <- list()
@@ -356,8 +370,8 @@ if(type_cluster == 'All'){
 
 output <- list(best_k = opt_k, cl_res = PG_cl, test_cov = test_cov, 
                info_tune = info_hyperParam, feat = colnames(input_data), res_pval = res_pval,
-               cl_best = data.frame(id = sampleAnn$Individual_ID, 
-                                    gr = PG_cl[[which.max(info_hyperParam$DB_mean)]]$cl$membership))
+              cl_best = data.frame(id = sampleAnn$Individual_ID, 
+               gr = PG_cl[[which.max(info_hyperParam$coverage_and_conductance)]]$cl$membership))
 output$Dx_perc <- list(perc = df_perc, test = df_perc_test)
 output$samples_id <- rownames(input_data)
 

@@ -16,6 +16,7 @@ suppressPackageStartupMessages(library(ggpubr))
 suppressPackageStartupMessages(library(ggsci))
 suppressPackageStartupMessages(library(pheatmap))
 suppressPackageStartupMessages(library(RColorBrewer))
+suppressPackageStartupMessages(library(clustAnalytics))
 options(bitmapType = 'cairo', device = 'png')
 
 
@@ -24,6 +25,8 @@ parser$add_argument("--inputFile", type = "character", default = NULL, help = "f
 parser$add_argument("--sampleAnnFile", type = "character", help = "file with samples to be used")
 parser$add_argument("--tissues_name", type = "character", help = "name tissue")
 parser$add_argument("--covDatFile", type = "character", default = NULL, help = "additional cov to test")
+parser$add_argument("--cluster_method", type = "character", default = "leiden", help = "leidein or louvain, community detection method")
+parser$add_argument("--kNN_par", type = "integer", nargs = '*', default = 20, help = "parameter used for PG method")
 parser$add_argument("--type_cluster", type = "character", help = "All, Cases, Controls")
 parser$add_argument("--split_tot", type = "integer", default = 0, help = "if 0 then inpuntFile load alone, otherwise splitted version")
 parser$add_argument("--pvalresFile", type = "character", help = "file with pvalue results")
@@ -34,15 +37,15 @@ parser$add_argument("--functR", type = "character", help = "functions to be used
 parser$add_argument("--type_data", type = "character", default = "tscore", help = "tscore, path_Reactome or path_GO")
 parser$add_argument("--type_sim", type = "character", default = 'HK', help = "HK or ED")
 parser$add_argument("--type_input", type = "character", default = 'original', help = "original or zscaled")
-parser$add_argument("--kNN_par", type = "integer", nargs = '*', default = 30, help = "parameter used for PG method")
 parser$add_argument("--min_genes_path", type = "integer", default = 1, help = "minimum number of genes for a pathway, if > 1 recompute corrected pvalues")
 parser$add_argument("--exclude_MHC", type = "logical", default = F, help = "if true, MHC region excluded (only ossible for tscore)")
 parser$add_argument("--capped_zscore", type = "logical", default = F, help = "if true, zstat is capped based on distribution")
-parser$add_argument("--geneRegionFile", type = "character", default=NULL, help = "used if tscore and exclude_MHC")
+parser$add_argument("--geneRegionFile", type = "character", default = NULL, help = "used if tscore and exclude_MHC")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
 args <- parser$parse_args()
 pvalresFile <- args$pvalresFile
+cluster_method <- args$cluster_method
 tissues_name <- args$tissues_name
 capped_zscore <- args$capped_zscore
 pval_id <- args$pval_id
@@ -74,12 +77,13 @@ outFold <- args$outFold
 # type_data <- 'tscore'
 # type_cluster <- 'Cases'
 # type_sim <- 'HK'
-# outFold <- 'OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/'
+# outFold <- 'OUTPUT_GTEx/predict_CAD/Liver/200kb/CAD_GWAS_bin5e-2/UKBB/devgeno0.01_testdevgeno0/CAD_HARD_clustering/update_corrPCs/'
 # functR <- '/psycl/g/mpsziller/lucia/castom-igex/Software//model_clustering/clustering_functions.R'
 # corr_thr <- 0.9
 # type_input <- 'zscaled'
 # kNN_par <- 30
 # tissues_name <- 'Liver'
+# cluster_method <- 'leiden'
 #####################################################################################################################
 
 source(functR)
@@ -166,16 +170,20 @@ sampleAnn <- load_output$sampleAnn
 print(identical(colnames(scoreMat), res_pval[, id_info]))
 
 ### clumping: sort according best SNP association ###
-cor_score <- cor(scoreMat)
-element_rm <- clumping_features(res_pval=res_pval, 
+if(corr_thr < 1){
+  cor_score <- cor(scoreMat)
+  element_rm <- clumping_features(res_pval=res_pval, 
                                 id_info = id_info, 
                                 corr_feat = cor_score, 
                                 id_pval = id_pval, 
                                 corr_thr = corr_thr)
 
-print(paste(length(element_rm),'features removed due to high correlation'))
-scoreMat <- scoreMat[,!colnames(scoreMat) %in% element_rm]
-res_pval <- res_pval[match(colnames(scoreMat), res_pval[, id_info]),]
+  print(paste(length(element_rm),'features removed due to high correlation'))
+  scoreMat <- scoreMat[,!colnames(scoreMat) %in% element_rm]
+  res_pval <- res_pval[match(colnames(scoreMat), res_pval[, id_info]),]
+}else{
+  print('All features considered')
+}
 
 input_data_notcorr <- scale(scoreMat)
 attr(input_data_notcorr, "scaled:scale") <- NULL
@@ -225,8 +233,10 @@ test_cov <- vector(mode = 'list', length = length(kNN_par))
 for(i in 1:length(kNN_par)){
   
   PG_cl[[i]] <- fun_cl(kNN = kNN_par[i], score = input_data, 
-                       type_Dx = type_cluster, sample_info=sampleAnn,
-                       euclDist=ed_dist)
+                       type_Dx = type_cluster, 
+                       sample_info=sampleAnn,
+                       euclDist = ed_dist, 
+                       cluster_method = cluster_method)
   
   print(PG_cl[[i]]$info)
   # cluster depend on PC?
@@ -255,7 +265,7 @@ for(i in 1:length(kNN_par)){
 
 test_cov <- do.call(rbind, test_cov)
 info_hyperParam <- do.call(rbind, lapply(PG_cl, function(x) x$info))
-opt_k <- kNN_par[which.max(info_hyperParam$DB_mean)]
+opt_k <- kNN_par[which.max(info_hyperParam$coverage_and_conductance)]
 
 # if type_clster == 'All' compute percentage for each group
 df_perc <- df_perc_test <- list()
@@ -276,7 +286,8 @@ if(type_cluster == 'All'){
 output <- list(best_k = opt_k, cl_res = PG_cl, test_cov = test_cov, 
                info_tune = info_hyperParam, feat = colnames(input_data),
                res_pval = res_pval,
-               cl_best = data.frame(id = sampleAnn$Individual_ID, gr = PG_cl[[which.max(info_hyperParam$DB_mean)]]$cl$membership))
+               cl_best = data.frame(id = sampleAnn$Individual_ID, 
+               gr = PG_cl[[which.max(info_hyperParam$coverage_and_conductance)]]$cl$membership))
 output$Dx_perc <- list(perc = df_perc, test = df_perc_test)
 output$samples_id <- rownames(input_data)
 
@@ -303,6 +314,7 @@ df_gr_mean$id <- df_gr_sd$id <- df_gr_cv$id <- colnames(input_data)
 
 output$gr_input <- list(mean = df_gr_mean, sd = df_gr_sd, cv = df_gr_cv)
 output$input_data <- input_data
+output$ed_dist <- ed_dist
 
 # save results:
 save(output, file = sprintf('%s%s_corrPCs_%s_cluster%s_PGmethod_%smetric.RData', 
