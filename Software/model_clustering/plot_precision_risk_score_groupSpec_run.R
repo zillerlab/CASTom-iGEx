@@ -4,7 +4,6 @@
 options(stringsAsFactors=F)
 options(max.print=1000)
 suppressPackageStartupMessages(library(argparse))
-suppressPackageStartupMessages(library(e1071))
 suppressPackageStartupMessages(library(data.table))
 suppressPackageStartupMessages(library(doParallel))
 suppressPackageStartupMessages(library(qvalue))
