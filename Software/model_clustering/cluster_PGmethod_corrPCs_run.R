@@ -81,12 +81,13 @@ outFold <- args$outFold
 # functR <- '/psycl/g/mpsziller/lucia/castom-igex/Software//model_clustering/clustering_functions.R'
 # corr_thr <- 0.9
 # type_input <- 'zscaled'
-# kNN_par <- 30
+# kNN_par <- 20
 # tissues_name <- 'Liver'
 # cluster_method <- 'leiden'
 #####################################################################################################################
 
 source(functR)
+print(paste("kNN parameters:", kNN_par))
 
 sampleAnn <- read.table(sampleAnnFile, h=T, stringsAsFactors = F, check.names = F)
 
