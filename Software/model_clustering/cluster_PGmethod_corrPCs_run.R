@@ -193,10 +193,13 @@ attr(input_data_notcorr, "scaled:center") <- NULL
 input_data <- matrix(ncol = ncol(input_data_notcorr), nrow = nrow(input_data_notcorr))
 rownames(input_data) <- rownames(input_data_notcorr)
 colnames(input_data) <- colnames(input_data_notcorr)
-fmla <- as.formula(paste('g ~', paste0('PC', 1:10, collapse = '+')))
+name_cov <- setdiff(colnames(sampleAnn),
+                    c('Individual_ID', 'genoSample_ID', 'Dx', 'Sex',
+                      'Age', 'Temp_ID', 'cohort', 'cohort_id'))
+fmla <- as.formula(paste('g ~', paste0(name_cov, collapse = '+')))
 for(i in 1:ncol(input_data_notcorr)){
   # print(i)
-  tmp <- data.frame(g = input_data_notcorr[,i], sampleAnn[, paste0('PC', 1:10)])
+  tmp <- data.frame(g = input_data_notcorr[,i], sampleAnn[, name_cov])
   reg <- lm(fmla, data = tmp)
   input_data[,i] <- reg$residuals
 }
@@ -232,7 +235,8 @@ PG_cl <- vector(mode = 'list', length = length(kNN_par))
 test_cov <- vector(mode = 'list', length = length(kNN_par))
 for(i in 1:length(kNN_par)){
   
-  PG_cl[[i]] <- fun_cl(kNN = kNN_par[i], score = input_data, 
+  PG_cl[[i]] <- fun_cl(kNN = kNN_par[i], 
+                       score = input_data, 
                        type_Dx = type_cluster, 
                        sample_info=sampleAnn,
                        euclDist = ed_dist, 
