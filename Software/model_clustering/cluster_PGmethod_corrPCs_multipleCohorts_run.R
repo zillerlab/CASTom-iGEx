@@ -40,7 +40,6 @@ parser$add_argument("--functR", type = "character", help = "functions to be used
 parser$add_argument("--type_data", type = "character", default = "tscore", help = "tscore, path_Reactome or path_GO")
 parser$add_argument("--type_sim", type = "character", default = 'HK', help = "HK or ED")
 parser$add_argument("--type_input", type = "character", default = 'original', help = "original or zscaled")
-parser$add_argument("--kNN_par", type = "integer", nargs = '*', default = 30, help = "parameter used for PG method")
 parser$add_argument("--min_genes_path", type = "integer", default = 1, help = "minimum number of genes for a pathway, if > 1 recompute corrected pvalues")
 parser$add_argument("--outFold", type="character", help = "Output file [basename only]")
 
@@ -85,13 +84,14 @@ outFold <- args$outFold
 # functR <- '/home/luciat/castom-igex/Software/model_clustering/clustering_functions.R'
 # corr_thr <- 0.9
 # type_input <- 'zscaled'
-# kNN_par <- 30
+# kNN_par <- 20
 # color_file <- '/home/luciat/castom-igex/Figures/color_tissues.txt'
 # tissues_name <- 'DLPC_CMC'
 # genes_to_filter <- '/home/luciat/eQTL_PROJECT/compare_prediction_UKBB_SCZ-PGC/DLPC_CMC_filter_genes_matched_datasets.txt'
 #####################################################################################################################
 
 source(functR)
+print(paste("kNN parameters:", kNN_par))
 
 # load pval res
 res_pval <- get(load(pvalresFile))
