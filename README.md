@@ -11,14 +11,8 @@ across directly interpretable biological process and pathways as well as clinica
 ![](./overview.png)
 
 ## Built with
-* R (>= 4.0.3)
+* R (>= 4.0)
 ### Required R packages (complete pipeline)
-- GO.db
-- MASS
-- Matrix
-- RColorBrewer
-- RNOmni
-- SparseM
 - argparse
 - bigmemory
 - biomaRt
@@ -35,12 +29,15 @@ across directly interpretable biological process and pathways as well as clinica
 - ggsci
 - ggsignif
 - glmnet
+- GO.db
 - gridExtra
 - igraph
 - lattice
 - limma
 - lme4
 - lmtest
+- MASS
+- Matrix
 - matrixStats
 - nloptr
 - nnet
@@ -48,8 +45,11 @@ across directly interpretable biological process and pathways as well as clinica
 - pheatmap
 - pryr
 - qvalue
+- RColorBrewer
 - rlist
+- RNOmni
 - rstatix
+- SparseM
 - stringr
 - sva
 - tidyverse
