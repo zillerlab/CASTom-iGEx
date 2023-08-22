@@ -182,6 +182,15 @@ output$ed_dist <- ed_dist
 # save results:
 save(output, file = sprintf('%sPCs_cluster%s_PGmethod_%smetric.RData', outFold, type_cluster, type_sim))
 
+# save reduced output:
+output_red <- list(cl_best = output$cl_best,
+                   samples_id = output$samples_id, 
+                   feat = output$feat, 
+                   test_cov = output$test_cov)
+save(output_red, 
+  file = sprintf('%sPCs_cluster%s_PGmethod_%smetric_minimal.RData', 
+                  outFold, type_cluster, type_sim))
+
 ### plot: UMAP
 n_comp_umap <- 2
 n_neigh_umap <- opt_k
@@ -217,59 +226,5 @@ if(type_cluster == 'All'){
 }
 ggsave(filename = sprintf('%sPCs_cluster%s_PGmethod_%smetric_umap.png', outFold, type_cluster, type_sim),
        width = width_pl, height = 4, plot = tot_pl, device = 'png')
-
-pl <- list()
-if('Gender' %in% colnames(sampleAnn)){
-  df$Gender <- factor(sampleAnn$Gender)
-  tmp <- ggplot(df, aes(x = component_1, y=component_2, color = Gender))+
-    geom_point(size = 0.03)+ggtitle('Gender')+
-    theme_bw()+theme(legend.position = 'none')
-  pl <- list.append(pl, tmp)
-}
-if('Batch' %in% colnames(sampleAnn)){
-  df$Batch <- factor(sampleAnn$Batch)
-  tmp <- ggplot(df, aes(x = component_1, y=component_2, color = Batch))+
-    geom_point(size = 0.03)+ggtitle('Batch')+
-    theme_bw()+theme(legend.position = 'none')
-  pl <- list.append(pl, tmp)
-}
-if('Array' %in% colnames(sampleAnn)){
-  df$Array <- factor(sampleAnn$Array)
-  tmp <- ggplot(df, aes(x = component_1, y=component_2, color = Array))+
-    geom_point(size = 0.03)+ggtitle('Array')+
-    theme_bw()+theme(legend.position = 'none')
-  pl <- list.append(pl, tmp)
-}
-if('Centre' %in% colnames(sampleAnn)){
-  df$Centre <- factor(sampleAnn$Centre)
-  tmp <- ggplot(df, aes(x = component_1, y=component_2, color = Centre))+
-    geom_point(size = 0.03)+ggtitle('Centre')+
-    theme_bw()+theme(legend.position = 'none')
-  pl <- list.append(pl, tmp)
-}
-if('Age' %in% colnames(sampleAnn)){
-  df$Age <- sampleAnn$Age
-  myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
-  sc <- scale_colour_gradientn(colours = myPalette(100), 
-                               limits=c(min(sampleAnn$Age), max(sampleAnn$Age)))
-  tmp <- ggplot(df, aes(x = component_1, y=component_2, color = Age))+
-    geom_point(size = 0.03)+ggtitle('Age')+sc+
-    theme_bw()+theme(legend.position = 'right')
-  pl <- list.append(pl, tmp)
-}
-if('cohort' %in% colnames(sampleAnn)){
-  df$cohort <- factor(sampleAnn$cohort)
-  tmp <- ggplot(df, aes(x = component_1, y=component_2, color = cohort))+
-    geom_point(size = 0.03)+ggtitle('Cohort')+
-    theme_bw()+theme(legend.position = 'right')
-  pl <- list.append(pl, tmp)
-}
-
-ncol_pl <- floor(length(pl)/2)
-nrow_pl <- floor(length(pl)/ncol_pl)
-
-tot_pl <- ggarrange(plotlist = pl, ncol = ncol_pl, nrow = nrow_pl)
-ggsave(filename = sprintf('%sPCs_cluster%s_PGmethod_%smetric_umap_cov.png', outFold, type_cluster, type_sim),
-       width = 4*ncol_pl, height = 4*nrow_pl, plot = tot_pl, device = 'png')
 
 
