@@ -567,7 +567,7 @@ pheat_pl_tscore <- function(mat_tscore, cl, info_feat_tscore = NA, test_feat_tsc
   # add pvalue info for each group
   estimate_col_fun = colorRamp2(c(min(c(test_feat_tscore$estimates)), 0, max(c(test_feat_tscore$estimates))), 
                                 c("#00677B", "#F0F0F0", "#BF443B"))
-  lgd_est = Legend(title = "wilcoxon estimates", col = estimate_col_fun, 
+  lgd_est = Legend(title = "wilcoxon estimates", col_fun = estimate_col_fun, 
                    at = round(c(seq(min(c(test_feat_tscore$estimates)), 0, length.out = 4), 
                                 seq(0, max(c(test_feat_tscore$estimates)), length.out = 4)[-1]), digits = 2),
                    labels = as.character(round(c(seq(min(c(test_feat_tscore$estimates)), 0, length.out = 4), 
