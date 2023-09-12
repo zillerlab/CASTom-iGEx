@@ -108,6 +108,7 @@ for(i in all_Chroms){
   ################################
   
   res_nop_her <- get(load(sprintf('%sresNoPrior_NestedCV_HeritableGenes_chr%i.RData',part1Res_fold, i)))
+  cor_noadj_computed <- "cor_noadj" %in% colnames(res_nop_her$train[[1]])
   res_nop_nother <- get(load(sprintf('%sresNoPrior_NestedCV_NotHeritableGenes_chr%i.RData',part4Res_fold, i)))
   res_nop_nother_tot <- get(load(sprintf('%sresNoPrior_NotHeritableGenes_chr%i.RData',part4Res_fold, i)))
   
@@ -123,7 +124,7 @@ for(i in all_Chroms){
   res_nop[[i]]$train_dev_geno_cov <- c(rowMeans(sapply(res_nop_her$train, function(x) x$dev_geno_cov)), rowMeans(sapply(res_nop_nother$train, function(x) x$dev_geno_cov)))
   res_nop[[i]]$train_cor <- c(rowMeans(sapply(res_nop_her$train, function(x) x$cor)), rowMeans(sapply(res_nop_nother$train, function(x) x$cor)))
   res_nop[[i]]$train_cor_pvalue <- c(rowMeans(sapply(res_nop_her$train, function(x) x$cor_pval)), rowMeans(sapply(res_nop_nother$train, function(x) x$cor_pval)))
-  if("cor_noadj" %in% colnames(res_nop_her$train[[1]])){
+  if(cor_noadj_computed){
     res_nop[[i]]$train_cor_noadj <- c(rowMeans(sapply(res_nop_her$train, function(x) x$cor_noadj)), rowMeans(sapply(res_nop_nother$train, function(x) x$cor_noadj)))
     res_nop[[i]]$train_cor_noadj_pvalue <- c(rowMeans(sapply(res_nop_her$train, function(x) x$cor_noadj_pval)), rowMeans(sapply(res_nop_nother$train, function(x) x$cor_noadj_pval)))
   }
@@ -134,14 +135,14 @@ for(i in all_Chroms){
   res_nop[[i]]$test_dev_geno_cov <- c(rowMeans(sapply(res_nop_her$test, function(x) x$dev_geno_cov)), rowMeans(sapply(res_nop_nother$test, function(x) x$dev_geno_cov)))
   res_nop[[i]]$test_cor <- c(rowMeans(sapply(res_nop_her$test, function(x) x$cor)), rowMeans(sapply(res_nop_nother$test, function(x) x$cor)))
   res_nop[[i]]$test_cor_pvalue <- c(rowMeans(sapply(res_nop_her$test, function(x) x$cor_pval)), rowMeans(sapply(res_nop_nother$test, function(x) x$cor_pval)))
-  if("cor_noadj" %in% colnames(res_nop_her$test[[1]])){
+  if(cor_noadj_computed){
     res_nop[[i]]$test_cor_noadj <- c(rowMeans(sapply(res_nop_her$test, function(x) x$cor_noadj)), rowMeans(sapply(res_nop_nother$test, function(x) x$cor_noadj)))
     res_nop[[i]]$test_cor_noadj_pvalue <- c(rowMeans(sapply(res_nop_her$test, function(x) x$cor_noadj_pval)), rowMeans(sapply(res_nop_nother$test, function(x) x$cor_noadj_pval)))
   }
   
   res_nop[[i]]$test_comb_cor <- c(res_nop_her$cor_comb_test$cor, res_nop_nother$cor_comb_test$cor)
   res_nop[[i]]$test_comb_cor_pvalue <- c(res_nop_her$cor_comb_test$cor_pval, res_nop_nother$cor_comb_test$cor_pval)
-  if("cor_comb_noadj_test" %in% names(res_nop_her)){
+  if(cor_noadj_computed){
     res_nop[[i]]$test_comb_cor_noadj <- c(res_nop_her$cor_comb_noadj_test$cor, res_nop_nother$cor_comb_noadj_test$cor)
     res_nop[[i]]$test_comb_cor_noadj_pvalue <- c(res_nop_her$cor_comb_noadj_test$cor_pval, res_nop_nother$cor_comb_noadj_test$cor_pval)
   }
@@ -174,8 +175,10 @@ for(i in all_Chroms){
   
   res_p_her <- list(geneAnn = res_p_her_allchr$geneAnn[id_chr,], train = lapply(res_p_her_allchr$train_opt, function(x) x[id_chr,]), 
                     test = lapply(res_p_her_allchr$test_opt, function(x) x[id_chr,]), 
-                    cor_comb_test = res_p_her_allchr$cor_comb_test_opt[id_chr,], 
-                    cor_comb_noadj_test = res_p_her_allchr$cor_comb_test_noadj_opt[id_chr,])
+                    cor_comb_test = res_p_her_allchr$cor_comb_test_opt[id_chr,])
+  if(cor_noadj_computed){
+    res_p_her$cor_comb_noadj_test <- res_p_her_allchr$cor_comb_test_noadj_opt[id_chr,]
+  }
   
   res_p[[i]] <- as.data.frame(rbind(res_p_her_allchr$geneAnn[id_chr,], res_p_nother$geneAnn))
   
@@ -185,7 +188,7 @@ for(i in all_Chroms){
   res_p[[i]]$train_dev_geno_cov <- c(rowMeans(sapply(res_p_her$train, function(x) x$dev_geno_cov)), rowMeans(sapply(res_p_nother$train, function(x) x$dev_geno_cov)))
   res_p[[i]]$train_cor <- c(rowMeans(sapply(res_p_her$train, function(x) x$cor)), rowMeans(sapply(res_p_nother$train, function(x) x$cor)))
   res_p[[i]]$train_cor_pvalue <- c(rowMeans(sapply(res_p_her$train, function(x) x$cor_pval)), rowMeans(sapply(res_p_nother$train, function(x) x$cor_pval)))
-  if("cor_noadj" %in% colnames(res_p_her$train[[1]])){
+  if(cor_noadj_computed){
     res_p[[i]]$train_cor_noadj <- c(rowMeans(sapply(res_p_her$train, function(x) x$cor_noadj)), rowMeans(sapply(res_p_nother$train, function(x) x$cor_noadj)))
     res_p[[i]]$train_cor_noadj_pvalue <- c(rowMeans(sapply(res_p_her$train, function(x) x$cor_noadj_pval)), rowMeans(sapply(res_p_nother$train, function(x) x$cor_noadj_pval)))
   }
@@ -196,7 +199,7 @@ for(i in all_Chroms){
   res_p[[i]]$test_dev_geno_cov <- c(rowMeans(sapply(res_p_her$test, function(x) x$dev_geno_cov)), rowMeans(sapply(res_p_nother$test, function(x) x$dev_geno_cov)))
   res_p[[i]]$test_cor <- c(rowMeans(sapply(res_p_her$test, function(x) x$cor)), rowMeans(sapply(res_p_nother$test, function(x) x$cor)))
   res_p[[i]]$test_cor_pvalue <- c(rowMeans(sapply(res_p_her$test, function(x) x$cor_pval)), rowMeans(sapply(res_p_nother$test, function(x) x$cor_pval)))
-  if("cor_noadj" %in% colnames(res_p_her$test[[1]])){
+  if(cor_noadj_computed){
     res_p[[i]]$test_cor_noadj <- c(rowMeans(sapply(res_p_her$test, function(x) x$cor_noadj)), rowMeans(sapply(res_p_nother$test, function(x) x$cor_noadj)))
     res_p[[i]]$test_cor_noadj_pvalue <- c(rowMeans(sapply(res_p_her$test, function(x) x$cor_noadj_pval)), rowMeans(sapply(res_p_nother$test, function(x) x$cor_noadj_pval)))
   }
@@ -204,7 +207,7 @@ for(i in all_Chroms){
   
   res_p[[i]]$test_comb_cor <- c(res_p_her$cor_comb_test$cor, res_p_nother$cor_comb_test$cor)
   res_p[[i]]$test_comb_cor_pvalue <- c(res_p_her$cor_comb_test$cor_pval, res_p_nother$cor_comb_test$cor_pval)
-  if("cor_comb_noadj_test" %in% names(res_p_her)){
+  if(cor_noadj_computed){
     res_p[[i]]$test_comb_cor_noadj <- c(res_p_her$cor_comb_noadj_test$cor, res_p_nother$cor_comb_noadj_test$cor)
     res_p[[i]]$test_comb_cor_noadj_pvalue <- c(res_p_her$cor_comb_noadj_test$cor_pval, res_p_nother$cor_comb_noadj_test$cor_pval)
   }
@@ -472,7 +475,7 @@ ggsave(sprintf('%s.pdf',file_name), ggMarginal(pl_cor, groupColour = TRUE, group
 #### cor not adjusted (all genes) #####
 #######################################
 
-if("train_cor_noadj" %in% colnames(res_p)){
+if(cor_noadj_computed){
   cornoadj_train_test <- data.frame(train = res_p$train_cor_noadj, test = res_p$test_cor_noadj, type = res_p$type) 
   # remove NA
   id_na <-  is.na(rowSums(cornoadj_train_test[, 1:2]))
