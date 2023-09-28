@@ -128,13 +128,15 @@ for(i in 1:length(cohort_name)){
                                   c('Individual_ID', 'RNASample_ID', 'genoSample_ID', 'Dx',
                                     'Age', 'Gender', 'Sex', 'Array')]
   
-  if(any(table(cl)<=10)){
-    rm_id <- names(which(table(cl)<=10))
-    P <- P-length(rm_id)
+  print(table(cl))
+  if(any(table(cl) <= 15)){
+    rm_id <- names(which(table(cl) <= 15))
+    # P <- P - length(rm_id)
     gr_names <- gr_names[!gr_names %in% rm_id]
-    covDat <- covDat[!cl %in% rm_id,]
-    phenoDat <- phenoDat[!cl %in% rm_id,]
-    cl <- cl[!cl %in% rm_id]
+    print(gr_names)
+    # covDat <- covDat[!cl %in% rm_id,]
+    # phenoDat <- phenoDat[!cl %in% rm_id,]
+    # cl <- cl[!cl %in% rm_id]
   }
   
   phenoInfo_new[[i]] <- data.frame(pheno_id = colnames(phenoDat))
@@ -148,6 +150,7 @@ for(i in 1:length(cohort_name)){
     }
   }
   
+  if(length(gr_names) > 1){
   bin_reg <- vector(mode = 'list', length = length(gr_names)-1)
   for(k in 1:(length(gr_names)-1)){
     
@@ -196,10 +199,11 @@ for(i in 1:length(cohort_name)){
     }
     
   }
-  pairwise_bin_reg[[i]] <- do.call(rbind, do.call(c,bin_reg))
-  pairwise_bin_reg[[i]]$pval_corr_overall <-  p.adjust(pairwise_bin_reg[[i]]$pvalue, method = 'BY')
-  pairwise_bin_reg[[i]]$cohort <- cohort_name
-  
+    pairwise_bin_reg[[i]] <- do.call(rbind, do.call(c,bin_reg))
+    pairwise_bin_reg[[i]]$pval_corr_overall <-  p.adjust(pairwise_bin_reg[[i]]$pvalue, method = 'BY')
+    pairwise_bin_reg[[i]]$cohort <- cohort_name
+  }
+
   ################
   ## gri vs all ##
   ################
@@ -265,12 +269,14 @@ save(output,
      file = sprintf('%s%s_%s_cluster%s_phenoAssociationGLMall_prediction_model%s.RData', 
                     outFold, type_data, type_input, type_cluster, model_name))
 
-pairwise_save <- do.call(rbind, pairwise_bin_reg)
-tot_save <- do.call(rbind, tot_bin_reg)
-
-write.table(pairwise_save, 
+if(length(pairwise_bin_reg) > 0){
+  pairwise_save <- do.call(rbind, pairwise_bin_reg)
+  write.table(pairwise_save, 
             file = sprintf('%s%s_%s_cluster%s_phenoAssociationGLMpairwise_prediction_model%s.txt', 
                            outFold, type_data, type_input, type_cluster, model_name))
+}
+
+tot_save <- do.call(rbind, tot_bin_reg)
 write.table(tot_save, 
             file = sprintf('%s%s_%s_cluster%s_phenoAssociationGLM_prediction_model%s.txt', 
                            outFold, type_data, type_input, type_cluster, model_name))
