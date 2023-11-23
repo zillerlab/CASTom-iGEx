@@ -58,9 +58,9 @@ across directly interpretable biological process and pathways as well as clinica
 
 ## Usage
 For details of each module please refer to 
-* [Module 1](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/Software/model_training)
-* [Module 2](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/Software/model_prediction)
-* [Module 3](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/Software/model_clustering)
+* [Module 1](https://github.com/zillerlab/CASTom-iGEx/tree/master/Software/model_training)
+* [Module 2](https://github.com/zillerlab/CASTom-iGEx/tree/master/Software/model_prediction)
+* [Module 3](https://github.com/zillerlab/CASTom-iGEx/tree/master/Software/model_clustering)
 
 ## References
 The pipeline and its application is described in details in:
