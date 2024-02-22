@@ -33,7 +33,7 @@ parser$add_argument(
   "--altFrqColumn",
   type = "character",
   default = NULL,
-  help = "Column name in reference model with alternative allele frequence estimates. Default is NULL (skip this part)"
+  help = "Column name in reference model with alternative allele frequency estimates. Default is NULL (skip this part)"
 )
 
 parser$add_argument(
