@@ -58,10 +58,5 @@ for (chr in 1:22) {
 
   out_name <- sprintf("%s/%sdosage_chr%s_matrix.txt.gz", args$outDosageFold, gen_name, chr)
 
-  data.table::fwrite(
-    format(gen_file, nsmall = 2, scientific = FALSE),  # Force precision of two
-    out_name,
-    sep = "\t",
-    compress = "gzip"
-  )
+  data.table::fwrite(gen_file, out_name, sep = "\t", compress = "gzip")
 }
