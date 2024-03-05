@@ -66,24 +66,26 @@ for (chr in 1:22) {
     sprintf("%schr%s.txt", args$varInfoFile, chr),
     header = TRUE,
     stringsAsFactors = FALSE,
-    row.names = NULL
+    row.names = NULL,
+    check.names = FALSE
   )
 
   ext_gen <- read.table(
-    sprintf("%schr%s.snps_stats", args$snpStatsFile, chr),
+    sprintf("%schr%s.afreq", args$aFreqFile, chr),
     header = TRUE,
     stringsAsFactors = FALSE,
-    row.names = NULL
+    row.names = NULL,
+    check.names = FALSE,
+    comment.char = ""
   )
 
 
   # Although matching is done by position, later filtering will be done via rsId, so need to remove duplicates
-  ext_gen <- ext_gen[!duplicated(ext_gen$rsid), ]
+  ext_gen <- ext_gen[!duplicated(ext_gen$ID), ]
 
 
-  # 'alternate_ids' is actually a chromosome number
-  ext_gen$temp_id <- with(ext_gen, paste(alternate_ids, position, alleleA, alleleB, sep = "_"))
-  ext_gen$temp_id_rev <- with(ext_gen, paste(alternate_ids, position, alleleB, alleleA, sep = "_"))
+  ext_gen$temp_id <- with(ext_gen, paste(`#CHROM`, POS, REF, ALT, sep = "_"))
+  ext_gen$temp_id_rev <- with(ext_gen, paste(`#CHROM`, POS, ALT, REF, sep = "_"))
 
   priler_ref$temp_id <- with(priler_ref, paste(CHR, POS, REF, ALT, sep = "_"))
 
@@ -97,15 +99,11 @@ for (chr in 1:22) {
 
   rev_id <- which(ext_gen_common$temp_id_rev %in% common_var_rev)
 
-  ext_gen_common[rev_id, c("alleleA", "alleleB")] <- rev(ext_gen_common[rev_id, c("alleleA", "alleleB")])
-  ext_gen_common$temp_id <- with(ext_gen_common, paste(alternate_ids, position, alleleA, alleleB, sep = "_"))
+  ext_gen_common[rev_id, c("REF", "ALT")] <- rev(ext_gen_common[rev_id, c("REF", "ALT")])
+  ext_gen_common$temp_id <- with(ext_gen_common, paste(`#CHROM`, POS, REF, ALT, sep = "_"))
 
 
-  ext_gen_common$ALTfrq <- with(
-    ext_gen_common,
-    # When minor allele is NA, this is a case where both alleles have a frequency of 0.5
-    ifelse(alleleB == minor_allele | is.na(minor_allele), minor_allele_frequency, 1 - minor_allele_frequency)
-  )
+  ext_gen_common$ALTfrq <- with(ext_gen_common, ifelse(temp_id %in% common_var, ALT_FREQS, 1 - ALT_FREQS))
 
   if (is.null(args$altFrqColumn)) {
     ext_gen_pass <- ext_gen_common
@@ -116,7 +114,7 @@ for (chr in 1:22) {
   }
 
 
-  ext_gen_pass <- subset(ext_gen_pass, select = c(alternate_ids, temp_id, rsid, position, alleleA, alleleB, ALTfrq))
+  ext_gen_pass <- subset(ext_gen_pass, select = c(`#CHROM`, temp_id, ID, POS, REF, ALT, ALTfrq))
   colnames(ext_gen_pass) <- c("CHR", "ID", "rsID", "POS", "REF", "ALT", "ALTfrq")
 
 
