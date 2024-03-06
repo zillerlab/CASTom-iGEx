@@ -53,7 +53,7 @@ for (chr in 1:22) {
 
   gen_file[gen_file < args$dosageThresh] <- 0
 
-  colnames(gen_file) <- sample_file$V1[3:nrow(sample_file)]
+  colnames(gen_file) <- sample_file$V2[3:nrow(sample_file)]
 
 
   out_name <- sprintf("%s/%sdosage_chr%s_matrix.txt.gz", args$outDosageFold, gen_name, chr)
