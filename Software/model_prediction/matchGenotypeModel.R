@@ -12,9 +12,9 @@ parser$add_argument(
 )
 
 parser$add_argument(
-  "--snpStatsFile",
+  "--aFreqFile",
   type = "character",
-  help = "Full path to the output of qctool until \"chr\""
+  help = "Full path to the AFREQ file until \"chr\""
 )
 
 parser$add_argument(
