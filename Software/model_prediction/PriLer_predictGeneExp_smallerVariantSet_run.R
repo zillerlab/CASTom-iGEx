@@ -5,6 +5,7 @@ options(max.print=1000)
 suppressPackageStartupMessages(library(argparse))
 suppressPackageStartupMessages(library(Matrix))
 suppressPackageStartupMessages(library(bigmemory))
+suppressPackageStartupMessages(library(data.table))
 
 parser <- ArgumentParser(description="Predict gene expression on a new dataset (all genes)")
 
