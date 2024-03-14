@@ -300,7 +300,7 @@ for(n in 1:length(phenoDat_file)){
   print(pheno_names)
   if(cov_corr){
     tot_var <- merge(x = covDat[, ! colnames(covDat) %in% c('genoSample_ID', 'RNASample_ID', 'Dx')], y = phenoDat, by.x = 'Individual_ID', by.y = 'Individual_ID', sort = F)
-    cov_names <- colnames(covDat[, ! colnames(covDat) %in% c('Individual_ID', 'genoSample_ID', 'RNASample_ID', 'Dx')])
+    cov_names <- colnames(covDat[, ! colnames(covDat) %in% c('Individual_ID', 'genoSample_ID', 'RNASample_ID', 'Dx'), drop = FALSE])
   }else{
     tot_var <- phenoDat
   }
