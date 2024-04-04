@@ -10,9 +10,20 @@ across directly interpretable biological process and pathways as well as clinica
 
 ![](./overview.png)
 
-## Built with
-* R (>= 4.0)
-### Required R packages (complete pipeline)
+## Installation
+Requires R >= 4.0. Install using Git:
+```bash
+git clone https://github.com/zillerlab/CASTom-iGEx.git
+```
+
+Required R packages for the complete pipeline can be installed with a simple R script from the CASTom-iGEx directory:
+```bash
+Rscript Software/install_requirements.R
+```
+
+<details>
+<summary><b>List of required R packages for the complete pipeline</b></summary>
+
 - argparse
 - bigmemory
 - biomaRt
@@ -23,7 +34,6 @@ across directly interpretable biological process and pathways as well as clinica
 - doParallel
 - gep2pep
 - ggExtra
-- ggplot2
 - ggpubr
 - ggrepel
 - ggsci
@@ -50,11 +60,11 @@ across directly interpretable biological process and pathways as well as clinica
 - RNOmni
 - rstatix
 - SparseM
-- stringr
 - sva
 - tidyverse
 - umap
 
+</details>
 
 ## Usage
 For details of each module please refer to 
