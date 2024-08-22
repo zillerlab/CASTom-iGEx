@@ -58,7 +58,10 @@ compute_reg_pheno <- function(id_gene, type_pheno, id_pheno, total_mat){
     
       res <- glm(fmla, data = total_mat, family = 'binomial')
       output <- coef(summary(res))[rownames(coef(summary(res))) == var,1:4]
-      
+
+      # Prevent null output if glm fails
+      # Workaround for specific case with all-zero T-scores, which can happen with custom genetic scores
+      if (is.na(output["Estimate"])) output <- rep(NA, 4)
     }
   
   if(type_pheno == 'CAT_ORD'){
