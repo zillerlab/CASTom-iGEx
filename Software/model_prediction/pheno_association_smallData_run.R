@@ -440,6 +440,7 @@ for(n in 1:length(phenoDat_file)){
     print('pathScore reactome completed')
   } else {
     df_corr_pathR <- data.frame()
+    info_pathR <- data.frame()
   }
   
   ##################################
@@ -495,6 +496,7 @@ for(n in 1:length(phenoDat_file)){
     print('pathScore go completed')
   } else {
     df_corr_pathGO <- data.frame()
+    info_pathGO <- data.frame()
   }
 
   ################################################################################################################################################################################
