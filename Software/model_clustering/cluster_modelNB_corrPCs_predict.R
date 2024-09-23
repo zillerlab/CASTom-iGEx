@@ -58,7 +58,7 @@ model <- get(load(args$modelNB))
 
 
 sampleAnn_new <- read.table(args$sampleAnnNew_file, h=T, stringsAsFactors = F)
-name_cov <- setdiff(colnames(sampleAnn_new),c('Individual_ID', 'genoSample_ID', 'Dx', 'Sex', 'Age', 'Array'))
+name_cov <- setdiff(colnames(sampleAnn_new),c('Individual_ID', 'genoSample_ID', 'RNASample_ID', 'Dx', 'Sex', 'Age', 'Array'))
 
 
 if(args$type_cluster == 'Cases'){
