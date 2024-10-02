@@ -377,7 +377,12 @@ for(n in 1:length(phenoDat_file)){
     df_corr_tscore[[j]] <- cbind(df_tscore_info, output)
     
     # qvalue:
-    qval <- qvalue(as.vector(df_corr_tscore[[j]][, names_df[j,4]]))
+    # Prevent qvalue error when estimating pi0 from few scores. See https://github.com/StoreyLab/edge/issues/13
+    if (nrow(df_corr_tscore[[j]]) > 100) {
+      qval <- qvalue(as.vector(df_corr_tscore[[j]][, names_df[j,4]]))
+    } else {
+      qval <- qvalue(as.vector(df_corr_tscore[[j]][, names_df[j,4]]), pi0 = 1)
+    }
     df_corr_tscore[[j]] <- cbind(df_corr_tscore[[j]], qval$qvalue)
     colnames(df_corr_tscore[[j]])[ncol(df_corr_tscore[[j]])] <-  names_df_qval[j]
     df_pi1$tscore[j] <- 1 - qval$pi0
