@@ -110,8 +110,12 @@ tscoreMat <- tscoreMat[id_s, ]
 # filter geneAnn
 if(!identical(genesID, geneAnn$external_gene_name)){
   print('adjust genes annotation')
-  id <- sapply(genesID, function(x) which(x == geneAnn$external_gene_name))
-  geneAnn <- geneAnn[id,]
+
+  genes_match <- geneAnn$external_gene_name %in% genesID
+
+  stopifnot("Mismatched gene annotation between T-scores and gene information file" = any(genes_match))
+
+  geneAnn <- geneAnn[genes_match, ]
 }
 
 print(paste('same gene annotation:', identical(geneAnn$external_gene_name, genesID)))
