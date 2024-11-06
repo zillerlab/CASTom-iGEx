@@ -215,6 +215,9 @@ if(any(id_s)){
 }
 colnames(eMat) <- sampleAnn$Temp_ID
 
+# Perform Limma analysis to determine sample-specific T-scores relative to a reference population (for each gene)
+eMat <- eMat[rowSums(is.na(eMat))==0,]
+
 # add Dx info if not present
 if(!'Dx' %in% colnames(sampleAnn)){sampleAnn$Dx <- 0}
 
@@ -232,8 +235,6 @@ sampleGroups[["Case"]] = sampleAnn$Temp_ID[sampleAnn$Dx==1]
 sampleGroups[["Ref"]] = sampleAnn$Temp_ID[sampleAnn$Dx==0] 
 comparisons[[1]] = c("pairwise","all","Ref")
 
-# Perform Limma analysis to determine sample-specific T-scores relative to a reference population (for each gene)
-eMat <- eMat[rowSums(is.na(eMat))==0,]
 
 # produce a genes*samples table of t-scores for each comparison
 for (i in 1:length(sampleGroups)){sampleGroups[[i]] = unique(sampleGroups[[i]])}
