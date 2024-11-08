@@ -179,9 +179,7 @@ for(j in 1:length(pheno_var)){
   
 }  
 
-final <- list(pheno = res$pheno, tscore = df_tscore_all,,pi1_lambdafixed = df_pi1)
+final <- list(pheno = res$pheno, tscore = df_tscore_all, pi1_lambdafixed = df_pi1)
 
 file_name <- ifelse(cov_corr,sprintf('%spval_%s_pheno_covCorr.RData', outFold, phenoName), sprintf('%spval_%s_pheno.RData', outFold, phenoName))
 save(final, file = file_name)
-
-
