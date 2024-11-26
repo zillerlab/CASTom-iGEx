@@ -67,7 +67,10 @@ Rscript Software/install_requirements.R
 </details>
 
 ## Usage
-For details of each module please refer to 
+Guide on how to preprocess custom genetic data to work with the pipeline can be found here:
+https://github.com/zillerlab/CASTom-iGEx/wiki/Processing-genetic-data-to-work-with-CASTom%E2%80%90iGEx.
+
+For details of each module of the pipeline please refer to 
 * [Module 1](https://github.com/zillerlab/CASTom-iGEx/tree/master/Software/model_training)
 * [Module 2](https://github.com/zillerlab/CASTom-iGEx/tree/master/Software/model_prediction)
 * [Module 3](https://github.com/zillerlab/CASTom-iGEx/tree/master/Software/model_clustering)
