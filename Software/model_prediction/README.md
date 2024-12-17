@@ -11,9 +11,9 @@ CASTom-iGEx (Module 2) is a pipeline (R based) that uses trained model to
     - "CAT_SINGLE_UNORDERED", "CAT_SINGLE_BINARY", "CAT_MUL_BINARY_VAR" for binary (binomial regression)
     - "CAT_ORD" for ordinal (ordered logistic regression)
 - **Covariate matrix** (*--covDat_file*): covariates to correct for in the association analysis (covariats + IDs x samples). Columns must contain `Individual_ID` and `genoSample_ID` to match genotype plus covariates to correct for in the phenotype association. Column `Dx` (0 control 1 case) is optional, if present is used to build the reference set when computing T-scores. *Note: samples in genotype and phenotype matrix are matched based on covariate matrix*
-- **Reactome Pathway annotation** (*--reactome_file*): .gmt file can be downloaded from https://reactome.org/download-data/ (provided in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/))
-- **GO Pathway annotation** (*--GOterms_file*): .RData file, can be obtained using *Annotate_GOterm_run.R*, each pathway is a entry in the list with `GOID` `Term` `Ontology` `geneIds` elemnets (provided in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/))
-- **Custom pathway** (*--pathwayStructure_file*): .RData file, similar to GO structure, each pathway is a list entry with `name` and `geneIds` elements. Available for WikiPathways (2019) in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/)
+- **Reactome Pathway annotation** (*--reactome_file*, optional): .gmt file can be downloaded from https://reactome.org/download-data/ (provided in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/))
+- **GO Pathway annotation** (*--GOterms_file*, optional): .RData file, can be obtained using *Annotate_GOterm_run.R*, each pathway is a entry in the list with `GOID` `Term` `Ontology` `geneIds` elemnets (provided in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/))
+- **Custom pathway** (*--pathwayStructure_file*, optional): .RData file, similar to GO structure, each pathway is a list entry with `name` and `geneIds` elements. Available for WikiPathways (2019) in [refData](https://gitlab.mpcdf.mpg.de/luciat/castom-igex/-/tree/master/refData/)
 
 ## Workflow
 ### 1) Predict gene expression
@@ -63,15 +63,15 @@ Based on data dimension, the next scripts are divided in two parts. If sample si
 ***
 
 ### 2) Small dataset: T-scores and Pathway-scores computation
-Predicted gene expression is converted into T-scores and combined into Pathway-scores. T-scores are computed using a subset of control samples (`Dx == 0`) as reference set if column `Dx` is present in *--covDat_file*, otherwise a random subset of samples is selected. 
+Predicted gene expression is converted into T-scores and (optionally) combined into Pathway-scores. T-scores are computed using a subset of control samples (`Dx == 0`) as reference set if column `Dx` is present in *--covDat_file*, otherwise a random subset of samples is selected. 
 
 *--input_file* is predictedExpression.txt.gz of the previous step, 
 
 ```sh
 ./Tscore_PathScore_diff_run.R \
     --input_file \
-    --reactome_file \
-    --GOterms_file \
+    --reactome_file (default = NULL)\
+    --GOterms_file (default = NULL) \
     --originalRNA (default = F) \
     --thr_reliableGenes (default = c(0.01, 0)) \
     --covDat_file \
@@ -80,8 +80,8 @@ Predicted gene expression is converted into T-scores and combined into Pathway-s
 ```
 The output includes (saved in *--outFold*):
 - predictedTscores.txt: gene T-scores (used HUGO nomenclature)
-- Pathway_Reactome_scores.txt: pathway scores based on Reactome
-- Pathway_GO_scores.txt: pathway scores based on GO
+- (optional) Pathway_Reactome_scores.txt: pathway scores based on Reactome
+- (optional) Pathway_GO_scores.txt: pathway scores based on GO
 
 Pathway scores can include pathway made of the same genes but with different names (filtered in the association steps)
 
@@ -114,8 +114,8 @@ T-scores and pathway-scores are tested for association with phenotypes. The regr
 
 ```sh
 ./pheno_association_smallData_run.R \
-    --reactome_file \
-    --GOterms_file \
+    --reactome_file (default = NULL) \
+    --GOterms_file (default = NULL) \
     --sampleAnn_file \
     --thr_reliableGenes (default = c(0.01, 0)) \
     --covDat_file \
@@ -132,10 +132,10 @@ The output includes (saved in *--outFold*):
 - pval_*names_file*_covCorr.RData list composed of 
     - pheno: phenoAnn info
     - tscore (list, each entry refers to a phenotype): summary statistics of association from tscores for each reliable genes
-    - pathScore_reactome (list, each entry refers to a phenotype): summary statistics of association from pathscore (Reactome)
-    - pathScore_GO (list, each entry refers to a phenotype): summary statistics of association from pathscore (GO)
-    - info_pathScore_reactome (list, each entry refers to a phenotype): for each pathway in Reactome, its summary statistics and those of the genes belonging to the pathway
-    - info_pathScore_GO (list, each entry refers to a phenotype): for each pathway in GO, its summary statistics and those of the genes belonging to the pathway
+    - (optional) pathScore_reactome (list, each entry refers to a phenotype): summary statistics of association from pathscore (Reactome)
+    - (optional) pathScore_GO (list, each entry refers to a phenotype): summary statistics of association from pathscore (GO)
+    - (optional) info_pathScore_reactome (list, each entry refers to a phenotype): for each pathway in Reactome, its summary statistics and those of the genes belonging to the pathway
+    - (optional) info_pathScore_GO (list, each entry refers to a phenotype): for each pathway in GO, its summary statistics and those of the genes belonging to the pathway
 
 
 ### 4) Small dataset: Association with phenotype of custom pathways
@@ -184,6 +184,8 @@ Combine results from multiple cohorts (harmonized) via meta-analsys (inverse var
 The output includes (saved in *--outFold*):
 - pval_*phenoName*_covCorr.RData (same structure as previous step)
 - phenoInfo_*phenoName*_cohorts.txt (tab separated file with n. cases/controls for each sample)
+
+To perform the analysis only at the level of T-scores (if pathway scores were not computed), use the script `pheno_association_metaAnalysis_noPathScore_run.R` instead. Simply omit the `reactome_file` and `GOterms_file`.
 
 ### 6) Small dataset: Meta-analysis for multiple cohorts custom pathways 
 Same as before but for custom gene sets.

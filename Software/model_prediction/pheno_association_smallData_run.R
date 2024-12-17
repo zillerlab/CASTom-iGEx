@@ -15,8 +15,8 @@ suppressPackageStartupMessages(library(data.table))
 
 
 parser <- ArgumentParser(description="Gene and Pathwasy association analysis")
-parser$add_argument("--reactome_file", type = "character", help = "reactome pathway anntation (.gmt)")
-parser$add_argument("--GOterms_file", type = "character", help = "GO pathway anntation (.RData)")
+parser$add_argument("--reactome_file", type = "character", default = NULL, help = "reactome pathway anntation (.gmt)")
+parser$add_argument("--GOterms_file", type = "character", default = NULL, help = "GO pathway anntation (.RData)")
 parser$add_argument("--sampleAnn_file", type = "character", help = "file with sample info for new genotype data")
 parser$add_argument("--thr_reliableGenes", type = "double", nargs = '*', default = c(0.01, 0), help = "threshold for reliable genes: dev_geno_tot and test_dev_geno  [default %(default)s]")
 parser$add_argument("--inputFold", type = "character", help = "Folde with results from pathway analysis")
