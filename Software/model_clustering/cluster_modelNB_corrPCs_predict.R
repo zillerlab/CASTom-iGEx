@@ -46,7 +46,7 @@ parser$add_argument(
   "--outFold",
   type = "character",
   help = "Folder to save the results",
-  default = ""
+  default = NULL
 )
 
 
@@ -137,13 +137,11 @@ clust_new <- list(
 
 save(
   clust_new,
-  file = sprintf(
-    "%s/tscore_corrPCs_zscaled_predictCluster%s_PGmethod_HKmetric.RData",
-    args$outFold,
-    args$type_cluster
+  file = paste0(
+    args$outFold, ifelse(is.null(args$outFold), "", "/"),
+    sprintf("tscore_corrPCs_zscaled_predictCluster%s_PGmethod_HKmetric.RData", args$type_cluster)
   )
 )
-
 
 message(paste0(
   "Prediction for the new cohort finished. ",

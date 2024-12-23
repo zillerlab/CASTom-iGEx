@@ -27,7 +27,7 @@ parser$add_argument(
   "--outFold",
   type = "character",
   help = "Folder to save the results",
-  default = ""
+  default = NULL
 )
 
 
@@ -90,6 +90,6 @@ model <- list(
   thresh = thresh
 )
 
-save(model, file = paste0(args$outFold, "/", base, "_modelNB.Rdata"))
+save(model, file = paste0(args$outFold, ifelse(is.null(args$outFold), "", "/"), base, "_modelNB.Rdata"))
 
 message(paste("NB model training finished. Test AUC =", round(max(auc), 2)))
