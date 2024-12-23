@@ -17,10 +17,10 @@ parser$add_argument(
 )
 
 parser$add_argument(
-  "--nFolds",
+  "--seed",
   type = "numeric",
-  help = "Number of folds for cross-validation",
-  default = 5
+  help = "Random seed for test set partition",
+  default = 42
 )
 
 parser$add_argument(
@@ -43,57 +43,36 @@ clust_input <- as.data.frame(clust$input_data)
 clust_gr <- clust$cl_best$gr
 
 
-fold_size <- round(nrow(clust_input) / args$nFolds)
+set.seed(args$seed)
+test_ids <- sample(1:nrow(clust_input), size = round(nrow(clust_input) * 0.2))
 
-labels <- seq_len(nrow(clust_input))
-labels_fold <- list()
+input_train <- clust_input[-test_ids, ]
+input_train["gr"] <- clust_gr[-test_ids]
 
-for (fold in 1:(args$nFolds - 1)) {
-  lf <- sample(labels, size = fold_size)
+input_test <- clust_input[test_ids, ]
+gr_test <- clust_gr[test_ids]
 
-  labels_fold[[fold]] <- lf
-  labels <- labels[!(labels %in% lf)]
-}
+model <- e1071::naiveBayes(gr ~ ., input_train)
 
-labels_fold[[args$nFolds]] <- labels
+test_res <- stats::predict(model, input_test, type = "raw")
 
-
-model <- list()
-res <- list()
-
-for (fold in 1:args$nFolds) {
-  fold_test_i <- labels_fold[[fold]]
-
-  input_train <- clust_input[-fold_test_i, ]
-  input_train["gr"] <- clust_gr[-fold_test_i]
-
-  input_test <- clust_input[fold_test_i, ]
-  gr_test <- clust_gr[fold_test_i]
-
-  model[[fold]] <- e1071::naiveBayes(gr ~ ., input_train)
-
-  test_res <- predict(model[[fold]], input_test, type = "raw")
-
-  res[[fold]] <- data.frame(
-    fold = fold,
-    pred = max.col(test_res),
-    prob = apply(test_res, 1, max),
-    test = gr_test,
-    correct = max.col(test_res) == gr_test
-  )
-}
-
-
-auc <- sapply(
-  res,
-  function(x) pROC::auc(pROC::roc(x, response = correct, predictor = prob, levels = c(FALSE, TRUE), direction = "<"))
+res <- data.frame(
+  pred = max.col(test_res),
+  prob = apply(test_res, 1, max),
+  test = gr_test,
+  correct = max.col(test_res) == gr_test
 )
 
-
-model <- model[[which.max(auc)]]
+auc <- pROC::auc(pROC::roc(
+  res,
+  response = correct,
+  predictor = prob,
+  levels = c(FALSE, TRUE),
+  direction = "<"
+))
 
 thresh <- pROC::roc(
-  res[[which.max(auc)]],
+  res,
   response = correct,
   predictor = prob,
   levels = c(FALSE, TRUE),
@@ -101,17 +80,16 @@ thresh <- pROC::roc(
 )
 
 thresh <- pROC::coords(thresh, ret = c("fdr", "threshold"))
+# Can't pick the exact coordinate at which FDR <= 0.05, so pick the closest
 thresh <- subset(thresh, fdr <= 0.05)[1, 2]
 
 
-model_best <- list(
+model <- list(
   model = model,
   res_pval = clust$res_pval[, c(2, 7)],
   thresh = thresh
 )
 
+save(model, file = paste0(args$outFold, "/", base, "_modelNB.Rdata"))
 
-save(model_best, file = paste0(args$outFold, "/", base, "_modelNB.Rdata"))
-
-
-message(paste("NB model training finished. Best AUC =", round(max(auc), 2)))
+message(paste("NB model training finished. Test AUC =", round(max(auc), 2)))
