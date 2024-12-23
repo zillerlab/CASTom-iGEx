@@ -83,5 +83,5 @@ Example workflow based on simulated genetic data can be found here:
 https://figshare.com/account/projects/163249/articles/22347574
 
 ## References
-The pipeline and its application is described in details in:
+The pipeline and its application are described in details in:
 [Trastulla, L., Dolgalev, G., Moser, S. et al. Distinct genetic liability profiles define clinically relevant patient strata across common diseases. Nat Commun 15, 5534 (2024)](https://doi.org/10.1038/s41467-024-49338-2)
