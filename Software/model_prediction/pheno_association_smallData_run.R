@@ -15,8 +15,8 @@ suppressPackageStartupMessages(library(data.table))
 
 
 parser <- ArgumentParser(description="Gene and Pathwasy association analysis")
-parser$add_argument("--reactome_file", type = "character", help = "reactome pathway anntation (.gmt)")
-parser$add_argument("--GOterms_file", type = "character", help = "GO pathway anntation (.RData)")
+parser$add_argument("--reactome_file", type = "character", default = NULL, help = "reactome pathway anntation (.gmt)")
+parser$add_argument("--GOterms_file", type = "character", default = NULL, help = "GO pathway anntation (.RData)")
 parser$add_argument("--sampleAnn_file", type = "character", help = "file with sample info for new genotype data")
 parser$add_argument("--thr_reliableGenes", type = "double", nargs = '*', default = c(0.01, 0), help = "threshold for reliable genes: dev_geno_tot and test_dev_geno  [default %(default)s]")
 parser$add_argument("--inputFold", type = "character", help = "Folde with results from pathway analysis")
@@ -110,8 +110,12 @@ tscoreMat <- tscoreMat[id_s, ]
 # filter geneAnn
 if(!identical(genesID, geneAnn$external_gene_name)){
   print('adjust genes annotation')
-  id <- sapply(genesID, function(x) which(x == geneAnn$external_gene_name))
-  geneAnn <- geneAnn[id,]
+
+  genes_match <- geneAnn$external_gene_name %in% genesID
+
+  stopifnot("Mismatched gene annotation between T-scores and gene information file" = any(genes_match))
+
+  geneAnn <- geneAnn[genes_match, ]
 }
 
 print(paste('same gene annotation:', identical(geneAnn$external_gene_name, genesID)))
@@ -132,159 +136,163 @@ print('Tscore mat loaded')
 ##################################
 #### load pathScore Reactome #####
 ##################################
-tmp <-  fread(sprintf('%sPathway_Reactome_scores.txt', inputFold), header = T, stringsAsFactors = F, sep = '\t', check.names = F, data.table = F)
-pathScoreID_reactome <- tmp[,1]
-tmp <- tmp[,-1]
-identical(colnames(tmp), samplesID_new) # same order samples
-pathScore_reactome <- as.matrix(t(tmp))
-rm(tmp)
+if (!is.null(reactome_file)) {
+  tmp <-  fread(sprintf('%sPathway_Reactome_scores.txt', inputFold), header = T, stringsAsFactors = F, sep = '\t', check.names = F, data.table = F)
+  pathScoreID_reactome <- tmp[,1]
+  tmp <- tmp[,-1]
+  identical(colnames(tmp), samplesID_new) # same order samples
+  pathScore_reactome <- as.matrix(t(tmp))
+  rm(tmp)
 
 
-# consider only pathaways that do not have gene repetition, on pathwayScoreID add gene info
-gs <- readGmt(reactome_file)
+  # consider only pathaways that do not have gene repetition, on pathwayScoreID add gene info
+  gs <- readGmt(reactome_file)
 
-gs=lapply(gs,function(X){
-  X@ids=gsub(",1.0","",X@ids)
-  return(X)
-})
-gs_name <- sapply(gs, function(x) x@reference)
-gs <- gs[which(gs_name %in% pathScoreID_reactome)]
-gs_name <- unname(sapply(gs, function(x) x@reference))
-identical(gs_name, pathScoreID_reactome)
-
-genes_path <- lapply(gs, function(x) geneAnn$external_gene_name[geneAnn$external_gene_name %in% x@ids])
-ngenes_path <-  sapply(gs, function(x) length(unique(x@ids[x@ids != ""])))
-ngenes_tscore_path <- sapply(genes_path, length)
-
-# remove pathway with the same genes, recompute qvalue
-rm_path <- c()
-len <- c()
-for(i in 1:length(genes_path)){
-  # print(i)
-  id <- which(sapply(genes_path, function(x) all(genes_path[[i]] %in% x) & all(x %in% genes_path[[i]])))
-  len[i] <- length(id)
-  ngenes_tmp <- ngenes_path[id]
-  # take the one woth the lower amount of genes
-  rm_path <- c(rm_path, gs_name[id][-which.min(ngenes_tmp)])
-}
-
-rm_path <- unique(rm_path)
-id_rm <- which(pathScoreID_reactome %in% rm_path)
-if(length(id_rm)>0){
-  pathScore_reactome <- pathScore_reactome[,-id_rm]
-  pathScoreID_reactome <- pathScoreID_reactome[-id_rm]
-  gs <- gs[-id_rm]
+  gs=lapply(gs,function(X){
+    X@ids=gsub(",1.0","",X@ids)
+    return(X)
+  })
+  gs_name <- sapply(gs, function(x) x@reference)
+  gs <- gs[which(gs_name %in% pathScoreID_reactome)]
   gs_name <- unname(sapply(gs, function(x) x@reference))
   identical(gs_name, pathScoreID_reactome)
+
   genes_path <- lapply(gs, function(x) geneAnn$external_gene_name[geneAnn$external_gene_name %in% x@ids])
-  ngenes_path <- ngenes_path[-id_rm]
-  ngenes_tscore_path <- ngenes_tscore_path[-id_rm]
-}
+  ngenes_path <-  sapply(gs, function(x) length(unique(x@ids[x@ids != ""])))
+  ngenes_tscore_path <- sapply(genes_path, length)
 
-# add number of genes info and mean test_dev_geno and dev_geno
-df_pathR_info <- data.frame(path = pathScoreID_reactome, ngenes_tscore = unname(ngenes_tscore_path), ngenes_path = unname(ngenes_path), stringsAsFactors = F)
-df_pathR_info$mean_dev_geno <- unname(sapply(genes_path, function(x) mean(geneAnn$dev_geno[geneAnn$external_gene_name %in% x])))
-df_pathR_info$sd_dev_geno <- unname(sapply(genes_path, function(x) sd(geneAnn$dev_geno[geneAnn$external_gene_name %in% x])))
-df_pathR_info$mean_test_dev_geno <- unname(sapply(genes_path, function(x) mean(geneAnn$test_dev_geno[geneAnn$external_gene_name %in% x])))
-df_pathR_info$sd_test_dev_geno <- unname(sapply(genes_path, function(x) sd(geneAnn$test_dev_geno[geneAnn$external_gene_name %in% x])))
-
-# compute mean/sd correlation for the genes belonging to the pathway (based on tscore)
-df_pathR_info$mean_gene_corr <- NA
-df_pathR_info$sd_gene_corr <- NA
-
-for(i in 1:length(genes_path)){
-  
-  id <- which(genesID %in% genes_path[[i]])
-  
-  if(length(id)>1){
+  # remove pathway with the same genes, recompute qvalue
+  rm_path <- c()
+  len <- c()
+  for(i in 1:length(genes_path)){
     # print(i)
-    tmp <- cor(tscoreMat[,id])
-    tmp <- tmp[lower.tri(tmp, diag = F)]
-    df_pathR_info$mean_gene_corr[i] <- mean(tmp)
-    df_pathR_info$sd_gene_corr[i] <- sd(tmp)  
+    id <- which(sapply(genes_path, function(x) all(genes_path[[i]] %in% x) & all(x %in% genes_path[[i]])))
+    len[i] <- length(id)
+    ngenes_tmp <- ngenes_path[id]
+    # take the one woth the lower amount of genes
+    rm_path <- c(rm_path, gs_name[id][-which.min(ngenes_tmp)])
   }
-  
-}
 
-print('pathScore reactome mat loaded')
+  rm_path <- unique(rm_path)
+  id_rm <- which(pathScoreID_reactome %in% rm_path)
+  if(length(id_rm)>0){
+    pathScore_reactome <- pathScore_reactome[,-id_rm]
+    pathScoreID_reactome <- pathScoreID_reactome[-id_rm]
+    gs <- gs[-id_rm]
+    gs_name <- unname(sapply(gs, function(x) x@reference))
+    identical(gs_name, pathScoreID_reactome)
+    genes_path <- lapply(gs, function(x) geneAnn$external_gene_name[geneAnn$external_gene_name %in% x@ids])
+    ngenes_path <- ngenes_path[-id_rm]
+    ngenes_tscore_path <- ngenes_tscore_path[-id_rm]
+  }
+
+  # add number of genes info and mean test_dev_geno and dev_geno
+  df_pathR_info <- data.frame(path = pathScoreID_reactome, ngenes_tscore = unname(ngenes_tscore_path), ngenes_path = unname(ngenes_path), stringsAsFactors = F)
+  df_pathR_info$mean_dev_geno <- unname(sapply(genes_path, function(x) mean(geneAnn$dev_geno[geneAnn$external_gene_name %in% x])))
+  df_pathR_info$sd_dev_geno <- unname(sapply(genes_path, function(x) sd(geneAnn$dev_geno[geneAnn$external_gene_name %in% x])))
+  df_pathR_info$mean_test_dev_geno <- unname(sapply(genes_path, function(x) mean(geneAnn$test_dev_geno[geneAnn$external_gene_name %in% x])))
+  df_pathR_info$sd_test_dev_geno <- unname(sapply(genes_path, function(x) sd(geneAnn$test_dev_geno[geneAnn$external_gene_name %in% x])))
+
+  # compute mean/sd correlation for the genes belonging to the pathway (based on tscore)
+  df_pathR_info$mean_gene_corr <- NA
+  df_pathR_info$sd_gene_corr <- NA
+
+  for(i in 1:length(genes_path)){
+
+    id <- which(genesID %in% genes_path[[i]])
+
+    if(length(id)>1){
+      # print(i)
+      tmp <- cor(tscoreMat[,id])
+      tmp <- tmp[lower.tri(tmp, diag = F)]
+      df_pathR_info$mean_gene_corr[i] <- mean(tmp)
+      df_pathR_info$sd_gene_corr[i] <- sd(tmp)
+    }
+
+  }
+
+  print('pathScore reactome mat loaded')
+}
 
 ############################
 #### load pathScore GO #####
 ############################
-tmp <-  fread(sprintf('%sPathway_GO_scores.txt', inputFold), header = T, stringsAsFactors = F, sep = '\t', check.names = F, data.table = F)
-pathScoreID_GO <- tmp[,1]
-tmp <- tmp[,-1]
-identical(colnames(tmp), samplesID_new) # same order samples
-pathScore_GO <- as.matrix(t(tmp))
-rm(tmp)
+if (!is.null(GOterms_file)) {
+  tmp <-  fread(sprintf('%sPathway_GO_scores.txt', inputFold), header = T, stringsAsFactors = F, sep = '\t', check.names = F, data.table = F)
+  pathScoreID_GO <- tmp[,1]
+  tmp <- tmp[,-1]
+  identical(colnames(tmp), samplesID_new) # same order samples
+  pathScore_GO <- as.matrix(t(tmp))
+  rm(tmp)
 
-# consider only pathaways that do not heave gene repetition, on pathwayScoreID add gene info
-go <- get(load(GOterms_file))
+  # consider only pathaways that do not heave gene repetition, on pathwayScoreID add gene info
+  go <- get(load(GOterms_file))
 
-go_name <- sapply(go, function(x) x$GOID)
-go <- go[which(go_name %in% pathScoreID_GO)]
-go_name <- sapply(go, function(x) x$GOID)
-go_path_name <- sapply(go, function(x) x$Term)
-go_ont_name <- sapply(go, function(x) x$Ontology)
-identical(go_name, pathScoreID_GO)
-
-genes_path <- lapply(go, function(x) geneAnn$external_gene_name[geneAnn$external_gene_name %in% x$geneIds])
-ngenes_path <-  sapply(go, function(x) length(unique(x$geneIds[x$geneIds != ""])))
-ngenes_tscore_path <- sapply(genes_path, length)
-
-# remove pathway with the same genes, recompute qvalue
-rm_path <- c()
-len <- c()
-for(i in 1:length(genes_path)){
-  # print(i)
-  id <- which(sapply(genes_path, function(x) all(genes_path[[i]] %in% x) & all(x %in% genes_path[[i]])))
-  len[i] <- length(id)
-  ngenes_tmp <- ngenes_path[id]
-  # take the one woth the lower amount of genes
-  rm_path <- c(rm_path, go_name[id][-which.min(ngenes_tmp)])
-}
-
-rm_path <- unique(rm_path)
-id_rm <- which(pathScoreID_GO %in% rm_path)
-if(length(id_rm)>0){
-  pathScore_GO <- pathScore_GO[,-id_rm]
-  pathScoreID_GO <- pathScoreID_GO[-id_rm]
-  go <- go[-id_rm]
+  go_name <- sapply(go, function(x) x$GOID)
+  go <- go[which(go_name %in% pathScoreID_GO)]
   go_name <- sapply(go, function(x) x$GOID)
   go_path_name <- sapply(go, function(x) x$Term)
   go_ont_name <- sapply(go, function(x) x$Ontology)
   identical(go_name, pathScoreID_GO)
+
   genes_path <- lapply(go, function(x) geneAnn$external_gene_name[geneAnn$external_gene_name %in% x$geneIds])
-  ngenes_path <- ngenes_path[-id_rm]
-  ngenes_tscore_path <- ngenes_tscore_path[-id_rm]
-}
+  ngenes_path <-  sapply(go, function(x) length(unique(x$geneIds[x$geneIds != ""])))
+  ngenes_tscore_path <- sapply(genes_path, length)
 
-# add number of genes info and mean test_dev_geno and dev_geno
-df_pathGO_info <- data.frame(path_id = pathScoreID_GO, path = go_path_name, path_ont = go_ont_name, ngenes_tscore = unname(ngenes_tscore_path), ngenes_path = unname(ngenes_path), stringsAsFactors = F)
-df_pathGO_info$mean_dev_geno <- unname(sapply(genes_path, function(x) mean(geneAnn$dev_geno[geneAnn$external_gene_name %in% x])))
-df_pathGO_info$sd_dev_geno <- unname(sapply(genes_path, function(x) sd(geneAnn$dev_geno[geneAnn$external_gene_name %in% x])))
-df_pathGO_info$mean_test_dev_geno <- unname(sapply(genes_path, function(x) mean(geneAnn$test_dev_geno[geneAnn$external_gene_name %in% x])))
-df_pathGO_info$sd_test_dev_geno <- unname(sapply(genes_path, function(x) sd(geneAnn$test_dev_geno[geneAnn$external_gene_name %in% x])))
-
-# compute mean/sd correlation for the genes belonging to the pathway (based on tscore)
-df_pathGO_info$mean_gene_corr <- NA
-df_pathGO_info$sd_gene_corr <- NA
-
-for(i in 1:length(genes_path)){
-  
-  id <- which(genesID %in% genes_path[[i]])
-  
-  if(length(id)>1){
+  # remove pathway with the same genes, recompute qvalue
+  rm_path <- c()
+  len <- c()
+  for(i in 1:length(genes_path)){
     # print(i)
-    tmp <- cor(tscoreMat[,id])
-    tmp <- tmp[lower.tri(tmp, diag = F)]
-    df_pathGO_info$mean_gene_corr[i] <- mean(tmp)
-    df_pathGO_info$sd_gene_corr[i] <- sd(tmp)  
+    id <- which(sapply(genes_path, function(x) all(genes_path[[i]] %in% x) & all(x %in% genes_path[[i]])))
+    len[i] <- length(id)
+    ngenes_tmp <- ngenes_path[id]
+    # take the one woth the lower amount of genes
+    rm_path <- c(rm_path, go_name[id][-which.min(ngenes_tmp)])
   }
-  
-}
 
-print('pathScore GO mat loaded')
+  rm_path <- unique(rm_path)
+  id_rm <- which(pathScoreID_GO %in% rm_path)
+  if(length(id_rm)>0){
+    pathScore_GO <- pathScore_GO[,-id_rm]
+    pathScoreID_GO <- pathScoreID_GO[-id_rm]
+    go <- go[-id_rm]
+    go_name <- sapply(go, function(x) x$GOID)
+    go_path_name <- sapply(go, function(x) x$Term)
+    go_ont_name <- sapply(go, function(x) x$Ontology)
+    identical(go_name, pathScoreID_GO)
+    genes_path <- lapply(go, function(x) geneAnn$external_gene_name[geneAnn$external_gene_name %in% x$geneIds])
+    ngenes_path <- ngenes_path[-id_rm]
+    ngenes_tscore_path <- ngenes_tscore_path[-id_rm]
+  }
+
+  # add number of genes info and mean test_dev_geno and dev_geno
+  df_pathGO_info <- data.frame(path_id = pathScoreID_GO, path = go_path_name, path_ont = go_ont_name, ngenes_tscore = unname(ngenes_tscore_path), ngenes_path = unname(ngenes_path), stringsAsFactors = F)
+  df_pathGO_info$mean_dev_geno <- unname(sapply(genes_path, function(x) mean(geneAnn$dev_geno[geneAnn$external_gene_name %in% x])))
+  df_pathGO_info$sd_dev_geno <- unname(sapply(genes_path, function(x) sd(geneAnn$dev_geno[geneAnn$external_gene_name %in% x])))
+  df_pathGO_info$mean_test_dev_geno <- unname(sapply(genes_path, function(x) mean(geneAnn$test_dev_geno[geneAnn$external_gene_name %in% x])))
+  df_pathGO_info$sd_test_dev_geno <- unname(sapply(genes_path, function(x) sd(geneAnn$test_dev_geno[geneAnn$external_gene_name %in% x])))
+
+  # compute mean/sd correlation for the genes belonging to the pathway (based on tscore)
+  df_pathGO_info$mean_gene_corr <- NA
+  df_pathGO_info$sd_gene_corr <- NA
+
+  for(i in 1:length(genes_path)){
+
+    id <- which(genesID %in% genes_path[[i]])
+
+    if(length(id)>1){
+      # print(i)
+      tmp <- cor(tscoreMat[,id])
+      tmp <- tmp[lower.tri(tmp, diag = F)]
+      df_pathGO_info$mean_gene_corr[i] <- mean(tmp)
+      df_pathGO_info$sd_gene_corr[i] <- sd(tmp)
+    }
+
+  }
+
+  print('pathScore GO mat loaded')
+}
 
 #### load phenotype annotation ####
 phenoAnn <- fread(file = phenoAnn_file, header = T, stringsAsFactors = F, data.table = F)
@@ -373,7 +381,12 @@ for(n in 1:length(phenoDat_file)){
     df_corr_tscore[[j]] <- cbind(df_tscore_info, output)
     
     # qvalue:
-    qval <- qvalue(as.vector(df_corr_tscore[[j]][, names_df[j,4]]))
+    # Prevent qvalue error when estimating pi0 from few scores. See https://github.com/StoreyLab/edge/issues/13
+    if (nrow(df_corr_tscore[[j]]) > 200) {
+      qval <- qvalue(as.vector(df_corr_tscore[[j]][, names_df[j,4]]))
+    } else {
+      qval <- qvalue(as.vector(df_corr_tscore[[j]][, names_df[j,4]]), pi0 = 1)
+    }
     df_corr_tscore[[j]] <- cbind(df_corr_tscore[[j]], qval$qvalue)
     colnames(df_corr_tscore[[j]])[ncol(df_corr_tscore[[j]])] <-  names_df_qval[j]
     df_pi1$tscore[j] <- 1 - qval$pi0
@@ -386,108 +399,115 @@ for(n in 1:length(phenoDat_file)){
   ########################################
   #### pathScore Reactome assocaition ####
   ########################################
-  
-  pathScore_r_association <- cbind(pathScore_reactome[id_samples, ], tot_var)
-  colnames(pathScore_r_association)[1:length(pathScoreID_reactome)] <- paste0('X',1:length(pathScoreID_reactome))
-  
-  df_corr_pathR <- vector(mode = 'list', length = nrow(phenoAnn_tmp))
-  info_pathR <- vector(mode = 'list', length = nrow(phenoAnn_tmp))
-  
-  for(j in 1:nrow(phenoAnn_tmp)){
-    
-    print(paste0('## phenotype ', phenoAnn_tmp$pheno_id[j], ' ##'))
-    
-    if(ncores>0){
-      # parallelize over genes
-      output <- foreach(x=1:nrow(df_pathR_info), .combine = rbind)%dopar%{
-        # print(x)
-        compute_reg_pheno(id_gene = x, type_pheno = phenoAnn_tmp$transformed_type[j], id_pheno = phenoAnn_tmp$pheno_id[j], total_mat = pathScore_r_association)
-      }   
-    }else{
-      output <- matrix(nrow = nrow(df_pathR_info), ncol = 4)
-      for(x in 1:nrow(df_pathR_info)){
-        # print(x)
-        output[x,] <- compute_reg_pheno(id_gene = x, type_pheno = phenoAnn_tmp$transformed_type[j], id_pheno = phenoAnn_tmp$pheno_id[j], total_mat = pathScore_r_association)
+  if (!is.null(reactome_file)) {
+    pathScore_r_association <- cbind(pathScore_reactome[id_samples, ], tot_var)
+    colnames(pathScore_r_association)[1:length(pathScoreID_reactome)] <- paste0('X',1:length(pathScoreID_reactome))
+
+    df_corr_pathR <- vector(mode = 'list', length = nrow(phenoAnn_tmp))
+    info_pathR <- vector(mode = 'list', length = nrow(phenoAnn_tmp))
+
+    for(j in 1:nrow(phenoAnn_tmp)){
+
+      print(paste0('## phenotype ', phenoAnn_tmp$pheno_id[j], ' ##'))
+
+      if(ncores>0){
+        # parallelize over genes
+        output <- foreach(x=1:nrow(df_pathR_info), .combine = rbind)%dopar%{
+          # print(x)
+          compute_reg_pheno(id_gene = x, type_pheno = phenoAnn_tmp$transformed_type[j], id_pheno = phenoAnn_tmp$pheno_id[j], total_mat = pathScore_r_association)
+        }
+      }else{
+        output <- matrix(nrow = nrow(df_pathR_info), ncol = 4)
+        for(x in 1:nrow(df_pathR_info)){
+          # print(x)
+          output[x,] <- compute_reg_pheno(id_gene = x, type_pheno = phenoAnn_tmp$transformed_type[j], id_pheno = phenoAnn_tmp$pheno_id[j], total_mat = pathScore_r_association)
+        }
       }
+
+      colnames(output) <- names_df[j,]
+      rownames(output) <- NULL
+      df_corr_pathR[[j]] <- cbind(df_pathR_info, output)
+
+      # qvalue:
+      qval <- qvalue(as.vector(df_corr_pathR[[j]][, names_df[j,4]]))
+      df_corr_pathR[[j]] <- cbind(df_corr_pathR[[j]], qval$qvalue)
+      colnames(df_corr_pathR[[j]])[ncol(df_corr_pathR[[j]])] <-  names_df_qval[j]
+      df_pi1$pathScore_reactome[j] <- 1 - qval$pi0
+
+      # create list object for each pathway with tscore association results
+      info_pathR[[j]] <- vector(mode = 'list', length = nrow(df_pathR_info))
+      for(x in 1:nrow(df_pathR_info)){
+
+        tmp <- gs[which(sapply(gs, function(x) x@reference) == df_pathR_info$path[x])]
+        info_pathR[[j]][[x]] <- list(path = df_corr_pathR[[j]][x,], genes_path = tmp[[1]]@ids, tscore = df_corr_tscore[[j]][df_corr_tscore[[j]]$external_gene_name %in% tmp[[1]]@ids,])
+
+      }
+
     }
-    
-    colnames(output) <- names_df[j,]
-    rownames(output) <- NULL
-    df_corr_pathR[[j]] <- cbind(df_pathR_info, output)
-    
-    # qvalue:
-    qval <- qvalue(as.vector(df_corr_pathR[[j]][, names_df[j,4]]))
-    df_corr_pathR[[j]] <- cbind(df_corr_pathR[[j]], qval$qvalue)
-    colnames(df_corr_pathR[[j]])[ncol(df_corr_pathR[[j]])] <-  names_df_qval[j]
-    df_pi1$pathScore_reactome[j] <- 1 - qval$pi0
-    
-    # create list object for each pathway with tscore association results
-    info_pathR[[j]] <- vector(mode = 'list', length = nrow(df_pathR_info))
-    for(x in 1:nrow(df_pathR_info)){
-      
-      tmp <- gs[which(sapply(gs, function(x) x@reference) == df_pathR_info$path[x])]
-      info_pathR[[j]][[x]] <- list(path = df_corr_pathR[[j]][x,], genes_path = tmp[[1]]@ids, tscore = df_corr_tscore[[j]][df_corr_tscore[[j]]$external_gene_name %in% tmp[[1]]@ids,])
-      
-    }
-    
+
+    rm(pathScore_r_association)
+    print('pathScore reactome completed')
+  } else {
+    df_corr_pathR <- data.frame()
+    info_pathR <- data.frame()
   }
-  
-  rm(pathScore_r_association)
-  print('pathScore reactome completed')
-  
   
   ##################################
   #### pathScore GO assocaition ####
   ##################################
-  
-  pathScore_GO_association <- cbind(pathScore_GO[id_samples, ], tot_var)
-  colnames(pathScore_GO_association)[1:length(pathScoreID_GO)] <- paste0('X',1:length(pathScoreID_GO))
-  
-  df_corr_pathGO <- vector(mode = 'list', length = nrow(phenoAnn_tmp))
-  info_pathGO <- vector(mode = 'list', length = nrow(phenoAnn_tmp))
-  
-  for(j in 1:nrow(phenoAnn_tmp)){
-    
-    print(paste0('## phenotype ', phenoAnn_tmp$pheno_id[j], ' ##'))
-    
-    if(ncores>0){
-      # parallelize over genes
-      output <- foreach(x=1:nrow(df_pathGO_info), .combine = rbind)%dopar%{
-        # print(x)
-        compute_reg_pheno(id_gene = x, type_pheno = phenoAnn_tmp$transformed_type[j], id_pheno = phenoAnn_tmp$pheno_id[j], total_mat = pathScore_GO_association)
-      }   
-    }else{
-      output <- matrix(nrow = nrow(df_pathGO_info), ncol = 4)
+  if (!is.null(reactome_file)) {
+    pathScore_GO_association <- cbind(pathScore_GO[id_samples, ], tot_var)
+    colnames(pathScore_GO_association)[1:length(pathScoreID_GO)] <- paste0('X',1:length(pathScoreID_GO))
+
+    df_corr_pathGO <- vector(mode = 'list', length = nrow(phenoAnn_tmp))
+    info_pathGO <- vector(mode = 'list', length = nrow(phenoAnn_tmp))
+
+    for(j in 1:nrow(phenoAnn_tmp)){
+
+      print(paste0('## phenotype ', phenoAnn_tmp$pheno_id[j], ' ##'))
+
+      if(ncores>0){
+        # parallelize over genes
+        output <- foreach(x=1:nrow(df_pathGO_info), .combine = rbind)%dopar%{
+          # print(x)
+          compute_reg_pheno(id_gene = x, type_pheno = phenoAnn_tmp$transformed_type[j], id_pheno = phenoAnn_tmp$pheno_id[j], total_mat = pathScore_GO_association)
+        }
+      }else{
+        output <- matrix(nrow = nrow(df_pathGO_info), ncol = 4)
+        for(x in 1:nrow(df_pathGO_info)){
+          # print(x)
+          output[x,] <- compute_reg_pheno(id_gene = x, type_pheno = phenoAnn_tmp$transformed_type[j], id_pheno = phenoAnn_tmp$pheno_id[j], total_mat = pathScore_GO_association)
+        }
+      }
+
+      colnames(output) <- names_df[j,]
+      rownames(output) <- NULL
+      df_corr_pathGO[[j]] <- cbind(df_pathGO_info, output)
+
+      # qvalue:
+      qval <- qvalue(as.vector(df_corr_pathGO[[j]][, names_df[j,4]]))
+      df_corr_pathGO[[j]] <- cbind(df_corr_pathGO[[j]], qval$qvalue)
+      colnames(df_corr_pathGO[[j]])[ncol(df_corr_pathGO[[j]])] <-  names_df_qval[j]
+      df_pi1$pathScore_GO[j] <- 1 - qval$pi0
+
+      # create list object for each pathway with tscore association results
+      # create list object for each pathway with tscore association results
+      info_pathGO[[j]] <- vector(mode = 'list', length = nrow(df_pathGO_info))
       for(x in 1:nrow(df_pathGO_info)){
-        # print(x)
-        output[x,] <- compute_reg_pheno(id_gene = x, type_pheno = phenoAnn_tmp$transformed_type[j], id_pheno = phenoAnn_tmp$pheno_id[j], total_mat = pathScore_GO_association)
+
+        tmp <- go[which(sapply(go, function(x) x$GOID) == df_pathGO_info$path_id[x])]
+        info_pathGO[[j]][[x]] <- list(path = df_corr_pathGO[[j]][x,], genes_path = tmp[[1]]$geneIds, tscore = df_corr_tscore[[j]][df_corr_tscore[[j]]$external_gene_name %in% tmp[[1]]$geneIds,])
+
       }
     }
-    
-    colnames(output) <- names_df[j,]
-    rownames(output) <- NULL
-    df_corr_pathGO[[j]] <- cbind(df_pathGO_info, output)
-    
-    # qvalue:
-    qval <- qvalue(as.vector(df_corr_pathGO[[j]][, names_df[j,4]]))
-    df_corr_pathGO[[j]] <- cbind(df_corr_pathGO[[j]], qval$qvalue)
-    colnames(df_corr_pathGO[[j]])[ncol(df_corr_pathGO[[j]])] <-  names_df_qval[j]
-    df_pi1$pathScore_GO[j] <- 1 - qval$pi0
-    
-    # create list object for each pathway with tscore association results
-    # create list object for each pathway with tscore association results
-    info_pathGO[[j]] <- vector(mode = 'list', length = nrow(df_pathGO_info))
-    for(x in 1:nrow(df_pathGO_info)){
-      
-      tmp <- go[which(sapply(go, function(x) x$GOID) == df_pathGO_info$path_id[x])]
-      info_pathGO[[j]][[x]] <- list(path = df_corr_pathGO[[j]][x,], genes_path = tmp[[1]]$geneIds, tscore = df_corr_tscore[[j]][df_corr_tscore[[j]]$external_gene_name %in% tmp[[1]]$geneIds,])
-      
-    }
+
+    rm(pathScore_GO_association)
+    print('pathScore go completed')
+  } else {
+    df_corr_pathGO <- data.frame()
+    info_pathGO <- data.frame()
   }
-  
-  rm(pathScore_GO_association)
-  print('pathScore go completed')
-  
+
   ################################################################################################################################################################################
   
   final <- list(pheno = phenoAnn[phenoAnn$pheno_id %in% pheno_names, ], tscore = df_corr_tscore, pathScore_reactome = df_corr_pathR, pathScore_GO = df_corr_pathGO, pi1 = df_pi1, 

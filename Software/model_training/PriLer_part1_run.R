@@ -169,9 +169,9 @@ for(k in 1:nfolds_out){
   
 }
 
-predTest_geno_comb <- lapply(1:nfolds_out, function(x) as.matrix(t(betaSnpsMatrix[[k]]) %*% t(genDat[Folds[[x]],])))
+predTest_geno_comb <- lapply(1:nfolds_out, function(x) as.matrix(t(betaSnpsMatrix[[x]]) %*% t(genDat[Folds[[x]],])))
 predTest_geno_comb <- do.call(cbind, predTest_geno_comb)
-predTest_cov_comb <- lapply(1:nfolds_out, function(x) as.matrix(t(betaCovMatrix[[k]]) %*% t(cbind(covDat[Folds[[x]],], rep(1,length(Folds[[x]]))))))
+predTest_cov_comb <- lapply(1:nfolds_out, function(x) as.matrix(t(betaCovMatrix[[x]]) %*% t(cbind(covDat[Folds[[x]],], rep(1,length(Folds[[x]]))))))
 
 adjExpTest_comb <- lapply(1:nfolds_out, function(x) t(expDat[Folds[[x]],]) - predTest_cov_comb[[x]])
 adjExpTest_comb <- do.call(cbind, adjExpTest_comb)

@@ -11,8 +11,8 @@ suppressPackageStartupMessages(library(qvalue))
 parser <- ArgumentParser(description="Differential pathway analysis")
 
 parser$add_argument("--input_file", type = "character", help = "output path prediction folder (or cov corrected data)")
-parser$add_argument("--reactome_file", type = "character", help = "reactome pathway anntation (.gmt)")
-parser$add_argument("--GOterms_file", type = "character", help = "GO pathway anntation (.RData)")
+parser$add_argument("--reactome_file", default = NULL, type = "character", help = "reactome pathway anntation (.gmt)")
+parser$add_argument("--GOterms_file", default = NULL, type = "character", help = "GO pathway anntation (.RData)")
 parser$add_argument("--originalRNA", type="logical", default = F, help = "if true, original RNA without filtering used [default %(default)s]")
 parser$add_argument("--thr_reliableGenes", type = "double", nargs = '*', default = c(0.01, 0), help = "threshold for reliable genes: dev_geno_tot and test_dev_geno [default %(default)s]")
 parser$add_argument("--covDat_file", type = "character", help = "file with sample info for new genotype data, must contain Dx column (0 controls 1 cases)")
@@ -215,6 +215,9 @@ if(any(id_s)){
 }
 colnames(eMat) <- sampleAnn$Temp_ID
 
+# Perform Limma analysis to determine sample-specific T-scores relative to a reference population (for each gene)
+eMat <- eMat[rowSums(is.na(eMat))==0,]
+
 # add Dx info if not present
 if(!'Dx' %in% colnames(sampleAnn)){sampleAnn$Dx <- 0}
 
@@ -232,8 +235,6 @@ sampleGroups[["Case"]] = sampleAnn$Temp_ID[sampleAnn$Dx==1]
 sampleGroups[["Ref"]] = sampleAnn$Temp_ID[sampleAnn$Dx==0] 
 comparisons[[1]] = c("pairwise","all","Ref")
 
-# Perform Limma analysis to determine sample-specific T-scores relative to a reference population (for each gene)
-eMat <- eMat[rowSums(is.na(eMat))==0,]
 
 # produce a genes*samples table of t-scores for each comparison
 for (i in 1:length(sampleGroups)){sampleGroups[[i]] = unique(sampleGroups[[i]])}
@@ -325,214 +326,212 @@ colnames(tscoreTables[[1]])[-1] <- mapply(function(x,y) paste(x, y),x= sampleAnn
 #################################################
 #################### Reactome ###################
 #################################################
+if (!is.null(reactome_file)) {
+  gs <- readGmt(reactome_file)
+  geneSetName="Reactome"
 
-gs <- readGmt(reactome_file)
-geneSetName="Reactome"
-
-gs=lapply(gs,function(X){
-  X@ids=gsub(",1.0","",X@ids)
-  return(X)
-})
-
-# lineage scorecard settings
-minGenesPerGeneSet = 1
-maxGenesPerGeneSet = 50000
-# perform parametric gene set analysis on the moderated t statistics that compare each sample with the reference
-performClustering = F
-pvalScorecard = F
-maxGeneSetsPlotted = 100
-curGeneSets = gs #scorecardGeneSets
-scorecards = list()
-
-i=1
-curComparison = names(tscoreTables)[i]
-tTable = tscoreTables[[i]]
-geneNames=tTable[,1]
-print(paste("Processing:",curComparison))
-# prepare data for PGSEA analysis
-tCols = names(tTable)[grep(":: t",names(tTable))]
-exprs = as.matrix(tTable[,tCols])
-exprs=exprs[,colSums(is.nan(exprs))==0] # where the NaNs come from?
-dimnames(exprs)[[1]] = geneNames
-curColNames = sapply(dimnames(exprs)[[2]],function(X) { gsub(" vs.*$","",X)  }); names(curColNames) = NULL
-dimnames(exprs)[[2]] = curColNames
-geneSetNames = sapply(curGeneSets,function(X) { X@reference })
-names(geneSetNames) = NULL    
-geneSetLengths = sapply(curGeneSets,function(X) { length(X@ids) })
-names(geneSetLengths) = NULL    
-# perform PGSEA analysis on the t-scores relative to the reference and subsequently filter out those gene sets that do not fall within the size range
-results = modPGSEA(exprs, curGeneSets, range=c(minGenesPerGeneSet, maxGenesPerGeneSet), center=F, p.value=T) 
-scores = results[["results"]]; dimnames(scores) = list(geneSetNames,gsub("\\.t","",dimnames(scores)[[2]]))
-pvalues = results[["p.results"]]; dimnames(pvalues) = list(geneSetNames,paste("pval",gsub("\\.t",".pval",dimnames(pvalues)[[2]]),sep="_"))
-valid = apply(scores,1,function(X) { sum(is.na(X)) == 0 })
-insufficientCoverage = paste(geneSetNames[!valid])
-scores = scores[valid,]
-pvalues = pvalues[valid,]
-# for each lineage / group of gene sets, take the mean of the gene set scores of all contributing gene sets
-# export lineage scorecard
-output = data.frame(rownames(scores),scores)
-names(output) = c("pathID",colnames(scores))
-output2 = data.frame(rownames(scores),pvalues)
-names(output2) = c("pathID",colnames(pvalues))
-write.table(output,sprintf("%sPathway_%s_scores.txt", outFold, geneSetName),sep="\t",quote=F,row.names=F)     
-write.table(output2,sprintf("%sPathway_%s_pval.txt", outFold,geneSetName),sep="\t",quote=F,row.names=F)      
-scorecards[[curComparison]] = output
-
-sigScores = scores; #sigScores[pvalues>0.005] = NA
-if(any(sampleAnn$Dx == 1)){
-  
-  cases=is.element(colnames(scores),sampleAnn[sampleAnn$Dx==1,1]) ## mod LT
-  pvalCombined = apply(pvalues[,cases],1,function(X) { pchisq(-2*sum(log(X)),2*length(X),lower.tail=FALSE) })
-  # save
-  write.table(x = data.frame(chisq = sort(pvalCombined), pathway = names(sort(pvalCombined))), 
-              file = sprintf('%sPathwaySummaryPvalues_cases_%s.txt', outFold, geneSetName), sep = '\t', quote = F, col.names = T, row.names = F)
-}
-
-controls=is.element(colnames(scores),sampleAnn[sampleAnn$Dx==0,1]) ## mod LT
-pvalCombined_controls = apply(pvalues[,controls],1,function(X) {pchisq(-2*sum(log(X)),2*length(X),lower.tail=FALSE)})
-# save
-write.table(x = data.frame(chisq = sort(pvalCombined_controls), pathway = names(sort(pvalCombined_controls))), 
-            file = sprintf('%sPathwaySummaryPvalues_controls_%s.txt', outFold, geneSetName), sep = '\t', quote = F, col.names = T, row.names = F)
-
-
-
-
-if(any(sampleAnn$Dx == 1)){
-  
-  thres=0.05
-  rAll=rowSums(pvalues<=thres)
-  rCase=rowSums(pvalues[,cases]<=thres)
-  rFrac=rCase/rAll
-  ind=!is.nan(rFrac)
-  pEn=cbind(rAll,rCase,rFrac)
-  
-  write.table(data.frame(cbind(pathway=rownames(pEn[ind,]), pEn[ind,])),
-              sprintf("%sPathwayEnrichment_%s_FracCases.txt", outFold, geneSetName),sep="\t",quote=F, row.names = F)
-  
-  padj=apply(pvalues,2,function(X){
-    return(qvalue(X)$qvalue)
+  gs=lapply(gs,function(X){
+    X@ids=gsub(",1.0","",X@ids)
+    return(X)
   })
-  
-  #find gene sets that show high deviation
-  thres=0.05
-  rAll=rowSums(padj<=thres)
-  rCase=rowSums(padj[,cases]<=thres)
-  # rAll=rowSums(pvalues<=thres)
-  # rCase=rowSums(pvalues[,cases]<=thres)
-  
-  
-  rFrac=rCase/rAll
-  ind=!is.nan(rFrac)
-  pEn=cbind(rAll,rCase,rFrac)
-  
-  write.table(data.frame(cbind(pathway=rownames(pEn[ind,]), pEn[ind,])),
-              sprintf("%sPathwayEnrichment_%s_FracCases_pvalAdj.txt",outFold, geneSetName),sep="\t",quote=F, row.names = F)
-  
-  
-}
 
+  # lineage scorecard settings
+  minGenesPerGeneSet = 1
+  maxGenesPerGeneSet = 50000
+  # perform parametric gene set analysis on the moderated t statistics that compare each sample with the reference
+  performClustering = F
+  pvalScorecard = F
+  maxGeneSetsPlotted = 100
+  curGeneSets = gs #scorecardGeneSets
+  scorecards = list()
+
+  i=1
+  curComparison = names(tscoreTables)[i]
+  tTable = tscoreTables[[i]]
+  geneNames=tTable[,1]
+  print(paste("Processing:",curComparison))
+  # prepare data for PGSEA analysis
+  tCols = names(tTable)[grep(":: t",names(tTable))]
+  exprs = as.matrix(tTable[,tCols])
+  exprs=exprs[,colSums(is.nan(exprs))==0] # where the NaNs come from?
+  dimnames(exprs)[[1]] = geneNames
+  curColNames = sapply(dimnames(exprs)[[2]],function(X) { gsub(" vs.*$","",X)  }); names(curColNames) = NULL
+  dimnames(exprs)[[2]] = curColNames
+  geneSetNames = sapply(curGeneSets,function(X) { X@reference })
+  names(geneSetNames) = NULL
+  geneSetLengths = sapply(curGeneSets,function(X) { length(X@ids) })
+  names(geneSetLengths) = NULL
+  # perform PGSEA analysis on the t-scores relative to the reference and subsequently filter out those gene sets that do not fall within the size range
+  results = modPGSEA(exprs, curGeneSets, range=c(minGenesPerGeneSet, maxGenesPerGeneSet), center=F, p.value=T)
+  scores = results[["results"]]; dimnames(scores) = list(geneSetNames,gsub("\\.t","",dimnames(scores)[[2]]))
+  pvalues = results[["p.results"]]; dimnames(pvalues) = list(geneSetNames,paste("pval",gsub("\\.t",".pval",dimnames(pvalues)[[2]]),sep="_"))
+  valid = apply(scores,1,function(X) { sum(is.na(X)) == 0 })
+  insufficientCoverage = paste(geneSetNames[!valid])
+  scores = scores[valid,]
+  pvalues = pvalues[valid,]
+  # for each lineage / group of gene sets, take the mean of the gene set scores of all contributing gene sets
+  # export lineage scorecard
+  output = data.frame(rownames(scores),scores)
+  names(output) = c("pathID",colnames(scores))
+  output2 = data.frame(rownames(scores),pvalues)
+  names(output2) = c("pathID",colnames(pvalues))
+  write.table(output,sprintf("%sPathway_%s_scores.txt", outFold, geneSetName),sep="\t",quote=F,row.names=F)
+  write.table(output2,sprintf("%sPathway_%s_pval.txt", outFold,geneSetName),sep="\t",quote=F,row.names=F)
+  scorecards[[curComparison]] = output
+
+  sigScores = scores; #sigScores[pvalues>0.005] = NA
+  if(any(sampleAnn$Dx == 1)){
+
+    cases=is.element(colnames(scores),sampleAnn[sampleAnn$Dx==1,1]) ## mod LT
+    pvalCombined = apply(pvalues[,cases],1,function(X) { pchisq(-2*sum(log(X)),2*length(X),lower.tail=FALSE) })
+    # save
+    write.table(x = data.frame(chisq = sort(pvalCombined), pathway = names(sort(pvalCombined))),
+                file = sprintf('%sPathwaySummaryPvalues_cases_%s.txt', outFold, geneSetName), sep = '\t', quote = F, col.names = T, row.names = F)
+  }
+
+  controls=is.element(colnames(scores),sampleAnn[sampleAnn$Dx==0,1]) ## mod LT
+  pvalCombined_controls = apply(pvalues[,controls],1,function(X) {pchisq(-2*sum(log(X)),2*length(X),lower.tail=FALSE)})
+  # save
+  write.table(x = data.frame(chisq = sort(pvalCombined_controls), pathway = names(sort(pvalCombined_controls))),
+              file = sprintf('%sPathwaySummaryPvalues_controls_%s.txt', outFold, geneSetName), sep = '\t', quote = F, col.names = T, row.names = F)
+
+
+
+
+  if(any(sampleAnn$Dx == 1)){
+
+    thres=0.05
+    rAll=rowSums(pvalues<=thres)
+    rCase=rowSums(pvalues[,cases]<=thres)
+    rFrac=rCase/rAll
+    ind=!is.nan(rFrac)
+    pEn=cbind(rAll,rCase,rFrac)
+
+    write.table(data.frame(cbind(pathway=rownames(pEn[ind,]), pEn[ind,])),
+                sprintf("%sPathwayEnrichment_%s_FracCases.txt", outFold, geneSetName),sep="\t",quote=F, row.names = F)
+
+    padj=apply(pvalues,2,function(X){
+      return(qvalue(X)$qvalue)
+    })
+
+    #find gene sets that show high deviation
+    thres=0.05
+    rAll=rowSums(padj<=thres)
+    rCase=rowSums(padj[,cases]<=thres)
+    # rAll=rowSums(pvalues<=thres)
+    # rCase=rowSums(pvalues[,cases]<=thres)
+
+
+    rFrac=rCase/rAll
+    ind=!is.nan(rFrac)
+    pEn=cbind(rAll,rCase,rFrac)
+
+    write.table(data.frame(cbind(pathway=rownames(pEn[ind,]), pEn[ind,])),
+                sprintf("%sPathwayEnrichment_%s_FracCases_pvalAdj.txt",outFold, geneSetName),sep="\t",quote=F, row.names = F)
+
+
+  }
+}
 
 ################################################
 #################### GO term ###################
 ################################################
 
 # repeat the same for GO terms
-go <- get(load(GOterms_file))
-geneSetName <- 'GO'
-# lineage scorecard settings
-minGenesPerGeneSet = 1
-maxGenesPerGeneSet = 50000
-# perform parametric gene set analysis on the moderated t statistics that compare each sample with the reference
-performClustering = F
-pvalScorecard = F
-maxGeneSetsPlotted = 100
-#curGeneSets = allGeneSets
-scorecards = list()
+if (!is.null(GOterms_file)) {
+  go <- get(load(GOterms_file))
+  geneSetName <- 'GO'
+  # lineage scorecard settings
+  minGenesPerGeneSet = 1
+  maxGenesPerGeneSet = 50000
+  # perform parametric gene set analysis on the moderated t statistics that compare each sample with the reference
+  performClustering = F
+  pvalScorecard = F
+  maxGeneSetsPlotted = 100
+  #curGeneSets = allGeneSets
+  scorecards = list()
 
-i=1
-curComparison = names(tscoreTables)[i]
-tTable = tscoreTables[[i]]
-geneNames=tTable[,1]
-print(paste("Processing:",curComparison))
-# prepare data for PGSEA analysis
-tCols = names(tTable)[grep(":: t",names(tTable))]
-exprs = as.matrix(tTable[,tCols])
-exprs=exprs[,colSums(is.nan(exprs))==0] # where the NaNs come from?
-dimnames(exprs)[[1]] = geneNames
-curColNames = sapply(dimnames(exprs)[[2]],function(X) { gsub(" vs.*$","",X)  }); names(curColNames) = NULL
-dimnames(exprs)[[2]] = curColNames
+  i=1
+  curComparison = names(tscoreTables)[i]
+  tTable = tscoreTables[[i]]
+  geneNames=tTable[,1]
+  print(paste("Processing:",curComparison))
+  # prepare data for PGSEA analysis
+  tCols = names(tTable)[grep(":: t",names(tTable))]
+  exprs = as.matrix(tTable[,tCols])
+  exprs=exprs[,colSums(is.nan(exprs))==0] # where the NaNs come from?
+  dimnames(exprs)[[1]] = geneNames
+  curColNames = sapply(dimnames(exprs)[[2]],function(X) { gsub(" vs.*$","",X)  }); names(curColNames) = NULL
+  dimnames(exprs)[[2]] = curColNames
 
-geneSetNames = sapply(go,function(X) { X$GOID })
-geneSetLengths = sapply(go,function(X) { length(unique(X$geneIds))})
+  geneSetNames = sapply(go,function(X) { X$GOID })
+  geneSetLengths = sapply(go,function(X) { length(unique(X$geneIds))})
 
-# perform PGSEA analysis on the t-scores relative to the reference and subsequently filter out those gene sets that do not fall within the size range
-results = modPGSEA(exprs, go, range=c(minGenesPerGeneSet, maxGenesPerGeneSet), center=F, p.value=T) 
-scores = results[["results"]]; dimnames(scores) = list(geneSetNames,gsub("\\.t","",dimnames(scores)[[2]]))
-pvalues = results[["p.results"]]; dimnames(pvalues) = list(geneSetNames,paste("pval",gsub("\\.t",".pval",dimnames(pvalues)[[2]]),sep="_"))
-valid = apply(scores,1,function(X) { sum(is.na(X)) == 0 })
-insufficientCoverage = paste(geneSetNames[!valid])
-scores = scores[valid,]
-pvalues = pvalues[valid,]
-# for each lineage / group of gene sets, take the mean of the gene set scores of all contributing gene sets
-# export lineage scorecard
-output = data.frame(rownames(scores),scores)
-names(output) = c("pathID",colnames(scores))
-output2 = data.frame(rownames(scores),pvalues)
-names(output2) = c("pathID",colnames(pvalues))
-write.table(output,sprintf("%sPathway_%s_scores.txt", outFold, geneSetName),sep="\t",quote=F,row.names=F)     
-write.table(output2,sprintf("%sPathway_%s_pval.txt", outFold,geneSetName),sep="\t",quote=F,row.names=F)      
-scorecards[[curComparison]] = output
+  # perform PGSEA analysis on the t-scores relative to the reference and subsequently filter out those gene sets that do not fall within the size range
+  results = modPGSEA(exprs, go, range=c(minGenesPerGeneSet, maxGenesPerGeneSet), center=F, p.value=T)
+  scores = results[["results"]]; dimnames(scores) = list(geneSetNames,gsub("\\.t","",dimnames(scores)[[2]]))
+  pvalues = results[["p.results"]]; dimnames(pvalues) = list(geneSetNames,paste("pval",gsub("\\.t",".pval",dimnames(pvalues)[[2]]),sep="_"))
+  valid = apply(scores,1,function(X) { sum(is.na(X)) == 0 })
+  insufficientCoverage = paste(geneSetNames[!valid])
+  scores = scores[valid,]
+  pvalues = pvalues[valid,]
+  # for each lineage / group of gene sets, take the mean of the gene set scores of all contributing gene sets
+  # export lineage scorecard
+  output = data.frame(rownames(scores),scores)
+  names(output) = c("pathID",colnames(scores))
+  output2 = data.frame(rownames(scores),pvalues)
+  names(output2) = c("pathID",colnames(pvalues))
+  write.table(output,sprintf("%sPathway_%s_scores.txt", outFold, geneSetName),sep="\t",quote=F,row.names=F)
+  write.table(output2,sprintf("%sPathway_%s_pval.txt", outFold,geneSetName),sep="\t",quote=F,row.names=F)
+  scorecards[[curComparison]] = output
 
-sigScores = scores; #sigScores[pvalues>0.005] = NA
-if(any(sampleAnn$Dx == 1)){
-  
-  cases=is.element(colnames(scores),sampleAnn[sampleAnn$Dx==1,1]) ## mod LT
-  pvalCombined = apply(pvalues[,cases],1,function(X) { pchisq(-2*sum(log(X)),2*length(X),lower.tail=FALSE) })
+  sigScores = scores; #sigScores[pvalues>0.005] = NA
+  if(any(sampleAnn$Dx == 1)){
+
+    cases=is.element(colnames(scores),sampleAnn[sampleAnn$Dx==1,1]) ## mod LT
+    pvalCombined = apply(pvalues[,cases],1,function(X) { pchisq(-2*sum(log(X)),2*length(X),lower.tail=FALSE) })
+    # save
+    write.table(x = data.frame(chisq = sort(pvalCombined), pathway = names(sort(pvalCombined))),
+                file = sprintf('%sPathwaySummaryPvalues_cases_%s.txt', outFold, geneSetName), sep = '\t', quote = F, col.names = T, row.names = F)
+  }
+
+  controls=is.element(colnames(scores),sampleAnn[sampleAnn$Dx==0,1]) ## mod LT
+  pvalCombined_controls = apply(pvalues[,controls],1,function(X) {pchisq(-2*sum(log(X)),2*length(X),lower.tail=FALSE)})
   # save
-  write.table(x = data.frame(chisq = sort(pvalCombined), pathway = names(sort(pvalCombined))), 
-              file = sprintf('%sPathwaySummaryPvalues_cases_%s.txt', outFold, geneSetName), sep = '\t', quote = F, col.names = T, row.names = F)
+  write.table(x = data.frame(chisq = sort(pvalCombined_controls), pathway = names(sort(pvalCombined_controls))),
+              file = sprintf('%sPathwaySummaryPvalues_controls_%s.txt', outFold, geneSetName), sep = '\t', quote = F, col.names = T, row.names = F)
+
+
+
+  if(any(sampleAnn$Dx == 1)){
+
+    thres=0.05
+    rAll=rowSums(pvalues<=thres)
+    rCase=rowSums(pvalues[,cases]<=thres)
+    rFrac=rCase/rAll
+    ind=!is.nan(rFrac)
+    pEn=cbind(rAll,rCase,rFrac)
+
+    write.table(data.frame(cbind(pathway=rownames(pEn[ind,]), pEn[ind,])),
+                sprintf("%sPathwayEnrichment_%s_FracCases.txt", outFold, geneSetName),sep="\t",quote=F, row.names = F)
+
+    padj=apply(pvalues,2,function(X){
+      return(qvalue(X)$qvalue)
+    })
+
+    #find gene sets that show high deviation
+    thres=0.05
+    rAll=rowSums(padj<=thres)
+    rCase=rowSums(padj[,cases]<=thres)
+    # rAll=rowSums(pvalues<=thres)
+    # rCase=rowSums(pvalues[,cases]<=thres)
+
+
+    rFrac=rCase/rAll
+    ind=!is.nan(rFrac)
+    pEn=cbind(rAll,rCase,rFrac)
+
+    write.table(data.frame(cbind(pathway=rownames(pEn[ind,]), pEn[ind,])),
+                sprintf("%sPathwayEnrichment_%s_FracCases_pvalAdj.txt",outFold, geneSetName),sep="\t",quote=F, row.names = F)
+  }
 }
-
-controls=is.element(colnames(scores),sampleAnn[sampleAnn$Dx==0,1]) ## mod LT
-pvalCombined_controls = apply(pvalues[,controls],1,function(X) {pchisq(-2*sum(log(X)),2*length(X),lower.tail=FALSE)})
-# save
-write.table(x = data.frame(chisq = sort(pvalCombined_controls), pathway = names(sort(pvalCombined_controls))), 
-            file = sprintf('%sPathwaySummaryPvalues_controls_%s.txt', outFold, geneSetName), sep = '\t', quote = F, col.names = T, row.names = F)
-
-
-
-if(any(sampleAnn$Dx == 1)){
-  
-  thres=0.05
-  rAll=rowSums(pvalues<=thres)
-  rCase=rowSums(pvalues[,cases]<=thres)
-  rFrac=rCase/rAll
-  ind=!is.nan(rFrac)
-  pEn=cbind(rAll,rCase,rFrac)
-  
-  write.table(data.frame(cbind(pathway=rownames(pEn[ind,]), pEn[ind,])),
-              sprintf("%sPathwayEnrichment_%s_FracCases.txt", outFold, geneSetName),sep="\t",quote=F, row.names = F)
-  
-  padj=apply(pvalues,2,function(X){
-    return(qvalue(X)$qvalue)
-  })
-  
-  #find gene sets that show high deviation
-  thres=0.05
-  rAll=rowSums(padj<=thres)
-  rCase=rowSums(padj[,cases]<=thres)
-  # rAll=rowSums(pvalues<=thres)
-  # rCase=rowSums(pvalues[,cases]<=thres)
-  
-  
-  rFrac=rCase/rAll
-  ind=!is.nan(rFrac)
-  pEn=cbind(rAll,rCase,rFrac)
-  
-  write.table(data.frame(cbind(pathway=rownames(pEn[ind,]), pEn[ind,])),
-              sprintf("%sPathwayEnrichment_%s_FracCases_pvalAdj.txt",outFold, geneSetName),sep="\t",quote=F, row.names = F)
-  
-  
-}
-
-
