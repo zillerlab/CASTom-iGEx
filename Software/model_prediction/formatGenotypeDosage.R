@@ -32,7 +32,7 @@ args <- parser$parse_args()
 gen_name <- basename(args$trawFile)
 
 for (chr in 1:22) {
-  gen_file <- data.table::fread(sprintf("%schr%s.traw", args$trawFile, chr), header = FALSE)
+  gen_file <- data.table::fread(sprintf("%schr%s.traw", args$trawFile, chr))
 
   gen_file <- gen_file[, 7:ncol(gen_file)]
 
