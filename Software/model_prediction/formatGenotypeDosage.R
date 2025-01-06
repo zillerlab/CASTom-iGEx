@@ -24,6 +24,7 @@ parser$add_argument(
 parser$add_argument(
   "--outDosageFold",
   type = "character",
+  default = ".",
   help = "Folder to save dosage files"
 )
 
