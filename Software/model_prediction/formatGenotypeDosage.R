@@ -9,9 +9,9 @@ suppressPackageStartupMessages({
 parser <- argparse::ArgumentParser()
 
 parser$add_argument(
-  "--genFile",
+  "--trawFile",
   type = "character",
-  help = "Full path to the genotype files until \"chr\""
+  help = "Full path to the traw files until \"chr\""
 )
 
 parser$add_argument(
@@ -27,36 +27,20 @@ parser$add_argument(
   help = "Folder to save dosage files"
 )
 
-
 args <- parser$parse_args()
 
-
-gen_name <- basename(args$genFile)
-
+gen_name <- basename(args$trawFile)
 
 for (chr in 1:22) {
-  gen_file <- data.table::fread(sprintf("%schr%s.gen.gz", args$genFile, chr), header = FALSE)
+  gen_file <- data.table::fread(sprintf("%schr%s.traw", args$trawFile, chr), header = FALSE)
 
-  sample_file <- read.table(
-    sprintf("%schr%s.sample", args$genFile, chr),
-    stringsAsFactors = FALSE,
-    row.names = NULL
-  )
-
-
-  gen_file <- gen_file[, 6:ncol(gen_file)]
-
-  gen_file <- gen_file[, seq(3, ncol(gen_file), 3), with = FALSE] * 2 +
-              gen_file[, seq(2, ncol(gen_file), 3), with = FALSE]
+  gen_file <- gen_file[, 7:ncol(gen_file)]
 
   gen_file <- round(gen_file, 2)
 
   gen_file[gen_file < args$dosageThresh] <- 0
 
-  colnames(gen_file) <- sample_file$V2[3:nrow(sample_file)]
-
-
-  out_name <- sprintf("%s/%sdosage_chr%s_matrix.txt.gz", args$outDosageFold, gen_name, chr)
+  out_name <- sprintf("%s/%schr%s_matrix.txt.gz", args$outDosageFold, gen_name, chr)
 
   data.table::fwrite(gen_file, out_name, sep = "\t", compress = "gzip")
 }
