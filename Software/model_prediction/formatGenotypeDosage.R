@@ -15,6 +15,19 @@ parser$add_argument(
 )
 
 parser$add_argument(
+  "--sampleFile",
+  type = "character",
+  help = "Full path to the sample file, including the suffix."
+)
+
+parser$add_argument(
+  "--sampleNameColumn",
+  type = "integer",
+  default = 1,
+  help = "Which column in the sample file to use for column names."
+)
+
+parser$add_argument(
   "--dosageThresh",
   type = "double",
   default = 0.1,
@@ -30,16 +43,20 @@ parser$add_argument(
 
 args <- parser$parse_args()
 
+sample_file <- read.delim(args$sampleFile, check.names = FALSE, stringsAsFactors = FALSE)
+
 gen_name <- basename(args$trawFile)
 
 for (chr in 1:22) {
   gen_file <- data.table::fread(sprintf("%schr%s.traw", args$trawFile, chr))
 
-  gen_file <- gen_file[, 7:ncol(gen_file)]
+  gen_file[, (1:6) := NULL]
+
+  gen_file[gen_file < args$dosageThresh] <- 0
 
   gen_file <- round(gen_file, 2)
 
-  gen_file[gen_file < args$dosageThresh] <- 0
+  colnames(gen_file) <- sample_file[[args$sampleNameColumn]]
 
   out_name <- sprintf("%s/%schr%s_matrix.txt.gz", args$outDosageFold, gen_name, chr)
 
