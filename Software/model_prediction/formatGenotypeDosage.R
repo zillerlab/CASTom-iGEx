@@ -17,14 +17,14 @@ parser$add_argument(
 parser$add_argument(
   "--sampleFile",
   type = "character",
-  help = "Full path to the sample file, including the suffix."
+  help = "Full path to the sample file, including the suffix"
 )
 
 parser$add_argument(
   "--sampleNameColumn",
   type = "integer",
-  default = 1,
-  help = "Which column in the sample file to use for column names."
+  default = NULL,
+  help = "Which column in the sample file to use for column names. Default is a concatentaion of FID (1) and IID (2)"
 )
 
 parser$add_argument(
@@ -56,7 +56,11 @@ for (chr in 1:22) {
 
   gen_file <- round(gen_file, 2)
 
-  colnames(gen_file) <- sample_file[[args$sampleNameColumn]]
+  if (is.null(args$sampleNameColumn)) {
+    colnames(gen_file) <- paste(sample_file[[1]], sample_file[[2]], sep = "_")
+  } else {
+    colnames(gen_file) <- sample_file[[args$sampleNameColumn]]
+  }
 
   out_name <- sprintf("%s/%schr%s_matrix.txt.gz", args$outDosageFold, gen_name, chr)
 
