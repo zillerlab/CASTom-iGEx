@@ -376,61 +376,7 @@ if (!is.null(reactome_file)) {
   output2 = data.frame(rownames(scores),pvalues)
   names(output2) = c("pathID",colnames(pvalues))
   write.table(output,sprintf("%sPathway_%s_scores.txt", outFold, geneSetName),sep="\t",quote=F,row.names=F)
-  write.table(output2,sprintf("%sPathway_%s_pval.txt", outFold,geneSetName),sep="\t",quote=F,row.names=F)
-  scorecards[[curComparison]] = output
-
-  sigScores = scores; #sigScores[pvalues>0.005] = NA
-  if(any(sampleAnn$Dx == 1)){
-
-    cases=is.element(colnames(scores),sampleAnn[sampleAnn$Dx==1,1]) ## mod LT
-    pvalCombined = apply(pvalues[,cases],1,function(X) { pchisq(-2*sum(log(X)),2*length(X),lower.tail=FALSE) })
-    # save
-    write.table(x = data.frame(chisq = sort(pvalCombined), pathway = names(sort(pvalCombined))),
-                file = sprintf('%sPathwaySummaryPvalues_cases_%s.txt', outFold, geneSetName), sep = '\t', quote = F, col.names = T, row.names = F)
-  }
-
-  controls=is.element(colnames(scores),sampleAnn[sampleAnn$Dx==0,1]) ## mod LT
-  pvalCombined_controls = apply(pvalues[,controls],1,function(X) {pchisq(-2*sum(log(X)),2*length(X),lower.tail=FALSE)})
-  # save
-  write.table(x = data.frame(chisq = sort(pvalCombined_controls), pathway = names(sort(pvalCombined_controls))),
-              file = sprintf('%sPathwaySummaryPvalues_controls_%s.txt', outFold, geneSetName), sep = '\t', quote = F, col.names = T, row.names = F)
-
-
-
-
-  if(any(sampleAnn$Dx == 1)){
-
-    thres=0.05
-    rAll=rowSums(pvalues<=thres)
-    rCase=rowSums(pvalues[,cases]<=thres)
-    rFrac=rCase/rAll
-    ind=!is.nan(rFrac)
-    pEn=cbind(rAll,rCase,rFrac)
-
-    write.table(data.frame(cbind(pathway=rownames(pEn[ind,]), pEn[ind,])),
-                sprintf("%sPathwayEnrichment_%s_FracCases.txt", outFold, geneSetName),sep="\t",quote=F, row.names = F)
-
-    padj=apply(pvalues,2,function(X){
-      return(qvalue(X)$qvalue)
-    })
-
-    #find gene sets that show high deviation
-    thres=0.05
-    rAll=rowSums(padj<=thres)
-    rCase=rowSums(padj[,cases]<=thres)
-    # rAll=rowSums(pvalues<=thres)
-    # rCase=rowSums(pvalues[,cases]<=thres)
-
-
-    rFrac=rCase/rAll
-    ind=!is.nan(rFrac)
-    pEn=cbind(rAll,rCase,rFrac)
-
-    write.table(data.frame(cbind(pathway=rownames(pEn[ind,]), pEn[ind,])),
-                sprintf("%sPathwayEnrichment_%s_FracCases_pvalAdj.txt",outFold, geneSetName),sep="\t",quote=F, row.names = F)
-
-
-  }
+  #write.table(output2,sprintf("%sPathway_%s_pval.txt", outFold,geneSetName),sep="\t",quote=F,row.names=F)
 }
 
 ################################################
@@ -482,56 +428,5 @@ if (!is.null(GOterms_file)) {
   output2 = data.frame(rownames(scores),pvalues)
   names(output2) = c("pathID",colnames(pvalues))
   write.table(output,sprintf("%sPathway_%s_scores.txt", outFold, geneSetName),sep="\t",quote=F,row.names=F)
-  write.table(output2,sprintf("%sPathway_%s_pval.txt", outFold,geneSetName),sep="\t",quote=F,row.names=F)
-  scorecards[[curComparison]] = output
-
-  sigScores = scores; #sigScores[pvalues>0.005] = NA
-  if(any(sampleAnn$Dx == 1)){
-
-    cases=is.element(colnames(scores),sampleAnn[sampleAnn$Dx==1,1]) ## mod LT
-    pvalCombined = apply(pvalues[,cases],1,function(X) { pchisq(-2*sum(log(X)),2*length(X),lower.tail=FALSE) })
-    # save
-    write.table(x = data.frame(chisq = sort(pvalCombined), pathway = names(sort(pvalCombined))),
-                file = sprintf('%sPathwaySummaryPvalues_cases_%s.txt', outFold, geneSetName), sep = '\t', quote = F, col.names = T, row.names = F)
-  }
-
-  controls=is.element(colnames(scores),sampleAnn[sampleAnn$Dx==0,1]) ## mod LT
-  pvalCombined_controls = apply(pvalues[,controls],1,function(X) {pchisq(-2*sum(log(X)),2*length(X),lower.tail=FALSE)})
-  # save
-  write.table(x = data.frame(chisq = sort(pvalCombined_controls), pathway = names(sort(pvalCombined_controls))),
-              file = sprintf('%sPathwaySummaryPvalues_controls_%s.txt', outFold, geneSetName), sep = '\t', quote = F, col.names = T, row.names = F)
-
-
-
-  if(any(sampleAnn$Dx == 1)){
-
-    thres=0.05
-    rAll=rowSums(pvalues<=thres)
-    rCase=rowSums(pvalues[,cases]<=thres)
-    rFrac=rCase/rAll
-    ind=!is.nan(rFrac)
-    pEn=cbind(rAll,rCase,rFrac)
-
-    write.table(data.frame(cbind(pathway=rownames(pEn[ind,]), pEn[ind,])),
-                sprintf("%sPathwayEnrichment_%s_FracCases.txt", outFold, geneSetName),sep="\t",quote=F, row.names = F)
-
-    padj=apply(pvalues,2,function(X){
-      return(qvalue(X)$qvalue)
-    })
-
-    #find gene sets that show high deviation
-    thres=0.05
-    rAll=rowSums(padj<=thres)
-    rCase=rowSums(padj[,cases]<=thres)
-    # rAll=rowSums(pvalues<=thres)
-    # rCase=rowSums(pvalues[,cases]<=thres)
-
-
-    rFrac=rCase/rAll
-    ind=!is.nan(rFrac)
-    pEn=cbind(rAll,rCase,rFrac)
-
-    write.table(data.frame(cbind(pathway=rownames(pEn[ind,]), pEn[ind,])),
-                sprintf("%sPathwayEnrichment_%s_FracCases_pvalAdj.txt",outFold, geneSetName),sep="\t",quote=F, row.names = F)
-  }
+  #write.table(output2,sprintf("%sPathway_%s_pval.txt", outFold,geneSetName),sep="\t",quote=F,row.names=F)
 }
