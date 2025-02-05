@@ -32,7 +32,7 @@ parser$add_argument("--split_tot", type = "integer", default = 0, help = "if 0 t
 parser$add_argument("--pvalresFile", type = "character", help = "file with pvalue results")
 parser$add_argument("--pval_id", type = "integer", default = 1, help = "id to be used on pvalue file")
 parser$add_argument("--pval_thr", type = "double", default = 1, help = "threshold to filter features")
-parser$add_argument("--corr_thr", type = "double", default = -1, help = "correlation among features threshold")
+parser$add_argument("--corr_thr", type = "double", default = 0.5, help = "correlation among features threshold")
 parser$add_argument("--functR", type = "character", help = "functions to be used")
 parser$add_argument("--type_data", type = "character", default = "tscore", help = "tscore, path_Reactome or path_GO")
 parser$add_argument("--type_sim", type = "character", default = 'HK', help = "HK or ED")
