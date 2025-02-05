@@ -9,9 +9,22 @@ suppressPackageStartupMessages({
 parser <- argparse::ArgumentParser()
 
 parser$add_argument(
-  "--genFile",
+  "--trawFile",
   type = "character",
-  help = "Full path to the genotype files until \"chr\""
+  help = "Full path to the traw files until \"chr\""
+)
+
+parser$add_argument(
+  "--sampleFile",
+  type = "character",
+  help = "Full path to the sample file, including the suffix"
+)
+
+parser$add_argument(
+  "--sampleNameColumn",
+  type = "integer",
+  default = NULL,
+  help = "Which column in the sample file to use for column names. Default is a concatentaion of FID (1) and IID (2)"
 )
 
 parser$add_argument(
@@ -24,39 +37,32 @@ parser$add_argument(
 parser$add_argument(
   "--outDosageFold",
   type = "character",
+  default = ".",
   help = "Folder to save dosage files"
 )
 
-
 args <- parser$parse_args()
 
+sample_file <- read.delim(args$sampleFile, check.names = FALSE, stringsAsFactors = FALSE)
 
-gen_name <- basename(args$genFile)
-
+gen_name <- basename(args$trawFile)
 
 for (chr in 1:22) {
-  gen_file <- data.table::fread(sprintf("%schr%s.gen.gz", args$genFile, chr), header = FALSE)
+  gen_file <- data.table::fread(sprintf("%schr%s.traw", args$trawFile, chr))
 
-  sample_file <- read.table(
-    sprintf("%schr%s.sample", args$genFile, chr),
-    stringsAsFactors = FALSE,
-    row.names = NULL
-  )
-
-
-  gen_file <- gen_file[, 6:ncol(gen_file)]
-
-  gen_file <- gen_file[, seq(3, ncol(gen_file), 3), with = FALSE] * 2 +
-              gen_file[, seq(2, ncol(gen_file), 3), with = FALSE]
-
-  gen_file <- round(gen_file, 2)
+  gen_file[, (1:6) := NULL]
 
   gen_file[gen_file < args$dosageThresh] <- 0
 
-  colnames(gen_file) <- sample_file$V2[3:nrow(sample_file)]
+  gen_file <- round(gen_file, 2)
 
+  if (is.null(args$sampleNameColumn)) {
+    colnames(gen_file) <- paste(sample_file[[1]], sample_file[[2]], sep = "_")
+  } else {
+    colnames(gen_file) <- sample_file[[args$sampleNameColumn]]
+  }
 
-  out_name <- sprintf("%s/%sdosage_chr%s_matrix.txt.gz", args$outDosageFold, gen_name, chr)
+  out_name <- sprintf("%s/%schr%s_matrix.txt.gz", args$outDosageFold, gen_name, chr)
 
   data.table::fwrite(gen_file, out_name, sep = "\t", compress = "gzip")
 }

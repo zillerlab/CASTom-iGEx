@@ -343,6 +343,7 @@ for(n in 1:length(phenoDat_file)){
   print(str(phenoAnn_tmp))
   names_df <- t(sapply(phenoAnn_tmp$pheno_id, function(x) paste0(x, c('_beta', '_se_beta','_z_t','_pval'))))
   names_df_qval <- sapply(phenoAnn_tmp$pheno_id, function(x) paste0(x, c('_qval')))
+  names_df_bhcorr <- sapply(phenoAnn_tmp$pheno_id, function(x) paste0(x, c('_BHcorr')))
   
   ############################
   #### tscore assocaition ####
@@ -390,7 +391,10 @@ for(n in 1:length(phenoDat_file)){
     df_corr_tscore[[j]] <- cbind(df_corr_tscore[[j]], qval$qvalue)
     colnames(df_corr_tscore[[j]])[ncol(df_corr_tscore[[j]])] <-  names_df_qval[j]
     df_pi1$tscore[j] <- 1 - qval$pi0
-    
+
+    BH_t <- p.adjust(as.vector(df_corr_tscore[[j]][, names_df[j,4]]), method = 'BH')
+    df_corr_tscore[[j]] <- cbind(df_corr_tscore[[j]], BH_t)
+    colnames(df_corr_tscore[[j]])[ncol(df_corr_tscore[[j]])] <-  names_df_bhcorr[j]
   }
   
   rm(tscoreMat_association)
@@ -433,6 +437,10 @@ for(n in 1:length(phenoDat_file)){
       df_corr_pathR[[j]] <- cbind(df_corr_pathR[[j]], qval$qvalue)
       colnames(df_corr_pathR[[j]])[ncol(df_corr_pathR[[j]])] <-  names_df_qval[j]
       df_pi1$pathScore_reactome[j] <- 1 - qval$pi0
+
+      BH_t <- p.adjust(as.vector(df_corr_pathR[[j]][, names_df[j,4]]), method = 'BH')
+      df_corr_pathR[[j]] <- cbind(df_corr_pathR[[j]], BH_t)
+      colnames(df_corr_pathR[[j]])[ncol(df_corr_pathR[[j]])] <- names_df_bhcorr[j]
 
       # create list object for each pathway with tscore association results
       info_pathR[[j]] <- vector(mode = 'list', length = nrow(df_pathR_info))
@@ -489,6 +497,10 @@ for(n in 1:length(phenoDat_file)){
       df_corr_pathGO[[j]] <- cbind(df_corr_pathGO[[j]], qval$qvalue)
       colnames(df_corr_pathGO[[j]])[ncol(df_corr_pathGO[[j]])] <-  names_df_qval[j]
       df_pi1$pathScore_GO[j] <- 1 - qval$pi0
+
+      BH_t <- p.adjust(as.vector(df_corr_pathGO[[j]][, names_df[j,4]]), method = 'BH')
+      df_corr_pathGO[[j]] <- cbind(df_corr_pathGO[[j]], BH_t)
+      colnames(df_corr_pathGO[[j]])[ncol(df_corr_pathGO[[j]])] <- names_df_bhcorr[j]
 
       # create list object for each pathway with tscore association results
       # create list object for each pathway with tscore association results

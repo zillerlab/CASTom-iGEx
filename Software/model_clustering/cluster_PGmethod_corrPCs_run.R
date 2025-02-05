@@ -32,7 +32,7 @@ parser$add_argument("--split_tot", type = "integer", default = 0, help = "if 0 t
 parser$add_argument("--pvalresFile", type = "character", help = "file with pvalue results")
 parser$add_argument("--pval_id", type = "integer", default = 1, help = "id to be used on pvalue file")
 parser$add_argument("--pval_thr", type = "double", default = 1, help = "threshold to filter features")
-parser$add_argument("--corr_thr", type = "double", default = -1, help = "correlation among features threshold")
+parser$add_argument("--corr_thr", type = "double", default = 0.5, help = "correlation among features threshold")
 parser$add_argument("--functR", type = "character", help = "functions to be used")
 parser$add_argument("--type_data", type = "character", default = "tscore", help = "tscore, path_Reactome or path_GO")
 parser$add_argument("--type_sim", type = "character", default = 'HK', help = "HK or ED")
@@ -372,34 +372,34 @@ p <- facet(p, facet.by = "PC", short.panel.labs = T, scales = 'free_y', nrow = 1
 ggsave(filename = sprintf('%s%s_corrPCs_%s_cluster%s_PGmethod_%smetric_PCs.png', outFold, type_data, type_input, type_cluster, type_sim), width = 13, height = 4, plot = p, device = 'png')
 ggsave(filename = sprintf('%s%s_corrPCs_%s_cluster%s_PGmethod_%smetric_PCs.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = 13, height = 4, plot = p, device = 'pdf')
 
-# plot distribution AGE, Sex
-df_cov_age <- data.frame(Age = df_cov$Age, gr = df_cov$gr)
-output$test_cov$pval[output$test_cov$cov_id == 'Age'] <- kruskal.test(df_cov_age$Age, g = df_cov_age$gr)$p.value
+# plot distribution AGE, Sex if the information is available
+if ("Age" %in% colnames(df_cov) & "Gender" %in% colnames(df_cov)) {
+  df_cov_age <- data.frame(Age = df_cov$Age, gr = df_cov$gr)
+  output$test_cov$pval[output$test_cov$cov_id == 'Age'] <- kruskal.test(df_cov_age$Age, g = df_cov_age$gr)$p.value
 
-df_cov_sex <- data.frame(n = as.vector(table(df_cov$Gender, df_cov$gr)), Sex = rep(c('male', 'female'), P), gr = unlist(lapply(paste0('gr', 1:P), function(x) rep(x, 2))))
-df_cov_sex$Sex <- factor(df_cov_sex$Sex, levels = c('male', 'female'))
+  df_cov_sex <- data.frame(n = as.vector(table(df_cov$Gender, df_cov$gr)), Sex = rep(c('male', 'female'), P), gr = unlist(lapply(paste0('gr', 1:P), function(x) rep(x, 2))))
+  df_cov_sex$Sex <- factor(df_cov_sex$Sex, levels = c('male', 'female'))
 
-pl_a <- ggplot(df_cov_age, aes(x = gr, y = Age, fill = gr))+
-  geom_violin(alpha = 0.8)+
-  geom_boxplot(width=0.2, fill="white")+
-  xlab('')+ ylab('Age')+
-  scale_fill_manual(values = gr_color)+
-  annotate("text", x = 1, y = max(df_cov_age$Age)+2, 
-	label = sprintf('p=%s',	as.character(round(output$test_cov$pval[output$test_cov$cov_id == 'Age'], digits = 2))))+
-  theme_bw()+theme(legend.position = 'none')
+  pl_a <- ggplot(df_cov_age, aes(x = gr, y = Age, fill = gr))+
+    geom_violin(alpha = 0.8)+
+    geom_boxplot(width=0.2, fill="white")+
+    xlab('')+ ylab('Age')+
+    scale_fill_manual(values = gr_color)+
+    annotate("text", x = 1, y = max(df_cov_age$Age)+2,
+      label = sprintf('p=%s',	as.character(round(output$test_cov$pval[output$test_cov$cov_id == 'Age'], digits = 2))))+
+    theme_bw()+theme(legend.position = 'none')
 
-pl_s <- ggplot(df_cov_sex, aes(x = gr, y = n, color = gr, fill = Sex))+
-  geom_bar(size = 1, alpha = 0.8, stat = 'identity', position = position_dodge())+
-  xlab('')+ ylab('number of individual')+
-  scale_color_manual(values = gr_color)+
-  scale_fill_manual(values = c('grey10', 'grey60'))+
-  guides(color = FALSE)+
-  annotate("text", x = 1, y = max(df_cov_sex$n)+2, 
-	label = sprintf('p=%s', as.character(round(output$test_cov$pval[output$test_cov$cov_id == 'Gender'], digits = 2))))+
-  theme_bw()+theme(legend.position = 'right')
+  pl_s <- ggplot(df_cov_sex, aes(x = gr, y = n, color = gr, fill = Sex))+
+    geom_bar(size = 1, alpha = 0.8, stat = 'identity', position = position_dodge())+
+    xlab('')+ ylab('number of individual')+
+    scale_color_manual(values = gr_color)+
+    scale_fill_manual(values = c('grey10', 'grey60'))+
+    guides(color = FALSE)+
+    annotate("text", x = 1, y = max(df_cov_sex$n)+2,
+      label = sprintf('p=%s', as.character(round(output$test_cov$pval[output$test_cov$cov_id == 'Gender'], digits = 2))))+
+    theme_bw()+theme(legend.position = 'right')
 
-tot_pl <- ggarrange(plotlist = list(pl_a, pl_s), ncol = 2, nrow = 1, align='h', widths=c(1, 1.4))
-ggsave(filename = sprintf('%s%s_corrPCs_%s_cluster%s_PGmethod_%smetric_Age_Sex.png', outFold, type_data, type_input, type_cluster, type_sim), width = 6.5, height = 3, plot = tot_pl, device = 'png')
-ggsave(filename = sprintf('%s%s_corrPCs_%s_cluster%s_PGmethod_%smetric_Age_Sex.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = 6.5, height = 3, plot = tot_pl, device = 'pdf')
-
-
+  tot_pl <- ggarrange(plotlist = list(pl_a, pl_s), ncol = 2, nrow = 1, align='h', widths=c(1, 1.4))
+  ggsave(filename = sprintf('%s%s_corrPCs_%s_cluster%s_PGmethod_%smetric_Age_Sex.png', outFold, type_data, type_input, type_cluster, type_sim), width = 6.5, height = 3, plot = tot_pl, device = 'png')
+  ggsave(filename = sprintf('%s%s_corrPCs_%s_cluster%s_PGmethod_%smetric_Age_Sex.pdf', outFold, type_data, type_input, type_cluster, type_sim), width = 6.5, height = 3, plot = tot_pl, device = 'pdf')
+}
