@@ -21,7 +21,7 @@ options(bitmapType = 'cairo', device = 'png')
 
 
 parser <- ArgumentParser(description="clustering using PG method")
-parser$add_argument("--PCs_input_file", type = "character", default = 'NA', help = "file to be loaded")
+parser$add_argument("--PCs_input_file", type = "character", default = NULL, help = "file to be loaded")
 parser$add_argument("--sampleAnnFile", type = "character", help = "file with samples to be used")
 parser$add_argument("--sampleOutFile", type = "character", default = NULL, help = "file with samples to be excluded")
 parser$add_argument("--type_cluster", type = "character", help = "All, Cases, Controls")
@@ -74,9 +74,27 @@ if(!is.null(sampleOutFile)){
   sampleAnn <- sampleAnn[!sampleAnn$Individual_ID %in% rm_samples$Individual_ID,]
 }
 
-PCs_input <- get(load(PCs_input_file))
-PCs_input <- PCs_input[match(sampleAnn$Individual_ID, rownames(PCs_input)),]
+if (!is.null(PCs_input_file)) {
+  PCs_input <- get(load(PCs_input_file))
+  PCs_input <- PCs_input[match(sampleAnn$Individual_ID, rownames(PCs_input)),]
+} else {
+  pc_cols <- colnames(sampleAnn)[grepl("^[p]c[0-9]+$", colnames(sampleAnn), ignore.case = TRUE, perl = TRUE)]
 
+  if (length(pc_cols) == 0) {
+    stop(c(
+      "Error: No PCs found. Please provide them either as .RData object (--PCs_input_file) ",
+      "or include them in the sample annotation file (--sampleAnnFile) as columns."
+    ))
+  }
+
+  message(sprintf(
+    "Assuming %s columns in the sample annotation file are the principal components",
+    paste(pc_cols, collapse = ", "))
+  )
+
+  PCs_input <- sampleAnn[pc_cols]
+  rownames(PCs_input) <- sampleAnn$Individual_ID
+}
 input_data <- scale(PCs_input)
 attr(input_data, "scaled:scale") <- NULL
 attr(input_data, "scaled:center") <- NULL
