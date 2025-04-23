@@ -24,7 +24,7 @@ parser$add_argument(
   "--sampleNameColumn",
   type = "integer",
   default = NULL,
-  help = "Which column in the sample file to use for column names. Default is a concatentaion of FID (1) and IID (2)"
+  help = "Which column in the sample file to use for column names. Default is a concatenation of FID (1) and IID (2)"
 )
 
 parser$add_argument(
