@@ -131,7 +131,7 @@ for (chr in 1:22) {
       CHR = chr,
       P0 = chr_genes_reliable[id, "start_position", drop = TRUE],
       P1 = chr_genes_reliable[id, "end_position", drop = TRUE],
-      N = N_tot,
+      N = args$N_tot,
       priler_r2 = chr_genes_reliable[id, "dev_geno", drop = TRUE],  # Save overall R2 (genetic component only)
       priler_r2cv = chr_genes_reliable[id, "test_dev_geno", drop = TRUE]  # Save average cross-validation R2
     ))
