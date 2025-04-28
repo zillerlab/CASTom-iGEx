@@ -79,7 +79,7 @@ for (chr in 1:22) {
 
   chr_genes <- subset(priler_model, chrom == paste0("chr", chr))
 
-  reliable_id <- (seq_len(nrow(chr_genes)))[(chr_genes$dev_geno >= thr_reliable[1]) & (chr_genes$test_dev_geno > thr_reliable[2])]
+  reliable_id <- (seq_len(nrow(chr_genes)))[(chr_genes$dev_geno >= args$thr_reliableGenes[1]) & (chr_genes$test_dev_geno > args$thr_reliableGenes[2])]
   chr_genes_reliable <- chr_genes[reliable_id, ]
 
   chr_weights <- as.matrix(weights[[chr]])[, reliable_id]
