@@ -112,7 +112,7 @@ for (chr in 1:22) {
 
     rownames(wgt.matrix) <- chr_variants[, args$rsidCol, drop = TRUE]
 
-    snps <- snps[chr_weights_id_sig, ]
+    snps <- snps[chr_weights_id_sig, , drop = FALSE]
     wgt.matrix <- wgt.matrix[chr_weights_id_sig, , drop = FALSE]
 
     if (nrow(snps) == 0) next
