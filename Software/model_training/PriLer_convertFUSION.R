@@ -124,8 +124,8 @@ for (chr in 1:22) {
     gene_id <- chr_genes_reliable[id, "ensembl_gene_id", drop = TRUE]
 
     fusion_pos_gene <- list(data.frame(
-      PANEL = model_name,
-      WGT = sprintf("%s/%s.wgt.RDat", model_name, gene_id),
+      PANEL = args$modelName,
+      WGT = sprintf("%s/%s.wgt.RDat", args$modelName, gene_id),
       ID = gene_id,
       CHR = chr,
       P0 = chr_genes_reliable[id, "start_position", drop = TRUE],
