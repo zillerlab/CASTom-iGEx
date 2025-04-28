@@ -147,4 +147,10 @@ for (chr in 1:22) {
 
 fusion_pos <- do.call(rbind, fusion_pos)
 
-write.table(fusion_pos, sprintf("%s/%s.pos", args$outFold, args$modelName), sep = "\t", row.names = FALSE)
+write.table(
+  fusion_pos,
+  sprintf("%s/%s.pos", args$outFold, args$modelName),
+  sep = "\t",
+  quote = FALSE,
+  row.names = FALSE
+)
