@@ -2,6 +2,7 @@
 
 suppressPackageStartupMessages({
   library(argparse)
+  library(Matrix)
 })
 
 
