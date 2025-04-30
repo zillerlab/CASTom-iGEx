@@ -115,7 +115,7 @@ for (chr in 1:22) {
     snps <- snps[chr_weights_id_sig, , drop = FALSE]
     wgt.matrix <- wgt.matrix[chr_weights_id_sig, , drop = FALSE]
 
-    if (nrow(snps) == 0) next
+    if (nrow(snps) < 2) next
 
     # Pval is zero since we define reliable genes differently in PriLer
     cv.performance <- as.matrix(data.frame(
