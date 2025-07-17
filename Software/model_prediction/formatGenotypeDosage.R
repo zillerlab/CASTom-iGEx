@@ -45,7 +45,7 @@ args <- parser$parse_args()
 
 sample_file <- read.delim(
   args$sampleFile,
-  header = False,
+  header = FALSE,
   comment.char = "#",
   check.names = FALSE,
   stringsAsFactors = FALSE
