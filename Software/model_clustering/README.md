@@ -24,14 +24,15 @@ CASTom-iGEx (Module 3) is a pipeline (R based) that uses gene-level T-scores, co
 ***
 ### Optional: Clustering based on genetic principal componenets
 Cluster individuals based on genetic principal componenets. This script is used to benchmark results and observe the overlap with tissue-specific clustering.
-- *--PCs_input_file*: .RData object containing matrix (nsamples x PCs) rownames must be `Individual_ID`.
-- *--sampleOutFile*: .txt tab separated file, list of samples to be removed from clustering, columns must include `Individual_ID`.
+- *--PCs_input_file*: .RData object containing matrix (nsamples x PCs) rownames must be `Individual_ID`. This parameter
+can be skipped if the principal components are present as columns (e.g. "PC1" or "C1") in the sample annotation file.
+- *--sampleOutFile*: (Optional) .txt tab separated file, list of samples to be removed from clustering, columns must include `Individual_ID`.
 
 ```sh
 ./cluster_PGmethod_PCs_run.R \
-    --PCs_input_file \
+    --PCs_input_file (default NULL)\
     --sampleAnnFile \
-    --sampleOutFile \
+    --sampleOutFile (default NULL) \
     --type_cluster \
     --functR ./clustering_functions.R \
     --type_sim (default "HK") \
@@ -74,7 +75,7 @@ Cluster individuals based on tissue-specific imputed gene expression. This scrip
     --pvalresFile \
     --pval_id (default 1) \
     --pval_thr (default 1) \
-    --corr_thr (default -1) \
+    --corr_thr (default 0.5) \
     --functR ./clustering_functions.R \
     --type_data (default tscore) \
     --type_sim (default HK) \

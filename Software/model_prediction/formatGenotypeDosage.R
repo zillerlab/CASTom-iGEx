@@ -24,7 +24,7 @@ parser$add_argument(
   "--sampleNameColumn",
   type = "integer",
   default = NULL,
-  help = "Which column in the sample file to use for column names. Default is a concatentaion of FID (1) and IID (2)"
+  help = "Which column in the sample file to use for column names. Default is a concatenation of FID (1) and IID (2)"
 )
 
 parser$add_argument(
@@ -43,7 +43,13 @@ parser$add_argument(
 
 args <- parser$parse_args()
 
-sample_file <- read.delim(args$sampleFile, check.names = FALSE, stringsAsFactors = FALSE)
+sample_file <- read.delim(
+  args$sampleFile,
+  header = False,
+  comment.char = "#",
+  check.names = FALSE,
+  stringsAsFactors = FALSE
+)
 
 gen_name <- basename(args$trawFile)
 
