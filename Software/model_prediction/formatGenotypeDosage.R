@@ -43,7 +43,13 @@ parser$add_argument(
 
 args <- parser$parse_args()
 
-sample_file <- read.delim(args$sampleFile, check.names = FALSE, stringsAsFactors = FALSE)
+sample_file <- read.delim(
+  args$sampleFile,
+  header = False,
+  comment.char = "#",
+  check.names = FALSE,
+  stringsAsFactors = FALSE
+)
 
 gen_name <- basename(args$trawFile)
 
